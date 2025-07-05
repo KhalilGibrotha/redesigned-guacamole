@@ -1,3 +1,4 @@
+---
 # Azure DevOps Pipeline Configuration
 # Copy this to azure-pipelines.yml for Azure DevOps
 
@@ -36,7 +37,7 @@ stages:
       inputs:
         versionSpec: '$(pythonVersion)'
       displayName: 'Use Python $(pythonVersion)'
-    
+
     - task: Cache@2
       inputs:
         key: 'python | "$(Agent.OS)" | requirements.txt'
@@ -45,22 +46,22 @@ stages:
           python
         path: $(pipCacheDir)
       displayName: 'Cache pip packages'
-    
+
     - script: |
         python -m pip install --upgrade pip
         pip install ansible-lint yamllint
         sudo apt-get update && sudo apt-get install -y make pandoc
       displayName: 'Install dependencies'
-    
+
     - script: make sanity-check
       displayName: 'Sanity Check'
-    
+
     - script: make lint
       displayName: 'Lint Check'
-    
+
     - script: make validate-templates
       displayName: 'Template Validation'
-    
+
     - task: PublishTestResults@2
       condition: succeededOrFailed()
       inputs:
@@ -80,15 +81,15 @@ stages:
       inputs:
         versionSpec: '$(pythonVersion)'
       displayName: 'Use Python $(pythonVersion)'
-    
+
     - script: |
         sudo apt-get update && sudo apt-get install -y make
       displayName: 'Install dependencies'
-    
+
     - script: make security-check
       displayName: 'Security Check'
       continueOnError: true
-    
+
     - task: PublishBuildArtifacts@1
       condition: always()
       inputs:
@@ -108,19 +109,19 @@ stages:
       inputs:
         versionSpec: '$(pythonVersion)'
       displayName: 'Use Python $(pythonVersion)'
-    
+
     - script: |
         python -m pip install --upgrade pip
         pip install ansible-lint ansible yamllint
         sudo apt-get update && sudo apt-get install -y make pandoc
       displayName: 'Install dependencies'
-    
+
     - script: make validate
       displayName: 'Full Validation'
-    
+
     - script: make test-render
       displayName: 'Template Rendering Test'
-    
+
     - task: PublishBuildArtifacts@1
       condition: always()
       inputs:
@@ -136,7 +137,7 @@ stages:
       inputs:
         versionSpec: '$(pythonVersion)'
       displayName: 'Use Python $(pythonVersion)'
-    
+
     - script: |
         python -m pip install --upgrade pip
         pip install molecule[docker] ansible
@@ -144,13 +145,13 @@ stages:
         sudo systemctl start docker
         sudo usermod -aG docker $(whoami)
       displayName: 'Install Molecule and Docker'
-    
+
     - script: |
         export PATH="$HOME/.local/bin:$PATH"
         molecule test || echo "Molecule tests failed - continuing"
       displayName: 'Run Molecule Tests'
       continueOnError: true
-    
+
     - task: PublishTestResults@2
       condition: always()
       inputs:
@@ -174,15 +175,15 @@ stages:
             inputs:
               versionSpec: '$(pythonVersion)'
             displayName: 'Use Python $(pythonVersion)'
-          
+
           - script: |
               python -m pip install --upgrade pip
               pip install ansible-lint ansible yamllint
               sudo apt-get update && sudo apt-get install -y make pandoc
             displayName: 'Install dependencies'
-          
+
           - script: make validate
             displayName: 'Pre-deployment validation'
-          
+
           - script: echo "Ready for deployment"
             displayName: 'Deployment ready'

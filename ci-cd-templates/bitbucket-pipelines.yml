@@ -1,3 +1,4 @@
+---
 # Bitbucket Pipelines Configuration
 # Copy this to bitbucket-pipelines.yml for Bitbucket CI/CD
 
@@ -6,7 +7,7 @@ image: python:3.11
 definitions:
   caches:
     pip: ~/.cache/pip
-  
+
   steps:
     - step: &install-deps
         name: Install Dependencies
@@ -16,14 +17,14 @@ definitions:
           - pip install ansible-lint ansible
         caches:
           - pip
-    
+
     - step: &sanity-check
         name: Sanity Check
         script:
           - make sanity-check
         caches:
           - pip
-    
+
     - step: &security-scan
         name: Security Scan
         script:
@@ -33,7 +34,7 @@ definitions:
         artifacts:
           - "**/*security*"
           - "**/*report*"
-    
+
     - step: &lint
         name: Lint and Validate
         script:
@@ -41,7 +42,7 @@ definitions:
           - make validate-templates
         caches:
           - pip
-    
+
     - step: &full-validation
         name: Full Validation
         script:
@@ -60,7 +61,7 @@ pipelines:
     - parallel:
         - step: *security-scan
         - step: *lint
-  
+
   branches:
     main:
       - step: *install-deps
@@ -80,7 +81,7 @@ pipelines:
             - pip
           artifacts:
             - "**/molecule-results.*"
-    
+
     develop:
       - step: *install-deps
       - step: *sanity-check
@@ -88,7 +89,7 @@ pipelines:
           - step: *security-scan
           - step: *lint
       - step: *full-validation
-  
+
   pull-requests:
     '**':
       - step: *install-deps
