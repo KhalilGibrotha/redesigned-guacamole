@@ -1,0 +1,166 @@
+---
+- name: "Markdown → Confluence Automation"
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - vars/vars.yml
+
+  tasks:
+
+    - name: "Render markdown templates"
+      ansible.builtin.template:
+        src: "{{ item }}"
+        dest: "/tmp/{{ item | basename | replace('.j2', '') }}"
+        mode: '0644'
+      loop:
+        - docs/main.md.j2
+        - docs/platform_governance.md.j2
+        - docs/platform_runbook.md.j2
+        - docs/operator_runbook.md.j2
+        - docs/training_enablement.md.j2
+
+    - name: "Convert Markdown to HTML"
+      ansible.builtin.command: >
+        pandoc /tmp/{{ item }} -f markdown -t html -o /tmp/{{ item }}.html
+      loop:
+        - main.md
+        - platform_governance.md
+        - platform_runbook.md
+        - operator_runbook.md
+        - training_enablement.md
+      changed_when: true
+
+    - name: "Publish to Confluence"
+      block:
+
+        - name: "Ensure main page exists"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content"
+            method: POST
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              type: page
+              title: "{{ project_name }} Documentation"
+              space:
+                key: "{{ confluence_space }}"
+              body:
+                storage:
+                  value: "{{ lookup('file', '/tmp/main.md.html') }}"
+                  representation: storage
+          register: main_page
+          failed_when: false
+
+        - name: "Get main page ID if exists"
+          ansible.builtin.uri:
+            url: >-
+              {{ confluence_url }}/rest/api/content?title={{ project_name | urlencode }}%20Documentation
+              &spaceKey={{ confluence_space }}&expand=version
+            method: GET
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+          register: main_page_query
+          when: main_page.status != 200
+
+        - name: "Update main page if exists"
+          ansible.builtin.uri:
+            url: >-
+              {{ confluence_url }}/rest/api/content/{{ main_page_query.json.results[0].id }}
+            method: PUT
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              version:
+                number: "{{ main_page_query.json.results[0].version.number + 1 }}"
+              title: "{{ project_name }} Documentation"
+              type: page
+              body:
+                storage:
+                  value: "{{ lookup('file', '/tmp/main.md.html') }}"
+                  representation: storage
+          when:
+            - main_page_query is defined
+            - main_page_query.status == 200
+            - main_page_query.json is defined
+            - main_page_query.json.results is defined
+            - main_page_query.json.results | length > 0
+
+
+        - name: "Try to create child page"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content"
+            method: POST
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              type: page
+              title: "{{ item.title }}"
+              space:
+                key: "{{ confluence_space }}"
+              ancestors:
+                - id: >-
+                    {{ main_page.json.id if main_page.status == 200
+                    else main_page_query.json.results[0].id }}
+              body:
+                storage:
+                  value: "{{ lookup('file', '/tmp/' + item.file + '.html') }}"
+                  representation: storage
+          register: create_child_page
+          failed_when: false
+          loop: "{{ child_pages }}"
+
+        - name: "Query existing child page"
+          ansible.builtin.uri:
+            url: >-
+              {{ confluence_url }}/rest/api/content?title={{ item.title | urlencode }}
+              &spaceKey={{ confluence_space }}&expand=version
+            method: GET
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+          register: child_page_query
+          when: create_child_page.results[ansible_loop.index0].status != 200
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+
+        - name: "Update child page content"
+          ansible.builtin.uri:
+            url: >-
+              {{ confluence_url }}/rest/api/content/{{
+                child_page_query.results[ansible_loop.index0].json.results[0].id
+              }}
+            method: PUT
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              version:
+                number: >-
+                  {{ child_page_query.results[ansible_loop.index0].json.results[0].version.number + 1 }}
+              title: "{{ item.title }}"
+              type: page
+              ancestors:
+                - id: >-
+                    {{ main_page.json.id if main_page.status == 200
+                    else main_page_query.json.results[0].id }}
+              body:
+                storage:
+                  value: "{{ lookup('file', '/tmp/' + item.file + '.html') }}"
+                  representation: storage
+          when:
+            - child_page_query is defined
+            - child_page_query.results[ansible_loop.index0].status == 200
+            - child_page_query.results[ansible_loop.index0].json.results is defined
+            - child_page_query.results[ansible_loop.index0].json.results | length > 0
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true

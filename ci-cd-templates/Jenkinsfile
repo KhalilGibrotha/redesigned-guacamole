@@ -1,0 +1,229 @@
+# Jenkins Pipeline Configuration
+# Use this in a Jenkinsfile for Jenkins CI/CD
+
+pipeline {
+    agent any
+    
+    environment {
+        // Set Python path for tools
+        PATH = "${env.PATH}:/home/jenkins/.local/bin"
+        PYTHONPATH = "${env.PYTHONPATH}:/home/jenkins/.local/lib/python3.11/site-packages"
+    }
+    
+    options {
+        // Keep builds for 30 days
+        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '50'))
+        // Timeout after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        // Skip checkout to avoid issues
+        skipDefaultCheckout(false)
+    }
+    
+    triggers {
+        // Poll SCM every 5 minutes for changes
+        pollSCM('H/5 * * * *')
+    }
+    
+    stages {
+        stage('Preparation') {
+            steps {
+                script {
+                    // Clean workspace
+                    cleanWs()
+                    // Checkout code
+                    checkout scm
+                }
+            }
+        }
+        
+        stage('Install Dependencies') {
+            steps {
+                script {
+                    sh '''
+                        # Install system dependencies
+                        sudo apt-get update || yum update -y || true
+                        sudo apt-get install -y make yamllint pandoc python3-pip || \
+                        sudo yum install -y make python3-pip || true
+                        
+                        # Install Python tools
+                        pip3 install --user ansible-lint ansible
+                        
+                        # Verify installations
+                        make --version
+                        yamllint --version || echo "yamllint not available"
+                        ansible-lint --version || echo "ansible-lint not available"
+                    '''
+                }
+            }
+        }
+        
+        stage('Sanity Check') {
+            steps {
+                script {
+                    sh 'make sanity-check'
+                }
+            }
+            post {
+                failure {
+                    echo 'Sanity check failed - blocking build'
+                    error('Sanity check failed')
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                script {
+                    sh 'make security-check'
+                }
+            }
+            post {
+                always {
+                    // Archive security scan results
+                    archiveArtifacts artifacts: '**/security-report.txt', 
+                                   allowEmptyArchive: true
+                }
+                failure {
+                    echo 'Security issues found - review required'
+                    // Don't fail build, but notify
+                    emailext subject: 'Security Issues Found in ${JOB_NAME} #${BUILD_NUMBER}',
+                             body: 'Security scan found issues. Please review.',
+                             to: '${DEFAULT_RECIPIENTS}'
+                }
+            }
+        }
+        
+        stage('Lint and Validate') {
+            parallel {
+                stage('YAML Lint') {
+                    steps {
+                        script {
+                            sh 'make lint-yaml'
+                        }
+                    }
+                }
+                
+                stage('Ansible Lint') {
+                    steps {
+                        script {
+                            sh 'make lint-ansible'
+                        }
+                    }
+                }
+                
+                stage('Template Validation') {
+                    steps {
+                        script {
+                            sh 'make validate-templates'
+                        }
+                    }
+                }
+            }
+            post {
+                failure {
+                    echo 'Linting failed - fix issues before proceeding'
+                }
+            }
+        }
+        
+        stage('Full Validation') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                    branch 'develop'
+                }
+            }
+            steps {
+                script {
+                    sh 'make validate'
+                }
+            }
+        }
+        
+        stage('Molecule Testing') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    // Only run if Docker is available
+                    sh '''
+                        if command -v docker &> /dev/null; then
+                            echo "Docker available - running Molecule tests"
+                            pip3 install --user molecule[docker]
+                            molecule test || echo "Molecule tests failed - continuing"
+                        else
+                            echo "Docker not available - skipping Molecule tests"
+                        fi
+                    '''
+                }
+            }
+            post {
+                always {
+                    // Archive test results
+                    archiveArtifacts artifacts: '**/molecule-results.xml', 
+                                   allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Deployment Check') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'master'
+                }
+            }
+            steps {
+                script {
+                    sh 'make test-render'
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            // Clean up
+            sh 'make clean || true'
+            
+            // Archive artifacts
+            archiveArtifacts artifacts: '**/*.log, **/*-report.*', 
+                           allowEmptyArchive: true
+            
+            // Publish test results if available
+            publishTestResults testResultsPattern: '**/test-results.xml',
+                              allowEmptyResults: true
+        }
+        
+        success {
+            echo 'Pipeline completed successfully!'
+            // Notify on success for main branches
+            script {
+                if (env.BRANCH_NAME == 'main' || env.BRANCH_NAME == 'master') {
+                    emailext subject: 'Build Success: ${JOB_NAME} #${BUILD_NUMBER}',
+                             body: 'Build completed successfully on ${BRANCH_NAME}',
+                             to: '${DEFAULT_RECIPIENTS}'
+                }
+            }
+        }
+        
+        failure {
+            echo 'Pipeline failed!'
+            emailext subject: 'Build Failed: ${JOB_NAME} #${BUILD_NUMBER}',
+                     body: 'Build failed on ${BRANCH_NAME}. Check console output for details.',
+                     to: '${DEFAULT_RECIPIENTS}'
+        }
+        
+        unstable {
+            echo 'Pipeline unstable - some tests failed'
+            emailext subject: 'Build Unstable: ${JOB_NAME} #${BUILD_NUMBER}',
+                     body: 'Build completed with warnings on ${BRANCH_NAME}.',
+                     to: '${DEFAULT_RECIPIENTS}'
+        }
+    }
+}

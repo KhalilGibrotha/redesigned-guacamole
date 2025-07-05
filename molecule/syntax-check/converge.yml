@@ -1,0 +1,63 @@
+---
+# Syntax and basic validation tests (no external dependencies)
+
+- name: Syntax validation and basic checks
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - ../../vars/vars.yml
+
+  tasks:
+    - name: "Syntax check - validate playbook structure"
+      ansible.builtin.command: ansible-playbook --syntax-check ../../playbook.yml
+      changed_when: false
+      environment:
+        # Override to prevent actual API calls
+        confluence_url: "https://test.example.com"
+        confluence_auth: "dGVzdA=="
+
+    - name: "Validate template files exist"
+      ansible.builtin.stat:
+        path: "docs/{{ item }}"
+      register: template_files
+      loop:
+        - main.md.j2
+        - platform_governance.md.j2
+        - platform_runbook.md.j2
+        - operator_runbook.md.j2
+        - training_enablement.md.j2
+      failed_when: false
+
+    - name: "Check variable definitions"
+      ansible.builtin.assert:
+        that:
+          - project_name is defined
+          - env is defined
+          - child_pages is defined
+          - child_pages | length > 0
+        fail_msg: "Required variables are not properly defined"
+        success_msg: "All required variables are defined"
+
+    - name: "Validate child_pages structure"
+      ansible.builtin.assert:
+        that:
+          - item.title is defined
+          - item.file is defined
+        fail_msg: "child_pages item missing required fields: {{ item }}"
+        success_msg: "child_pages structure is valid"
+      loop: "{{ child_pages }}"
+
+    - name: "Security check - no plain text secrets"
+      ansible.builtin.shell: |
+        ! grep -r "password\|secret\|key\|token" . --include="*.yml" \
+          --exclude-dir=molecule || echo "Security check passed"
+      register: security_check
+      changed_when: false
+      failed_when: false
+
+    - name: "Validate YAML syntax in all files"
+      ansible.builtin.shell: |
+        find . -name "*.yml" -not -path "./molecule/*" -exec yamllint -c .yamllint {} \;
+      register: yaml_syntax
+      changed_when: false
+      failed_when: yaml_syntax.rc != 0

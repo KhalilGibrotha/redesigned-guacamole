@@ -1,0 +1,204 @@
+---
+# Molecule test for the actual playbook with mocked API calls
+
+- name: Test playbook with mocked Confluence API
+  hosts: all
+  gather_facts: false
+  vars_files:
+    - ../../vars/vars.yml
+
+  vars:
+    # Override for testing - use mock server
+    confluence_url: "http://localhost:8080/mock"
+    confluence_auth: "dGVzdDp0ZXN0"  # test:test in base64
+
+  pre_tasks:
+    # Install dependencies
+    - name: "Install required packages"
+      ansible.builtin.package:
+        name:
+          - pandoc
+          - curl
+          - python3-pip
+        state: present
+      become: true
+
+    # Setup mock server to simulate Confluence API
+    - name: "Install mock server dependencies"
+      ansible.builtin.pip:
+        name:
+          - flask
+          - werkzeug
+      become: true
+
+    - name: "Create mock Confluence API server"
+      ansible.builtin.copy:
+        content: |
+          #!/usr/bin/env python3
+          from flask import Flask, request, jsonify
+          import threading
+          import time
+
+          app = Flask(__name__)
+
+          # Mock responses
+          mock_responses = {
+              'pages': [],
+              'page_counter': 1
+          }
+
+          @app.route('/rest/api/content', methods=['POST'])
+          def create_page():
+              data = request.get_json()
+              page_id = mock_responses['page_counter']
+              mock_responses['page_counter'] += 1
+
+              page = {
+                  'id': str(page_id),
+                  'title': data.get('title', 'Test Page'),
+                  'version': {'number': 1}
+              }
+              mock_responses['pages'].append(page)
+
+              return jsonify(page), 200
+
+          @app.route('/rest/api/content', methods=['GET'])
+          def get_pages():
+              title = request.args.get('title')
+              space_key = request.args.get('spaceKey')
+
+              # Simulate existing page
+              return jsonify({
+                  'results': [{
+                      'id': '12345',
+                      'title': title,
+                      'version': {'number': 2}
+                  }]
+              }), 200
+
+          @app.route('/rest/api/content/<page_id>', methods=['PUT'])
+          def update_page(page_id):
+              return jsonify({'id': page_id, 'version': {'number': 3}}), 200
+
+          if __name__ == '__main__':
+              app.run(host='0.0.0.0', port=8080, debug=False)
+        dest: /tmp/mock_confluence.py
+        mode: '0755'
+
+    - name: "Start mock Confluence server"
+      ansible.builtin.shell: |
+        cd /tmp
+        python3 mock_confluence.py &
+        echo $! > /tmp/mock_server.pid
+        sleep 3
+      async: 30
+      poll: 0
+      register: mock_server
+
+    - name: "Wait for mock server to start"
+      ansible.builtin.wait_for:
+        port: 8080
+        host: localhost
+        timeout: 10
+
+    # Create test template files
+    - name: "Create docs directory"
+      ansible.builtin.file:
+        path: "{{ ansible_env.HOME }}/docs"
+        state: directory
+        mode: '0755'
+
+    - name: "Create test template files"
+      ansible.builtin.copy:
+        content: |
+          # {{ project_name }} - {{ item.title }}
+
+          Environment: {{ env }}
+          Monitoring: {{ monitoring_tool }}
+
+          ## Test Content
+          This is test content for {{ item.title }}.
+
+          Generated at: {{ ansible_date_time.iso8601 }}
+        dest: "{{ ansible_env.HOME }}/docs/{{ item.file }}.j2"
+        mode: '0644'
+      loop: "{{ child_pages }}"
+
+    - name: "Create main template"
+      ansible.builtin.copy:
+        content: |
+          # {{ project_name }} Documentation
+
+          Environment: {{ env }}
+          Database: {{ database_url }}
+
+          ## Overview
+          Main documentation page for testing.
+
+          ## Monitoring
+          Using {{ monitoring_tool }} for monitoring.
+        dest: "{{ ansible_env.HOME }}/docs/main.md.j2"
+        mode: '0644'
+
+  tasks:
+    # Run the actual playbook tasks (template rendering and conversion)
+    - name: "Render markdown templates"
+      ansible.builtin.template:
+        src: "{{ ansible_env.HOME }}/docs/{{ item }}"
+        dest: "/tmp/{{ item | basename | replace('.j2', '') }}"
+        mode: '0644'
+      loop:
+        - main.md.j2
+        - platform_governance.md.j2
+        - platform_runbook.md.j2
+        - operator_runbook.md.j2
+        - training_enablement.md.j2
+
+    - name: "Convert Markdown to HTML"
+      ansible.builtin.command: >
+        pandoc /tmp/{{ item }} -f markdown -t html -o /tmp/{{ item }}.html
+      loop:
+        - main.md
+        - platform_governance.md
+        - platform_runbook.md
+        - operator_runbook.md
+        - training_enablement.md
+      changed_when: true
+
+    # Test the Confluence publishing logic (with mock API)
+    - name: "Test main page creation (mocked)"
+      ansible.builtin.uri:
+        url: "{{ confluence_url }}/rest/api/content"
+        method: POST
+        headers:
+          Authorization: "Basic {{ confluence_auth }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          type: page
+          title: "{{ project_name }} Documentation"
+          space:
+            key: "{{ confluence_space }}"
+          body:
+            storage:
+              value: "{{ lookup('file', '/tmp/main.md.html') }}"
+              representation: storage
+      register: main_page_test
+      failed_when: false
+
+    - name: "Verify main page creation response"
+      ansible.builtin.assert:
+        that:
+          - main_page_test.status == 200
+          - main_page_test.json.id is defined
+        fail_msg: "Main page creation failed"
+        success_msg: "Main page creation successful"
+
+  post_tasks:
+    - name: "Stop mock server"
+      ansible.builtin.shell: |
+        if [ -f /tmp/mock_server.pid ]; then
+          kill $(cat /tmp/mock_server.pid) || true
+          rm -f /tmp/mock_server.pid
+        fi
+      failed_when: false

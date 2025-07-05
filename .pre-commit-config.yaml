@@ -1,0 +1,42 @@
+---
+# Pre-commit configuration for Ansible projects
+# Install with: pip install pre-commit && pre-commit install
+
+repos:
+  # YAML linting
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.33.0
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint]
+
+  # Ansible linting
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v24.6.1
+    hooks:
+      - id: ansible-lint
+        args: [--offline]
+
+  # Molecule testing (runs on specific files)
+  - repo: local
+    hooks:
+      - id: molecule-lint
+        name: Molecule lint
+        entry: bash -c 'export PATH="/home/gambia/.local/bin:$PATH" && molecule lint'
+        language: system
+        files: ^molecule/.*\.yml$
+        pass_filenames: false
+
+  # General formatting
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: [--allow-multiple-documents]
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]

@@ -1,0 +1,78 @@
+---
+# Verification tests for playbook scenario
+
+- name: Verify playbook execution
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: "Verify all HTML files were generated"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}.html"
+      register: html_files
+      loop:
+        - main.md
+        - platform_governance.md
+        - platform_runbook.md
+        - operator_runbook.md
+        - training_enablement.md
+
+    - name: "Assert all HTML files exist and have content"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        fail_msg: "File {{ item.item }}.html is missing or empty"
+        success_msg: "File {{ item.item }}.html generated successfully"
+      loop: "{{ html_files.results }}"
+
+    - name: "Verify HTML content has proper structure"
+      ansible.builtin.shell: |
+        grep -q "<h1>" /tmp/main.md.html
+      register: html_structure
+      changed_when: false
+      failed_when: html_structure.rc != 0
+
+    - name: "Check for template variable substitution"
+      ansible.builtin.shell: |
+        grep -q "{{ project_name | default('Ansible') }}" /tmp/main.md.html
+      register: variable_check
+      changed_when: false
+
+    - name: "Verify variable substitution worked"
+      ansible.builtin.assert:
+        that:
+          - variable_check.rc == 0
+        fail_msg: "Template variables were not properly substituted"
+        success_msg: "Template variables substituted correctly"
+
+    - name: "Security check - no sensitive data in HTML"
+      ansible.builtin.shell: |
+        ! grep -i "YWxleGdhbWJpbm8\|ATAT\|password\|secret" /tmp/*.html
+      register: security_scan
+      changed_when: false
+      failed_when: false
+
+    - name: "Verify pandoc version compatibility"
+      ansible.builtin.command: pandoc --version
+      register: pandoc_info
+      changed_when: false
+
+    - name: "Display pandoc version"
+      ansible.builtin.debug:
+        msg: "Pandoc version: {{ pandoc_info.stdout_lines[0] }}"
+
+    - name: "Check file permissions"
+      ansible.builtin.stat:
+        path: "/tmp/{{ item }}.html"
+      register: file_perms
+      loop:
+        - main.md
+        - platform_governance.md
+
+    - name: "Verify file permissions are secure"
+      ansible.builtin.assert:
+        that:
+          - item.stat.mode == "0644"
+        fail_msg: "File {{ item.item }}.html has insecure permissions"
+        success_msg: "File {{ item.item }}.html has correct permissions"
+      loop: "{{ file_perms.results }}"

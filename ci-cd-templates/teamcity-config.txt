@@ -1,0 +1,138 @@
+# TeamCity Build Configuration
+# Use this as a reference for TeamCity setup
+
+# Project: Ansible Confluence Automation
+# Build Configuration: Quality Assurance
+
+# VCS Settings
+VCS_ROOT: {
+  url: "https://github.com/KhalilGibrotha/ansible-confluence-automation.git"
+  branch: "refs/heads/main"
+  checkoutPolicy: "USE_MIRRORS"
+}
+
+# Build Steps
+
+## Step 1: Install Dependencies
+BUILD_STEP_1: {
+  name: "Install Dependencies"
+  type: "Command Line"
+  script: |
+    #!/bin/bash
+    set -e
+    
+    # Update system packages
+    sudo apt-get update
+    sudo apt-get install -y make yamllint pandoc python3-pip
+    
+    # Install Python packages
+    pip3 install --user ansible-lint ansible
+    
+    # Verify installations
+    make --version
+    yamllint --version
+    ansible-lint --version
+}
+
+## Step 2: Sanity Check
+BUILD_STEP_2: {
+  name: "Sanity Check"
+  type: "Command Line"
+  script: "make sanity-check"
+  dependsOn: "BUILD_STEP_1"
+}
+
+## Step 3: Security Scan
+BUILD_STEP_3: {
+  name: "Security Scan"
+  type: "Command Line"
+  script: "make security-check"
+  dependsOn: "BUILD_STEP_1"
+  continueOnFailure: true
+}
+
+## Step 4: Lint and Validate
+BUILD_STEP_4: {
+  name: "Lint and Validate"
+  type: "Command Line"
+  script: |
+    make lint
+    make validate-templates
+  dependsOn: ["BUILD_STEP_2"]
+}
+
+## Step 5: Full Validation (Main Branch Only)
+BUILD_STEP_5: {
+  name: "Full Validation"
+  type: "Command Line"
+  script: |
+    make validate
+    make test-render
+  dependsOn: ["BUILD_STEP_4"]
+  condition: "branch.main"
+}
+
+## Step 6: Molecule Testing (Optional)
+BUILD_STEP_6: {
+  name: "Molecule Testing"
+  type: "Command Line"
+  script: |
+    if command -v docker &> /dev/null; then
+      pip3 install --user molecule[docker]
+      export PATH="$HOME/.local/bin:$PATH"
+      molecule test || echo "Molecule tests failed - continuing"
+    else
+      echo "Docker not available - skipping Molecule tests"
+    fi
+  dependsOn: ["BUILD_STEP_5"]
+  condition: "branch.main"
+  continueOnFailure: true
+}
+
+# Build Triggers
+TRIGGERS: {
+  vcs: {
+    triggerRules: [
+      "+:root=VCS_ROOT_ID:**"
+    ]
+    branchFilter: [
+      "+:*"
+      "-:refs/heads/feature/*"
+    ]
+  }
+  
+  schedule: {
+    cron: "0 2 * * *"  # Daily at 2 AM
+    branch: "main"
+    triggerOnlyIfChanged: true
+  }
+}
+
+# Build Features
+FEATURES: {
+  notifications: {
+    email: {
+      recipients: ["team@company.com"]
+      sendOnSuccess: false
+      sendOnFailure: true
+      sendOnFirstSuccess: true
+    }
+  }
+  
+  artifacts: {
+    paths: [
+      "**/*.log",
+      "**/test-results.*",
+      "**/*security*",
+      "**/*report*"
+    ]
+    publishOnFailure: true
+  }
+}
+
+# Build Parameters
+PARAMETERS: {
+  PYTHON_VERSION: "3.11"
+  ANSIBLE_VERSION: "latest"
+  SKIP_MOLECULE: "false"
+}

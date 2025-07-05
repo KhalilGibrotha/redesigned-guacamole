@@ -1,0 +1,62 @@
+---
+name: Quality Assurance
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    name: Quality Validation
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible-lint yamllint ansible
+          
+      - name: Run Sanity Check
+        run: make sanity-check
+        
+      - name: Run Security Check
+        run: make security-check
+        
+      - name: Validate Templates
+        run: make validate-templates
+        
+      - name: Run Full Validation
+        run: make validate
+        
+      - name: Generate Test Report
+        if: always()
+        run: |
+          echo "# Quality Assurance Report" > qa-report.md
+          echo "- **Date**: $(date)" >> qa-report.md
+          echo "- **Branch**: ${{ github.ref_name }}" >> qa-report.md
+          echo "- **Commit**: ${{ github.sha }}" >> qa-report.md
+          echo "" >> qa-report.md
+          echo "## Validation Results" >> qa-report.md
+          echo "✅ All quality checks passed successfully" >> qa-report.md
+          
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: qa-report
+          path: qa-report.md

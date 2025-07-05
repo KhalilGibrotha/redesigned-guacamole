@@ -1,0 +1,23 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: delegated
+platforms:
+  - name: localhost
+    groups:
+      - localhost
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      callbacks_enabled: profile_tasks,timer,yaml
+      stdout_callback: yaml
+      verbosity: 1
+  inventory:
+    group_vars:
+      localhost:
+        ansible_connection: local
+        ansible_python_interpreter: "{{ ansible_playbook_python }}"
+verifier:
+  name: ansible
