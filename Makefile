@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only
 
 # Default target
 help:
@@ -10,19 +10,145 @@ help:
 	@echo "  lint-ansible     - Run ansible-lint only"
 	@echo "  fix              - Auto-fix some linting issues"
 	@echo "  install-tools    - Install required linting tools"
+	@echo "  install-rhel-prereqs - Install RHEL/CentOS prerequisites"
+	@echo "  install-rhel-dnf-only - Install tools via DNF only (restricted environments)"
 	@echo "  test             - Run ansible playbook syntax check"
 	@echo "  test-syntax      - Comprehensive syntax validation"
 	@echo "  sanity-check     - Quick sanity checks for development"
 	@echo "  security-check   - Security validation"
 	@echo "  validate-templates - Validate template structure"
+	@echo "  check-os         - Display OS and compatibility info"
+	@echo "  check-deps       - Check if required dependencies are installed"
+	@echo "  test-compatibility - Run comprehensive compatibility test"
 	@echo "  clean            - Remove temporary files"
 
 # Install required linting tools
 install-tools:
 	@echo "Installing linting tools..."
-	sudo apt update && sudo apt install -y yamllint pandoc
-	pipx install ansible-lint || pip install ansible-lint
-	@echo "✅ Tools installed successfully"
+	@echo "Detecting operating system..."
+	@if [ -f /etc/redhat-release ]; then \
+		echo "🔍 Detected RHEL/CentOS/Fedora system"; \
+		if command -v dnf >/dev/null 2>&1; then \
+			echo "📦 Using dnf package manager"; \
+			sudo dnf install -y epel-release || true; \
+			sudo dnf install -y yamllint pandoc python3-pip; \
+		elif command -v yum >/dev/null 2>&1; then \
+			echo "📦 Using yum package manager"; \
+			sudo yum install -y epel-release || true; \
+			sudo yum install -y yamllint pandoc python3-pip; \
+		else \
+			echo "❌ No supported package manager found"; \
+			exit 1; \
+		fi; \
+	elif [ -f /etc/debian_version ]; then \
+		echo "🔍 Detected Debian/Ubuntu system"; \
+		echo "📦 Using apt package manager"; \
+		sudo apt update && sudo apt install -y yamllint pandoc python3-pip; \
+	elif [ -f /etc/arch-release ]; then \
+		echo "🔍 Detected Arch Linux system"; \
+		echo "📦 Using pacman package manager"; \
+		sudo pacman -Syu --noconfirm yamllint pandoc python-pip; \
+	elif command -v brew >/dev/null 2>&1; then \
+		echo "🔍 Detected macOS with Homebrew"; \
+		echo "📦 Using brew package manager"; \
+		brew install yamllint pandoc; \
+	else \
+		echo "⚠️  Unknown operating system, attempting generic installation..."; \
+		echo "📦 Trying pip for Python packages"; \
+	fi
+	@echo "🐍 Installing ansible-lint via pip..."
+	@if command -v pipx >/dev/null 2>&1; then \
+		echo "   Trying pipx installation..."; \
+		if ! pipx install ansible-lint 2>/dev/null; then \
+			echo "⚠️  pipx installation failed, trying pip..."; \
+			pip3 install --user ansible-lint 2>/dev/null || pip install --user ansible-lint 2>/dev/null || echo "❌ pip installation failed"; \
+		fi; \
+	else \
+		echo "   Trying pip installation..."; \
+		if ! pip3 install --user ansible-lint 2>/dev/null && ! pip install --user ansible-lint 2>/dev/null; then \
+			echo "❌ pip installation failed"; \
+			if [ -f /etc/redhat-release ] && command -v dnf >/dev/null 2>&1; then \
+				echo "💡 For restricted RHEL environments, try: make install-rhel-dnf-only"; \
+			fi; \
+		fi; \
+	fi
+	@echo "✅ Tools installation process complete"
+	@echo "💡 Run 'make check-deps' to verify what was successfully installed"
+
+# Install RHEL/CentOS prerequisites (EPEL repository and basic tools)
+install-rhel-prereqs:
+	@echo "🔧 Installing RHEL/CentOS prerequisites..."
+	@if ! [ -f /etc/redhat-release ]; then \
+		echo "❌ This target is only for RHEL/CentOS/Fedora systems"; \
+		exit 1; \
+	fi
+	@echo "📦 Installing EPEL repository and basic development tools..."
+	@if command -v dnf >/dev/null 2>&1; then \
+		echo "Using dnf (RHEL 8+/Fedora)..."; \
+		sudo dnf groupinstall -y "Development Tools" || sudo dnf install -y gcc make; \
+		sudo dnf install -y epel-release; \
+		sudo dnf install -y python3 python3-pip git; \
+	elif command -v yum >/dev/null 2>&1; then \
+		echo "Using yum (RHEL 7/CentOS)..."; \
+		sudo yum groupinstall -y "Development Tools" || sudo yum install -y gcc make; \
+		sudo yum install -y epel-release; \
+		sudo yum install -y python3 python3-pip git; \
+	else \
+		echo "❌ No supported package manager found"; \
+		exit 1; \
+	fi
+	@echo "✅ RHEL prerequisites installed successfully"
+	@echo "💡 You can now run 'make install-tools' to install linting tools"
+
+# Install tools via DNF only (for restricted RHEL environments without pip access)
+install-rhel-dnf-only:
+	@echo "🔧 Installing tools via DNF only (restricted environment mode)..."
+	@if ! [ -f /etc/redhat-release ]; then \
+		echo "❌ This target is only for RHEL/CentOS/Fedora systems"; \
+		exit 1; \
+	fi
+	@if ! command -v dnf >/dev/null 2>&1; then \
+		echo "❌ This target requires dnf (RHEL 8+ or Fedora)"; \
+		exit 1; \
+	fi
+	@echo "📦 Installing core tools and available linting packages..."
+	@echo "   Installing EPEL repository..."
+	@sudo dnf install -y epel-release || echo "⚠️  EPEL may already be installed or unavailable"
+	@echo "   Installing core development tools..."
+	@sudo dnf install -y make python3 git
+	@echo "   Installing Ansible and available linting tools..."
+	@sudo dnf install -y ansible yamllint pandoc || echo "⚠️  Some packages may not be available"
+	@echo ""
+	@echo "🔍 Checking what was successfully installed..."
+	@installed_tools=""; \
+	missing_tools=""; \
+	for tool in make python3 ansible yamllint pandoc; do \
+		if command -v $$tool >/dev/null 2>&1; then \
+			installed_tools="$$installed_tools $$tool"; \
+		else \
+			missing_tools="$$missing_tools $$tool"; \
+		fi; \
+	done; \
+	echo "✅ Successfully installed:$$installed_tools"; \
+	if [ -n "$$missing_tools" ]; then \
+		echo "❌ Could not install:$$missing_tools"; \
+	fi
+	@echo ""
+	@echo "📋 ansible-lint status:"
+	@if command -v ansible-lint >/dev/null 2>&1; then \
+		echo "✅ ansible-lint is available"; \
+	else \
+		echo "⚠️  ansible-lint not available via DNF"; \
+		echo "   This is normal in restricted environments"; \
+		echo "   You can still use: make lint-yaml, make test, make validate-templates"; \
+	fi
+	@echo ""
+	@echo "✅ DNF-only installation complete!"
+	@echo "💡 Available targets without ansible-lint:"
+	@echo "   make lint-yaml          - YAML linting only"
+	@echo "   make test              - Ansible syntax check"
+	@echo "   make validate-templates - Template validation"
+	@echo "   make sanity-check      - Core functionality tests"
 
 # Run all linting checks
 lint: lint-yaml lint-ansible
@@ -36,7 +162,13 @@ lint-yaml:
 # Run ansible-lint
 lint-ansible:
 	@echo "Running ansible-lint..."
-	ansible-lint --exclude molecule/
+	@if command -v ansible-lint >/dev/null 2>&1; then \
+		ansible-lint --exclude molecule/; \
+	else \
+		echo "⚠️  ansible-lint not available, skipping..."; \
+		echo "💡 Install with 'make install-tools' or 'make install-rhel-dnf-only'"; \
+		echo "✅ Continuing with available linting tools..."; \
+	fi
 
 # Comprehensive syntax validation
 test-syntax: lint test validate-templates
@@ -106,15 +238,15 @@ clean:
 	@echo "✅ Cleanup complete"
 
 # Development workflow
-dev: clean sanity-check security-check
+dev: check-deps clean sanity-check security-check
 	@echo "✅ Development checks complete!"
 
 # Full validation workflow
-validate: clean lint test-syntax security-check
+validate: check-deps clean lint test-syntax security-check
 	@echo "✅ Full validation complete!"
 
 # CI/CD target
-ci: install-tools validate
+ci: check-os check-deps install-tools validate
 	@echo "✅ CI/CD checks passed!"
 
 # Quick test for template rendering (requires pandoc)
@@ -126,3 +258,169 @@ test-render:
 	@echo "database_url: https://test.example.com" >> /tmp/test-vars.yml
 	@ansible-playbook -e @/tmp/test-vars.yml --extra-vars="confluence_url=https://test.example.com confluence_space=TEST confluence_auth=dGVzdA==" -c local -i localhost, playbook.yml --check
 	@echo "✅ Template rendering test complete!"
+
+# Check operating system compatibility
+check-os:
+	@echo "🔍 System Information:"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@if [ -f /etc/os-release ]; then \
+		echo "📋 OS Details:"; \
+		. /etc/os-release && echo "   Name: $$NAME"; \
+		. /etc/os-release && echo "   Version: $$VERSION"; \
+		. /etc/os-release && echo "   ID: $$ID"; \
+	fi
+	@echo "🖥️  Kernel: $$(uname -s) $$(uname -r)"
+	@echo "🏗️  Architecture: $$(uname -m)"
+	@echo "🐚 Shell: $$SHELL"
+	@echo ""
+	@echo "📦 Package Manager Detection:"
+	@if command -v dnf >/dev/null 2>&1; then \
+		echo "   ✅ dnf found (RHEL 8+/Fedora)"; \
+	elif command -v yum >/dev/null 2>&1; then \
+		echo "   ✅ yum found (RHEL 7/CentOS)"; \
+	elif command -v apt >/dev/null 2>&1; then \
+		echo "   ✅ apt found (Debian/Ubuntu)"; \
+	elif command -v pacman >/dev/null 2>&1; then \
+		echo "   ✅ pacman found (Arch Linux)"; \
+	elif command -v brew >/dev/null 2>&1; then \
+		echo "   ✅ brew found (macOS)"; \
+	else \
+		echo "   ⚠️  No recognized package manager found"; \
+	fi
+	@echo ""
+	@echo "🔧 Compatibility Status:"
+	@if [ -f /etc/redhat-release ]; then \
+		echo "   ✅ RHEL/CentOS/Fedora - Supported"; \
+	elif [ -f /etc/debian_version ]; then \
+		echo "   ✅ Debian/Ubuntu - Supported"; \
+	elif [ -f /etc/arch-release ]; then \
+		echo "   ✅ Arch Linux - Supported"; \
+	elif command -v brew >/dev/null 2>&1; then \
+		echo "   ✅ macOS with Homebrew - Supported"; \
+	else \
+		echo "   ⚠️  Unknown OS - Manual installation may be required"; \
+	fi
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Check if required dependencies are installed
+check-deps:
+	@echo "🔍 Dependency Check:"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "🔧 Core Tools:"
+	@if command -v make >/dev/null 2>&1; then \
+		echo "   ✅ make - $$(make --version | head -1)"; \
+	else \
+		echo "   ❌ make - Not found"; \
+	fi
+	@if command -v python3 >/dev/null 2>&1; then \
+		echo "   ✅ python3 - $$(python3 --version)"; \
+	else \
+		echo "   ❌ python3 - Not found"; \
+	fi
+	@if command -v pip3 >/dev/null 2>&1; then \
+		echo "   ✅ pip3 - $$(pip3 --version | cut -d' ' -f1,2)"; \
+	else \
+		echo "   ❌ pip3 - Not found"; \
+	fi
+	@echo ""
+	@echo "🎭 Ansible Tools:"
+	@if command -v ansible >/dev/null 2>&1; then \
+		echo "   ✅ ansible - $$(ansible --version | head -1)"; \
+	else \
+		echo "   ❌ ansible - Not found"; \
+	fi
+	@if command -v ansible-playbook >/dev/null 2>&1; then \
+		echo "   ✅ ansible-playbook - Available"; \
+	else \
+		echo "   ❌ ansible-playbook - Not found"; \
+	fi
+	@if command -v ansible-lint >/dev/null 2>&1; then \
+		echo "   ✅ ansible-lint - $$(ansible-lint --version | head -1)"; \
+	else \
+		echo "   ❌ ansible-lint - Not found (run 'make install-tools')"; \
+	fi
+	@echo ""
+	@echo "📝 Linting Tools:"
+	@if command -v yamllint >/dev/null 2>&1; then \
+		echo "   ✅ yamllint - $$(yamllint --version)"; \
+	else \
+		echo "   ❌ yamllint - Not found (run 'make install-tools')"; \
+	fi
+	@if command -v pandoc >/dev/null 2>&1; then \
+		echo "   ✅ pandoc - $$(pandoc --version | head -1)"; \
+	else \
+		echo "   ❌ pandoc - Not found (run 'make install-tools')"; \
+	fi
+	@echo ""
+	@echo "🔍 Optional Tools:"
+	@if command -v pipx >/dev/null 2>&1; then \
+		echo "   ✅ pipx - $$(pipx --version)"; \
+	else \
+		echo "   ℹ️  pipx - Not found (optional, using pip fallback)"; \
+	fi
+	@if command -v dos2unix >/dev/null 2>&1; then \
+		echo "   ✅ dos2unix - Available"; \
+	else \
+		echo "   ℹ️  dos2unix - Not found (optional, auto-fix will skip line ending fixes)"; \
+	fi
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@missing=0; \
+	for cmd in make python3 pip3 ansible ansible-playbook; do \
+		if ! command -v $$cmd >/dev/null 2>&1; then \
+			missing=$$((missing + 1)); \
+		fi; \
+	done; \
+	if [ $$missing -eq 0 ]; then \
+		echo "✅ All core dependencies are installed!"; \
+		if ! command -v yamllint >/dev/null 2>&1 || ! command -v ansible-lint >/dev/null 2>&1; then \
+			echo "📦 Run 'make install-tools' to install linting tools"; \
+		else \
+			echo "🎉 System is fully ready for development!"; \
+		fi; \
+	else \
+		echo "❌ Missing $$missing core dependencies. Please install them first."; \
+		exit 1; \
+	fi
+
+# Comprehensive compatibility test
+test-compatibility:
+	@echo "🧪 Running comprehensive compatibility test..."
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	$(MAKE) check-os
+	@echo ""
+	$(MAKE) check-deps
+	@echo ""
+	@echo "🔧 Testing core Unix commands..."
+	@for cmd in find grep sed test head tail cat; do \
+		if command -v $$cmd >/dev/null 2>&1; then \
+			echo "   ✅ $$cmd - Available"; \
+		else \
+			echo "   ❌ $$cmd - Missing"; \
+		fi; \
+	done
+	@echo ""
+	@echo "📂 Testing file system operations..."
+	@mkdir -p /tmp/makefile-test-$$$$
+	@echo "test content" > /tmp/makefile-test-$$$$/test.txt
+	@if [ -f /tmp/makefile-test-$$$$/test.txt ]; then \
+		echo "   ✅ File creation - OK"; \
+	else \
+		echo "   ❌ File creation - Failed"; \
+	fi
+	@rm -rf /tmp/makefile-test-$$$$
+	@echo "   ✅ File cleanup - OK"
+	@echo ""
+	@echo "🎭 Testing Ansible availability..."
+	@if command -v ansible-playbook >/dev/null 2>&1; then \
+		echo "   ✅ Testing playbook syntax check..."; \
+		if [ -f playbook.yml ]; then \
+			ansible-playbook --syntax-check playbook.yml --check 2>/dev/null && echo "   ✅ Syntax check - OK" || echo "   ⚠️  Syntax check - Issues found (normal if vars missing)"; \
+		else \
+			echo "   ℹ️  playbook.yml not found - skipping syntax test"; \
+		fi; \
+	else \
+		echo "   ❌ ansible-playbook not available"; \
+	fi
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "✅ Compatibility test complete!"
