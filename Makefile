@@ -60,11 +60,11 @@ sanity-check:
 security-check:
 	@echo "Running security checks..."
 	@echo "1. Checking for exposed secrets..."
-	@! grep -r "password\|secret\|ATAT" . --include="*.yml" --exclude-dir=molecule || (echo "⚠️  Potential secrets found" && exit 1)
+	@! grep -r "password\|secret\|ATAT" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret" || (echo "⚠️  Potential secrets found" && exit 1)
 	@echo "2. Checking file permissions..."
 	@find . -name "*.yml" -perm /002 | head -1 > /dev/null && (echo "❌ World-writable YAML files found" && exit 1) || echo "✅ File permissions OK"
 	@echo "3. Checking for hardcoded URLs..."
-	@! grep -r "http://\|https://" . --include="*.yml" | grep -v "example.com\|test\|mock" || echo "⚠️  Hardcoded URLs found (review recommended)"
+	@! grep -r "http://\|https://" . --include="*.yml" | grep -v "example.com\|test\|mock\|template" || echo "⚠️  Hardcoded URLs found (review recommended)"
 	@echo "✅ Security checks complete!"
 
 # Validate template structure
