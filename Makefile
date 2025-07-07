@@ -24,6 +24,12 @@ help:
 	@echo "  secure-setup     - Set up credentials securely with ansible-vault"
 	@echo "  debug-conversion - Debug markdown to HTML conversion issues"
 	@echo "  clean            - Remove temporary files"
+	@echo ""
+	@echo "📋 Status Legend:"
+	@echo "  ✅ = Fully tested and production ready"  
+	@echo "  ⚠️  = Work in progress / experimental"
+	@echo ""
+	@echo "⚠️  Note: Molecule testing and CI/CD templates are experimental"
 
 # Install required linting tools
 install-tools:

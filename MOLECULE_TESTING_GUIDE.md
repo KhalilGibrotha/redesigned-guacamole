@@ -1,5 +1,8 @@
 # Molecule Testing Guide for Enterprise AAP
 
+⚠️ **WORK IN PROGRESS** ⚠️
+> **Status**: Molecule testing functionality is currently under development and has not been fully validated. The configuration exists but may require additional setup and testing. Consider this experimental functionality.
+
 ## Overview
 
 Molecule provides automated testing for Ansible playbooks and roles, ensuring code quality and reliability in enterprise environments. This guide covers our Molecule testing strategy for the Confluence automation project.

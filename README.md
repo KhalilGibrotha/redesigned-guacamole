@@ -10,11 +10,13 @@ An enterprise-grade Ansible automation solution for generating and publishing do
 ## Features
 
 - 🚀 **Automated Documentation**: Convert Markdown templates to HTML and publish to Confluence
-- 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint, and Molecule
-- 🛡️ **Security First**: Built-in security scanning and credential protection
-- 📝 **Template System**: Jinja2-based markdown templates with variable substitution
-- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity
-- 📊 **Quality Gates**: Production-ready linting standards and validation
+- 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint ✅
+- 🛡️ **Security First**: Built-in security scanning and credential protection ✅
+- 📝 **Template System**: Jinja2-based markdown templates with variable substitution ✅
+- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
+- 📊 **Quality Gates**: Production-ready linting standards and validation ✅
+
+> **Note**: Features marked with ⚠️ are work-in-progress and may require additional testing and customization.
 
 ## Quick Start
 
@@ -23,7 +25,7 @@ An enterprise-grade Ansible automation solution for generating and publishing do
 - Ansible 2.9+
 - Python 3.8+
 - Pandoc (for markdown conversion)
-- Docker (optional, for Molecule testing)
+- Docker (optional, for Molecule testing - ⚠️ *experimental*)
 
 ### Installation
 
@@ -99,23 +101,41 @@ These options install available tools through system package managers and provid
    ansible-playbook playbook.yml
    ```
 
+## 📊 Project Status
+
+### ✅ **Fully Tested & Production Ready**
+- Core Ansible automation (playbook.yml)
+- YAML and Ansible linting (yamllint, ansible-lint)
+- Security scanning and credential protection
+- Cross-platform installation (RHEL, Ubuntu, macOS)
+- Template processing and Confluence publishing
+- Local development workflow
+
+### ⚠️ **Work in Progress (Experimental)**
+- **Molecule Testing**: Configuration exists but requires additional validation
+- **CI/CD Templates**: Provided as examples, need platform-specific testing
+- **Advanced Quality Gates**: May require customization for your environment
+
+### 🎯 **Recommended Usage**
+For production use, rely on the ✅ tested features. The ⚠️ experimental features can be used as starting points but should be thoroughly tested in your environment before production deployment.
+
 ## Project Structure
 
 ```
 confluence-automation/
-├── ci-cd-templates/         # Multi-platform CI/CD configurations
-│   ├── github-actions.yml  # GitHub Actions workflow
-│   ├── gitlab-ci.yml       # GitLab CI/CD pipeline
-│   ├── azure-pipelines.yml # Azure DevOps pipeline
-│   ├── Jenkinsfile         # Jenkins pipeline
-│   ├── bitbucket-pipelines.yml # Bitbucket Pipelines
-│   └── teamcity-config.txt # TeamCity configuration
-├── .yamllint               # YAML linting configuration
-├── .pre-commit-config.yaml # Pre-commit hooks
-├── molecule/               # Molecule test scenarios
-│   ├── default/           # Basic functionality tests
-│   ├── playbook-test/     # Full playbook testing
-│   └── syntax-check/      # Syntax validation
+├── ci-cd-templates/         # Multi-platform CI/CD configurations ⚠️ WIP
+│   ├── github-actions.yml  # GitHub Actions workflow ⚠️ 
+│   ├── gitlab-ci.yml       # GitLab CI/CD pipeline ⚠️
+│   ├── azure-pipelines.yml # Azure DevOps pipeline ⚠️
+│   ├── Jenkinsfile         # Jenkins pipeline ⚠️
+│   ├── bitbucket-pipelines.yml # Bitbucket Pipelines ⚠️
+│   └── teamcity-config.txt # TeamCity configuration ⚠️
+├── .yamllint               # YAML linting configuration ✅
+├── .pre-commit-config.yaml # Pre-commit hooks ✅
+├── molecule/               # Molecule test scenarios ⚠️ WIP
+│   ├── default/           # Basic functionality tests ⚠️
+│   ├── playbook-test/     # Full playbook testing ⚠️
+│   └── syntax-check/      # Syntax validation ⚠️
 ├── docs/                  # Jinja2 templates
 │   ├── main.md.j2
 │   ├── platform_governance.md.j2

@@ -1,10 +1,15 @@
 # CI/CD Integration Guide
 
+⚠️ **WORK IN PROGRESS** ⚠️
+> **Status**: These CI/CD templates are provided as examples and have not been fully tested in all environments. They should be considered work-in-progress and may require customization for your specific use case.
+
 ## Overview
 
 This project provides **flexible CI/CD integration** that works with any major industry tool. Choose the configuration that matches your organization's CI/CD platform.
 
 ## 📁 Available Configurations
+
+> ⚠️ **Note**: These templates are provided as starting points and require testing and customization for your environment.
 
 The `ci-cd-templates/` directory contains ready-to-use configurations for:
 
