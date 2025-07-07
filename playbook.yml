@@ -76,6 +76,19 @@
           ansible.builtin.debug:
             msg: "Pandoc found at: {{ pandoc_check.stdout }}"
 
+        - name: "Debug - Show pandoc conversion command"
+          ansible.builtin.debug:
+            msg: |
+              About to convert: /tmp/{{ item }}
+              Command: pandoc "/tmp/{{ item }}" -f markdown -t html -o "/tmp/{{ item }}.html"
+              Expected output: /tmp/{{ item }}.html
+          loop:
+            - main.md
+            - platform_governance.md
+            - platform_runbook.md
+            - operator_runbook.md
+            - training_enablement.md
+
         - name: "Convert markdown files to HTML with error handling"
           ansible.builtin.shell: |
             set -e
@@ -153,10 +166,10 @@
           ansible.builtin.debug:
             msg: |
               Troubleshooting info:
-              - Current user: {{ ansible_user_id }}
-              - Working directory: {{ ansible_env.PWD }}
+              - Current user: {{ ansible_env.USER | default('unknown') }}
+              - Working directory: {{ ansible_env.PWD | default('unknown') }}
               - Pandoc location: {{ pandoc_check.stdout | default('Not found') }}
-              - /tmp permissions: {{ ansible_env.USER }} should have write access
+              - /tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
 
         - name: "Fail with helpful message"
           ansible.builtin.fail:
@@ -171,6 +184,15 @@
 
     - name: "Publish to Confluence"
       block:
+
+        - name: "Debug - Show Confluence API call details"
+          ansible.builtin.debug:
+            msg: |
+              Confluence API Configuration:
+              Base URL: {{ confluence_url }}
+              Space: {{ confluence_space }}
+              Main page title: {{ project_name }} Documentation
+              Main page URL: {{ confluence_url }}/rest/api/content
 
         - name: "Ensure main page exists"
           ansible.builtin.uri:
@@ -192,17 +214,47 @@
           register: main_page
           failed_when: false
 
+        - name: "Debug - Show main page creation result"
+          ansible.builtin.debug:
+            msg: |
+              Main page creation result:
+              Status: {{ main_page.status }}
+              Response: {{ main_page.json | default('No JSON response') | to_nice_json }}
+              URL used: {{ confluence_url }}/rest/api/content
+
         - name: "Get main page ID if exists"
           ansible.builtin.uri:
             url: >-
-              {{ confluence_url }}/rest/api/content?title={{ project_name | urlencode }}%20Documentation
-              &spaceKey={{ confluence_space }}&expand=version
+              {{ confluence_url }}/rest/api/content?title={{ (project_name + ' Documentation') | urlencode }}&spaceKey={{ confluence_space }}&expand=version
             method: GET
             headers:
               Authorization: "Basic {{ confluence_auth }}"
               Content-Type: "application/json"
           register: main_page_query
           when: main_page.status != 200
+
+        - name: "Debug - Show main page query details"
+          ansible.builtin.debug:
+            msg: |
+              Main page query details:
+              URL: {{ confluence_url }}/rest/api/content?title={{ (project_name + ' Documentation') | urlencode }}&spaceKey={{ confluence_space }}&expand=version
+              Status: {{ main_page_query.status | default('Not executed') }}
+              Response: {{ main_page_query.json | default('No response') | to_nice_json }}
+          when: main_page.status != 200
+
+        - name: "Debug - Show update details"
+          ansible.builtin.debug:
+            msg: |
+              Main page update details:
+              Page ID: {{ main_page_query.json.results[0].id | default('Not found') }}
+              Current version: {{ main_page_query.json.results[0].version.number | default('Unknown') }}
+              Update URL: {{ confluence_url }}/rest/api/content/{{ main_page_query.json.results[0].id | default('NO_ID') }}
+          when:
+            - main_page_query is defined
+            - main_page_query.status == 200
+            - main_page_query.json is defined
+            - main_page_query.json.results is defined
+            - main_page_query.json.results | length > 0
 
         - name: "Update main page if exists"
           ansible.builtin.uri:
@@ -222,12 +274,21 @@
                 storage:
                   value: "{{ lookup('file', '/tmp/main.md.html') }}"
                   representation: storage
+          register: main_page_update
           when:
             - main_page_query is defined
             - main_page_query.status == 200
             - main_page_query.json is defined
             - main_page_query.json.results is defined
             - main_page_query.json.results | length > 0
+
+        - name: "Debug - Show main page update result"
+          ansible.builtin.debug:
+            msg: |
+              Main page update result:
+              Status: {{ main_page_update.status | default('Not executed') }}
+              Response: {{ main_page_update.json | default('No response') | to_nice_json }}
+          when: main_page_update is defined
 
 
         - name: "Try to create child page"
@@ -255,11 +316,24 @@
           failed_when: false
           loop: "{{ child_pages }}"
 
+        - name: "Debug - Show child page creation details"
+          ansible.builtin.debug:
+            msg: |
+              Child page creation details:
+              Title: {{ item.title }}
+              File: {{ item.file }}
+              Parent ID: {{ main_page.json.id if main_page.status == 200 else main_page_query.json.results[0].id }}
+              URL: {{ confluence_url }}/rest/api/content
+              Status: {{ create_child_page.results[ansible_loop.index0].status | default('Not executed') }}
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+          when: create_child_page is defined
+
         - name: "Query existing child page"
           ansible.builtin.uri:
             url: >-
-              {{ confluence_url }}/rest/api/content?title={{ item.title | urlencode }}
-              &spaceKey={{ confluence_space }}&expand=version
+              {{ confluence_url }}/rest/api/content?title={{ item.title | urlencode }}&spaceKey={{ confluence_space }}&expand=version
             method: GET
             headers:
               Authorization: "Basic {{ confluence_auth }}"
@@ -269,6 +343,19 @@
           loop: "{{ child_pages }}"
           loop_control:
             extended: true
+
+        - name: "Debug - Show child page query details"
+          ansible.builtin.debug:
+            msg: |
+              Child page query details:
+              Title: {{ item.title }}
+              URL: {{ confluence_url }}/rest/api/content?title={{ item.title | urlencode }}&spaceKey={{ confluence_space }}&expand=version
+              Status: {{ child_page_query.results[ansible_loop.index0].status | default('Not executed') }}
+              Response: {{ child_page_query.results[ansible_loop.index0].json | default('No response') | to_nice_json }}
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+          when: child_page_query is defined and child_page_query.results is defined
 
         - name: "Update child page content"
           ansible.builtin.uri:
@@ -304,6 +391,25 @@
           loop_control:
             extended: true
 
+        - name: "Debug - Show child page update details"
+          ansible.builtin.debug:
+            msg: |
+              Child page update details:
+              Title: {{ item.title }}
+              Page ID: {{ child_page_query.results[ansible_loop.index0].json.results[0].id | default('Not found') }}
+              Current version: {{ child_page_query.results[ansible_loop.index0].json.results[0].version.number | default('Unknown') }}
+              Update URL: {{ confluence_url }}/rest/api/content/{{ child_page_query.results[ansible_loop.index0].json.results[0].id | default('NO_ID') }}
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+          when:
+            - child_page_query is defined
+            - child_page_query.results is defined
+            - child_page_query.results[ansible_loop.index0].status == 200
+            - child_page_query.results[ansible_loop.index0].json is defined
+            - child_page_query.results[ansible_loop.index0].json.results is defined
+            - child_page_query.results[ansible_loop.index0].json.results | length > 0
+
     - name: "Fallback conversion and final verification"
       block:
         - name: "Fallback: Simple pandoc conversion if detailed version failed"
@@ -316,7 +422,9 @@
             - platform_runbook.md
             - operator_runbook.md
             - training_enablement.md
-          when: pandoc_conversion.results[ansible_loop.index0].rc != 0
+          loop_control:
+            index_var: conversion_index
+          when: pandoc_conversion.results[conversion_index].rc != 0
           changed_when: true
           failed_when: false
 
@@ -349,10 +457,10 @@
           ansible.builtin.debug:
             msg: |
               Troubleshooting info:
-              - Current user: {{ ansible_user_id }}
-              - Working directory: {{ ansible_env.PWD }}
+              - Current user: {{ ansible_env.USER | default('unknown') }}
+              - Working directory: {{ ansible_env.PWD | default('unknown') }}
               - Pandoc location: {{ pandoc_check.stdout | default('Not found') }}
-              - /tmp permissions: {{ ansible_env.USER }} should have write access
+              - /tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
 
         - name: "Fail with helpful message"
           ansible.builtin.fail:

@@ -13,6 +13,8 @@
 vars/vars.yml
 secrets.yml
 vault.yml
+.vault_pass
+.vault_pass_*
 
 # Ansible specific
 *.retry

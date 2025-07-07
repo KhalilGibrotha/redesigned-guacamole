@@ -1,10 +1,15 @@
 ---
 extends: default
 
+# Ignore encrypted vault files
+ignore: |
+  vars/vars.yml
+
 rules:
   # Line length - enterprise standard allowing reasonable line lengths
+  # Increased to 180 to accommodate long Confluence API URLs
   line-length:
-    max: 120
+    max: 180
     level: warning
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
