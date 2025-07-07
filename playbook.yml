@@ -32,10 +32,16 @@
           changed_when: false
           failed_when: pandoc_available.rc != 0
 
+    - name: Create temporary directory for markdown processing
+      ansible.builtin.file:
+        path: "~/tmp"
+        state: directory
+        mode: '0755'
+
     - name: "Render markdown templates"
       ansible.builtin.template:
         src: "{{ item }}"
-        dest: "/tmp/{{ item | basename | replace('.j2', '') }}"
+        dest: "~/tmp/{{ item | basename | replace('.j2', '') }}"
         mode: '0644'
       loop:
         - docs/main.md.j2
@@ -48,7 +54,7 @@
       block:
         - name: "Debug - Check if markdown files exist"
           ansible.builtin.stat:
-            path: "/tmp/{{ item }}"
+            path: "~/tmp/{{ item }}"
           register: md_files_check
           loop:
             - main.md
@@ -59,7 +65,7 @@
 
         - name: "Debug - Show markdown file status"
           ansible.builtin.debug:
-            msg: "File /tmp/{{ item.item }} exists: {{ item.stat.exists }}, size: {{ item.stat.size | default('N/A') }}"
+            msg: "File ~/tmp/{{ item.item }} exists: {{ item.stat.exists }}, size: {{ item.stat.size | default('N/A') }}"
           loop: "{{ md_files_check.results }}"
 
         - name: "Debug - Check pandoc availability"
@@ -79,9 +85,9 @@
         - name: "Debug - Show pandoc conversion command"
           ansible.builtin.debug:
             msg: |
-              About to convert: /tmp/{{ item }}
-              Command: pandoc "/tmp/{{ item }}" -f markdown -t html -o "/tmp/{{ item }}.html"
-              Expected output: /tmp/{{ item }}.html
+              About to convert: ~/tmp/{{ item }}
+              Command: pandoc "~/tmp/{{ item }}" -f markdown -t html -o "~/tmp/{{ item }}.html"
+              Expected output: ~/tmp/{{ item }}.html
           loop:
             - main.md
             - platform_governance.md
@@ -92,33 +98,33 @@
         - name: "Convert markdown files to HTML with error handling"
           ansible.builtin.shell: |
             set -e
-            echo "Converting /tmp/{{ item }} to HTML..."
-            if [ ! -f "/tmp/{{ item }}" ]; then
-              echo "ERROR: Source file /tmp/{{ item }} does not exist"
+            echo "Converting ~/tmp/{{ item }} to HTML..."
+            if [ ! -f "$HOME/tmp/{{ item }}" ]; then
+              echo "ERROR: Source file ~/tmp/{{ item }} does not exist"
               exit 1
             fi
 
-            echo "File size: $(stat -c%s "/tmp/{{ item }}") bytes"
+            echo "File size: $(stat -c%s "$HOME/tmp/{{ item }}") bytes"
             echo "File content preview:"
-            head -3 "/tmp/{{ item }}"
+            head -3 "$HOME/tmp/{{ item }}"
             echo "---"
 
             # Ensure output directory is writable
-            touch "/tmp/{{ item }}.html.tmp"
+            touch "$HOME/tmp/{{ item }}.html.tmp"
 
             # Run pandoc with verbose output
-            pandoc "/tmp/{{ item }}" -f markdown -t html -o "/tmp/{{ item }}.html.tmp" 2>&1
+            pandoc "$HOME/tmp/{{ item }}" -f markdown -t html -o "$HOME/tmp/{{ item }}.html.tmp" 2>&1
 
             # Check if output was created successfully
-            if [ ! -f "/tmp/{{ item }}.html.tmp" ]; then
+            if [ ! -f "$HOME/tmp/{{ item }}.html.tmp" ]; then
               echo "ERROR: Pandoc failed to create output file"
               exit 1
             fi
 
             # Move temp file to final location
-            mv "/tmp/{{ item }}.html.tmp" "/tmp/{{ item }}.html"
+            mv "$HOME/tmp/{{ item }}.html.tmp" "$HOME/tmp/{{ item }}.html"
 
-            echo "SUCCESS: Created /tmp/{{ item }}.html ($(stat -c%s "/tmp/{{ item }}.html") bytes)"
+            echo "SUCCESS: Created ~/tmp/{{ item }}.html ($(stat -c%s "$HOME/tmp/{{ item }}.html") bytes)"
           register: pandoc_conversion
           loop:
             - main.md
@@ -141,7 +147,7 @@
 
         - name: "Verify HTML files were created"
           ansible.builtin.stat:
-            path: "/tmp/{{ item }}.html"
+            path: "~/tmp/{{ item }}.html"
           register: html_files_check
           loop:
             - main.md
@@ -153,7 +159,7 @@
         - name: "Debug - Show HTML file verification"
           ansible.builtin.debug:
             msg: >-
-              HTML file /tmp/{{ item.item }}.html exists: {{ item.stat.exists }},
+              HTML file ~/tmp/{{ item.item }}.html exists: {{ item.stat.exists }},
               size: {{ item.stat.size | default('N/A') }}
           loop: "{{ html_files_check.results }}"
 
@@ -169,7 +175,7 @@
               - Current user: {{ ansible_env.USER | default('unknown') }}
               - Working directory: {{ ansible_env.PWD | default('unknown') }}
               - Pandoc location: {{ pandoc_check.stdout | default('Not found') }}
-              - /tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
+              - ~/tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
 
         - name: "Fail with helpful message"
           ansible.builtin.fail:
@@ -177,10 +183,10 @@
               Markdown to HTML conversion failed. Common issues:
               1. Pandoc not installed or not in PATH
               2. Source markdown files missing or corrupted
-              3. Insufficient permissions to write to /tmp
+              3. Insufficient permissions to write to ~/tmp
               4. Pandoc version compatibility issues
 
-              Manual test: pandoc /tmp/main.md -f markdown -t html -o /tmp/test.html
+              Manual test: pandoc ~/tmp/main.md -f markdown -t html -o ~/tmp/test.html
 
     - name: "Publish to Confluence"
       block:
@@ -209,7 +215,7 @@
                 key: "{{ confluence_space }}"
               body:
                 storage:
-                  value: "{{ lookup('file', '/tmp/main.md.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
                   representation: storage
           register: main_page
           failed_when: false
@@ -272,7 +278,7 @@
               type: page
               body:
                 storage:
-                  value: "{{ lookup('file', '/tmp/main.md.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
                   representation: storage
           register: main_page_update
           when:
@@ -310,7 +316,7 @@
                     else main_page_query.json.results[0].id }}
               body:
                 storage:
-                  value: "{{ lookup('file', '/tmp/' + item.file + '.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/' + item.file + '.html') }}"
                   representation: storage
           register: create_child_page
           failed_when: false
@@ -380,7 +386,7 @@
                     else main_page_query.json.results[0].id }}
               body:
                 storage:
-                  value: "{{ lookup('file', '/tmp/' + item.file + '.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/' + item.file + '.html') }}"
                   representation: storage
           when:
             - child_page_query is defined
@@ -414,7 +420,7 @@
       block:
         - name: "Fallback: Simple pandoc conversion if detailed version failed"
           ansible.builtin.command: >
-            pandoc "/tmp/{{ item }}" -f markdown -t html -o "/tmp/{{ item }}.html"
+            pandoc "{{ ansible_env.HOME }}/tmp/{{ item }}" -f markdown -t html -o "{{ ansible_env.HOME }}/tmp/{{ item }}.html"
           register: simple_conversion
           loop:
             - main.md
@@ -430,7 +436,7 @@
 
         - name: "Final verification of HTML files"
           ansible.builtin.stat:
-            path: "/tmp/{{ item }}.html"
+            path: "{{ ansible_env.HOME }}/tmp/{{ item }}.html"
           register: final_html_check
           loop:
             - main.md
@@ -460,7 +466,7 @@
               - Current user: {{ ansible_env.USER | default('unknown') }}
               - Working directory: {{ ansible_env.PWD | default('unknown') }}
               - Pandoc location: {{ pandoc_check.stdout | default('Not found') }}
-              - /tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
+              - ~/tmp permissions: {{ ansible_env.USER | default('current user') }} should have write access
 
         - name: "Fail with helpful message"
           ansible.builtin.fail:
@@ -468,7 +474,7 @@
               Fallback conversion to HTML failed. Common issues:
               1. Pandoc not installed or not in PATH
               2. Source markdown files missing or corrupted
-              3. Insufficient permissions to write to /tmp
+              3. Insufficient permissions to write to ~/tmp
               4. Pandoc version compatibility issues
 
-              Manual test: pandoc /tmp/main.md -f markdown -t html -o /tmp/test.html
+              Manual test: pandoc ~/tmp/main.md -f markdown -t html -o ~/tmp/test.html
