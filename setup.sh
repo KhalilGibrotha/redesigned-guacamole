@@ -146,11 +146,11 @@ echo
 echo -e "${GREEN}🎉 Setup complete!${NC}"
 echo
 echo "Next steps:"
-echo "1. Edit vars/vars.yml with your Confluence details"
+echo "1. Run './secure-setup.sh' to securely configure credentials"
 echo "2. Run 'make check-deps' to verify all dependencies"
 echo "3. Run 'make install-tools' if any tools are missing"
 echo "4. Run 'make validate' to test your configuration"
-echo "5. Run 'ansible-playbook playbook.yml' to publish documentation"
+echo "5. Run 'ansible-playbook playbook.yml --ask-vault-pass' to publish documentation"
 echo
 echo "Useful commands:"
 echo "  make check-os           - Check system compatibility"

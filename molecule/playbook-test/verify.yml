@@ -1,7 +1,8 @@
 ---
 # Verification tests for playbook scenario
-
-- name: Verify playbook execution
+    - name: "Security check - no sensitive data in output"
+      ansible.builtin.shell: |
+        ! grep -i "ATAT\|password\|secret\|real_token" /tmp/*.htmlname: Verify playbook execution
   hosts: all
   gather_facts: false
   tasks:

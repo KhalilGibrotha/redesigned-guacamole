@@ -9,6 +9,11 @@
 *.html
 *.pdf
 
+# Sensitive configuration files
+vars/vars.yml
+secrets.yml
+vault.yml
+
 # Ansible specific
 *.retry
 .ansible/

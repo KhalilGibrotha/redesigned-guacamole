@@ -154,7 +154,13 @@ confluence_auth: "base64_encoded_credentials"
 
 ⚠️ **CRITICAL: Never commit real credentials to version control!**
 
-**Recommended approaches:**
+**Quick Secure Setup:**
+```bash
+# Use the secure setup script (recommended)
+./secure-setup.sh
+```
+
+**Manual approaches:**
 
 1. **Ansible Vault** (Recommended for local development):
    ```bash
@@ -177,9 +183,10 @@ confluence_auth: "base64_encoded_credentials"
    ```
 
 **The project includes:**
-- `.gitignore` protection for `vars/vars.yml`
-- Automated secret detection in `make security-check`
-- Example configuration in `vars/vars.yml.example`
+- 🔒 `secure-setup.sh` - Automated secure credential setup
+- 🚫 `.gitignore` protection for `vars/vars.yml`
+- 🔍 Automated secret detection in `make security-check`
+- 📝 Example configuration in `vars/vars.yml.example`
 
 ## Testing
 

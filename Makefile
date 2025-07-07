@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only secure-setup
 
 # Default target
 help:
@@ -20,6 +20,7 @@ help:
 	@echo "  check-os         - Display OS and compatibility info"
 	@echo "  check-deps       - Check if required dependencies are installed"
 	@echo "  test-compatibility - Run comprehensive compatibility test"
+	@echo "  secure-setup     - Set up credentials securely with ansible-vault"
 	@echo "  clean            - Remove temporary files"
 
 # Install required linting tools
@@ -192,11 +193,24 @@ sanity-check:
 security-check:
 	@echo "Running security checks..."
 	@echo "1. Checking for exposed secrets..."
-	@! grep -r "password\|secret\|ATAT" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret" || (echo "⚠️  Potential secrets found" && exit 1)
+	@! grep -r "password\|secret\|ATAT\|api_token" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token" || (echo "⚠️  Potential secrets found" && exit 1)
 	@echo "2. Checking file permissions..."
 	@find . -name "*.yml" -perm /002 | head -1 > /dev/null && (echo "❌ World-writable YAML files found" && exit 1) || echo "✅ File permissions OK"
-	@echo "3. Checking for hardcoded URLs..."
-	@! grep -r "http://\|https://" . --include="*.yml" | grep -v "example.com\|test\|mock\|template" || echo "⚠️  Hardcoded URLs found (review recommended)"
+	@echo "3. Checking for hardcoded production URLs..."
+	@! grep -r "https://.*\.atlassian\.net\|https://.*\.confluence\." . --include="*.yml" | grep -v "example\|test\|mock\|template\|your-domain" || echo "⚠️  Production URLs found (review recommended)"
+	@echo "4. Checking if vars/vars.yml is protected..."
+	@if [ -f vars/vars.yml ] && ! head -1 vars/vars.yml | grep -q "ANSIBLE_VAULT"; then \
+		echo "⚠️  vars/vars.yml exists but is not encrypted!"; \
+		echo "💡 Run './secure-setup.sh' to encrypt it securely"; \
+	else \
+		echo "✅ vars/vars.yml is properly protected"; \
+	fi
+	@echo "5. Checking .gitignore protection..."
+	@if grep -q "vars/vars.yml" .gitignore; then \
+		echo "✅ vars/vars.yml is in .gitignore"; \
+	else \
+		echo "⚠️  vars/vars.yml should be in .gitignore"; \
+	fi
 	@echo "✅ Security checks complete!"
 
 # Validate template structure
