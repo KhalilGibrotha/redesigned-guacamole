@@ -1,8 +1,6 @@
 ---
 # Verification tests for playbook scenario
-    - name: "Security check - no sensitive data in output"
-      ansible.builtin.shell: |
-        ! grep -i "ATAT\|password\|secret\|real_token" /tmp/*.htmlname: Verify playbook execution
+- name: Verify playbook execution
   hosts: all
   gather_facts: false
   tasks:
@@ -48,7 +46,7 @@
 
     - name: "Security check - no sensitive data in HTML"
       ansible.builtin.shell: |
-        ! grep -i "YWxleGdhbWJpbm8\|ATAT\|password\|secret" /tmp/*.html
+        ! grep -i "ATAT\|password\|secret\|real_token" /tmp/*.html
       register: security_scan
       changed_when: false
       failed_when: false

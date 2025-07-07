@@ -1,0 +1,70 @@
+---
+# Minimal test playbook for debugging conversion issues
+- name: "Debug Markdown Conversion"
+  hosts: localhost
+  gather_facts: true
+  vars:
+    project_name: "Debug Test"
+    env: "Test"
+    database_url: "https://test.example.com"
+    monitoring_tool: "Test Monitor"
+
+  tasks:
+    - name: "Show environment info"
+      ansible.builtin.debug:
+        msg: |
+          Debug Info:
+          - Ansible version: {{ ansible_version.full }}
+          - Python version: {{ ansible_python_version }}
+          - User: {{ ansible_user_id }}
+          - Working directory: {{ ansible_env.PWD }}
+
+    - name: "Check if template exists"
+      ansible.builtin.stat:
+        path: "docs/main.md.j2"
+      register: template_exists
+
+    - name: "Show template status"
+      ansible.builtin.debug:
+        msg: "Template docs/main.md.j2 exists: {{ template_exists.stat.exists }}"
+
+    - name: "Render template (if exists)"
+      ansible.builtin.template:
+        src: "docs/main.md.j2"
+        dest: "/tmp/debug-main.md"
+        mode: '0644'
+      when: template_exists.stat.exists
+
+    - name: "Show rendered content"
+      ansible.builtin.command: cat /tmp/debug-main.md
+      register: rendered_content
+      when: template_exists.stat.exists
+      changed_when: false
+
+    - name: "Display rendered markdown"
+      ansible.builtin.debug:
+        msg: "{{ rendered_content.stdout_lines }}"
+      when: template_exists.stat.exists
+
+    - name: "Test pandoc conversion"
+      ansible.builtin.shell: |
+        set -o pipefail
+        echo "Testing pandoc..."
+        which pandoc
+        pandoc --version | head -1
+        echo "Converting file..."
+        pandoc /tmp/debug-main.md -f markdown -t html -o /tmp/debug-main.html
+      args:
+        executable: /bin/bash
+      changed_when: false
+        echo "Conversion result:"
+        ls -la /tmp/debug-main.html
+        echo "Content preview:"
+        head -5 /tmp/debug-main.html
+      register: pandoc_test
+      when: template_exists.stat.exists
+
+    - name: "Show pandoc test results"
+      ansible.builtin.debug:
+        msg: "{{ pandoc_test.stdout_lines }}"
+      when: template_exists.stat.exists

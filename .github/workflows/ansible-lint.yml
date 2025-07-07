@@ -35,7 +35,8 @@ jobs:
       - name: Run Security Check
         run: |
           # Check for potential secrets (excluding test data)
-          ! grep -r "password\|secret\|ATAT" . --include="*.yml" --exclude-dir=molecule || echo "Security check completed"
+          ! grep -r "password\|secret\|ATAT" . --include="*.yml" \
+            --exclude-dir=molecule || echo "Security check completed"
 
       - name: Validate Playbook Syntax
         run: ansible-playbook --syntax-check playbook.yml

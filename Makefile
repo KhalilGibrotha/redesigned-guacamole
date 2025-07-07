@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only secure-setup
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only secure-setup debug-conversion
 
 # Default target
 help:
@@ -21,6 +21,7 @@ help:
 	@echo "  check-deps       - Check if required dependencies are installed"
 	@echo "  test-compatibility - Run comprehensive compatibility test"
 	@echo "  secure-setup     - Set up credentials securely with ansible-vault"
+	@echo "  debug-conversion - Debug markdown to HTML conversion issues"
 	@echo "  clean            - Remove temporary files"
 
 # Install required linting tools
@@ -438,3 +439,87 @@ test-compatibility:
 	fi
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "✅ Compatibility test complete!"
+
+# Debug markdown to HTML conversion issues
+debug-conversion:
+	@echo "🔍 Debugging Markdown to HTML Conversion"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo "1. Checking pandoc installation..."
+	@if command -v pandoc >/dev/null 2>&1; then \
+		echo "   ✅ pandoc found: $$(which pandoc)"; \
+		echo "   📋 Version: $$(pandoc --version | head -1)"; \
+	else \
+		echo "   ❌ pandoc not found"; \
+		echo "   💡 Install with: make install-tools"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "2. Checking template rendering..."
+	@if [ -d docs/ ]; then \
+		echo "   📁 Template directory exists"; \
+		echo "   📝 Available templates:"; \
+		ls -la docs/*.j2 2>/dev/null || echo "   ⚠️  No .j2 templates found"; \
+	else \
+		echo "   ❌ docs/ directory missing"; \
+		exit 1; \
+	fi
+	@echo ""
+	@echo "3. Testing template rendering..."
+	@mkdir -p /tmp/debug-conversion
+	@echo "project_name: Debug Test" > /tmp/debug-vars.yml
+	@echo "env: Test" >> /tmp/debug-vars.yml
+	@echo "database_url: https://test.example.com" >> /tmp/debug-vars.yml
+	@echo "monitoring_tool: Test Monitor" >> /tmp/debug-vars.yml
+	@if [ -f docs/main.md.j2 ]; then \
+		echo "   🔄 Rendering main.md.j2..."; \
+		ansible localhost -m template -a "src=docs/main.md.j2 dest=/tmp/debug-conversion/main.md" -e @/tmp/debug-vars.yml 2>/dev/null || echo "   ❌ Template rendering failed"; \
+		if [ -f /tmp/debug-conversion/main.md ]; then \
+			echo "   ✅ Template rendered successfully"; \
+			echo "   📄 Content preview:"; \
+			head -5 /tmp/debug-conversion/main.md | sed 's/^/      /'; \
+			echo "      ..."; \
+		else \
+			echo "   ❌ Template rendering failed"; \
+		fi; \
+	fi
+	@echo ""
+	@echo "4. Testing pandoc conversion..."
+	@if [ -f /tmp/debug-conversion/main.md ]; then \
+		echo "   🔄 Converting markdown to HTML..."; \
+		pandoc /tmp/debug-conversion/main.md -f markdown -t html -o /tmp/debug-conversion/main.html 2>&1 && \
+		echo "   ✅ Pandoc conversion successful" || echo "   ❌ Pandoc conversion failed"; \
+		if [ -f /tmp/debug-conversion/main.html ]; then \
+			echo "   📄 HTML output size: $$(stat -c%s /tmp/debug-conversion/main.html) bytes"; \
+			echo "   📄 HTML preview:"; \
+			head -3 /tmp/debug-conversion/main.html | sed 's/^/      /'; \
+		fi; \
+	else \
+		echo "   ⚠️  No markdown file to test pandoc conversion"; \
+	fi
+	@echo ""
+	@echo "5. Testing permissions..."
+	@echo "   📁 /tmp permissions:"
+	@ls -ld /tmp/
+	@echo "   📁 Current user: $$(whoami)"
+	@echo "   🔧 Testing /tmp write access..."
+	@touch /tmp/debug-write-test && rm -f /tmp/debug-write-test && echo "   ✅ /tmp write access OK" || echo "   ❌ /tmp write access failed"
+	@echo ""
+	@echo "6. Environment check..."
+	@echo "   🏠 Working directory: $$(pwd)"
+	@echo "   🐍 Python: $$(python3 --version 2>/dev/null || echo 'Not found')"
+	@echo "   📦 Ansible: $$(ansible --version 2>/dev/null || echo 'Not found')"
+	@echo "   📦 Pandoc: $$(pandoc --version 2>/dev/null || echo 'Not found')"
+	@echo "   ℹ️  Note: Some checks may be skipped in restricted environments"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Quick test of markdown to HTML conversion
+test-pandoc:
+	@echo "🧪 Quick Pandoc Test"
+	@echo "Creating test markdown file..."
+	@echo "# Test Document\n\nThis is a **test** markdown file.\n\n- Item 1\n- Item 2" > /tmp/test.md
+	@echo "Converting with pandoc..."
+	@pandoc /tmp/test.md -f markdown -t html -o /tmp/test.html
+	@echo "✅ Conversion successful!"
+	@echo "Output:"
+	@cat /tmp/test.html
+	@rm -f /tmp/test.md /tmp/test.html

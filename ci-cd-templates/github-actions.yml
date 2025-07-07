@@ -40,54 +40,54 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y make
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make
 
-    - name: Run security check
-      run: make security-check
-      continue-on-error: true
+      - name: Run security check
+        run: make security-check
+        continue-on-error: true
 
-    - name: Upload security results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: security-scan-results
-        path: |
-          **/*security*
-          **/*report*
+      - name: Upload security results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: security-scan-results
+          path: |
+            **/*security*
+            **/*report*
 
   lint:
     name: Lint and Validate
     runs-on: ubuntu-latest
     needs: sanity-check
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y make yamllint pandoc
-        python -m pip install --upgrade pip
-        pip install ansible-lint ansible
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make yamllint pandoc
+          python -m pip install --upgrade pip
+          pip install ansible-lint ansible
 
-    - name: Run YAML lint
-      run: make lint-yaml
+      - name: Run YAML lint
+        run: make lint-yaml
 
-    - name: Run Ansible lint
-      run: make lint-ansible
+      - name: Run Ansible lint
+        run: make lint-ansible
 
-    - name: Validate templates
-      run: make validate-templates
+      - name: Validate templates
+        run: make validate-templates
 
   full-validation:
     name: Full Validation
@@ -95,26 +95,26 @@ jobs:
     needs: [sanity-check, lint]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y make yamllint pandoc
-        python -m pip install --upgrade pip
-        pip install ansible-lint ansible
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make yamllint pandoc
+          python -m pip install --upgrade pip
+          pip install ansible-lint ansible
 
-    - name: Run full validation
-      run: make validate
+      - name: Run full validation
+        run: make validate
 
-    - name: Test template rendering
-      run: make test-render
+      - name: Test template rendering
+        run: make test-render
 
   molecule-test:
     name: Molecule Testing
@@ -122,30 +122,30 @@ jobs:
     needs: full-validation
     if: github.ref == 'refs/heads/main'
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
 
-    - name: Install Docker and Molecule
-      run: |
-        python -m pip install --upgrade pip
-        pip install molecule[docker] ansible
+      - name: Install Docker and Molecule
+        run: |
+          python -m pip install --upgrade pip
+          pip install molecule[docker] ansible
 
-    - name: Run Molecule tests
-      run: |
-        export PATH="$HOME/.local/bin:$PATH"
-        molecule test
-      continue-on-error: true
+      - name: Run Molecule tests
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          molecule test
+        continue-on-error: true
 
-    - name: Upload Molecule results
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: molecule-test-results
-        path: |
-          **/molecule-results.*
-          **/*.log
+      - name: Upload Molecule results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: molecule-test-results
+          path: |
+            **/molecule-results.*
+            **/*.log
