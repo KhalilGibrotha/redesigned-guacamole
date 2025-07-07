@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-markdown convert-all verify-html clean-conversion
 
 # Default target
 help:
@@ -584,3 +584,59 @@ test-pandoc:
 	@echo "Output:"
 	@cat /tmp/test.html
 	@rm -f /tmp/test.md /tmp/test.html
+
+# Confluence Documentation Conversion Targets
+# These targets are used by the Ansible playbook for markdown to HTML conversion
+
+convert-templates:
+	@echo "🔄 Converting Jinja templates to markdown..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Rendering templates with vars.yml..."; \
+		ansible localhost -m template -a "src=docs/main.md.j2 dest=~/tmp/main.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ main.md template failed"; \
+		ansible localhost -m template -a "src=docs/platform_governance.md.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
+		ansible localhost -m template -a "src=docs/platform_runbook.md.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/operator_runbook.md.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/training_enablement.md.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		echo "   ✅ Template rendering complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi
+
+convert-markdown:
+	@echo "🔄 Converting markdown files to HTML..."
+	@if command -v pandoc >/dev/null 2>&1; then \
+		for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
+			if [ -f ~/tmp/$$file.md ]; then \
+				echo "   📄 Converting $$file.md to HTML..."; \
+				pandoc ~/tmp/$$file.md -f markdown -t html -o ~/tmp/$$file.md.html 2>&1 && \
+				echo "      ✅ $$file.md.html created ($$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0) bytes)" || \
+				echo "      ❌ Failed to convert $$file.md"; \
+			else \
+				echo "   ❌ ~/tmp/$$file.md not found"; \
+			fi; \
+		done; \
+	else \
+		echo "   ❌ pandoc not found - run 'make install-tools'"; \
+		exit 1; \
+	fi
+
+convert-all: convert-templates convert-markdown
+	@echo "✅ All conversion steps completed"
+
+verify-html:
+	@echo "🔍 Verifying HTML files..."
+	@for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
+		if [ -f ~/tmp/$$file.md.html ]; then \
+			size=$$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0); \
+			echo "   ✅ $$file.md.html exists ($$size bytes)"; \
+		else \
+			echo "   ❌ $$file.md.html missing"; \
+		fi; \
+	done
+
+clean-conversion:
+	@echo "🧹 Cleaning up conversion files..."
+	@rm -rf ~/tmp/main.md ~/tmp/*.md.html ~/tmp/platform_*.md ~/tmp/operator_*.md ~/tmp/training_*.md
+	@echo "   ✅ Cleanup complete"

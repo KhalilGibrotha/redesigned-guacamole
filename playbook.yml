@@ -38,11 +38,12 @@
         state: directory
         mode: '0755'
 
-    - name: "Render markdown templates"
-      ansible.builtin.template:
-        src: "{{ item }}"
-        dest: "~/tmp/{{ item | basename | replace('.j2', '') }}"
-        mode: '0644'
+    - name: "Debug - Show template rendering details"
+      ansible.builtin.debug:
+        msg: |
+          About to render Jinja2 templates:
+          Source: {{ item }}
+          Destination: ~/tmp/{{ item | basename | replace('.j2', '') }}
       loop:
         - docs/main.md.j2
         - docs/platform_governance.md.j2
@@ -50,9 +51,22 @@
         - docs/operator_runbook.md.j2
         - docs/training_enablement.md.j2
 
-    - name: "Convert Markdown to HTML"
+    - name: "Render Jinja templates to markdown using make"
+      ansible.builtin.command: make convert-templates
+      register: template_conversion
+      changed_when: true
+
+    - name: "Debug - Show template conversion result"
+      ansible.builtin.debug:
+        msg: |
+          Template conversion result:
+          Return code: {{ template_conversion.rc }}
+          Output: {{ template_conversion.stdout }}
+          Errors: {{ template_conversion.stderr | default('None') }}
+
+    - name: "Convert Markdown to HTML using make"
       block:
-        - name: "Debug - Check if markdown files exist"
+        - name: "Debug - Check if markdown files exist first"
           ansible.builtin.stat:
             path: "~/tmp/{{ item }}"
           register: md_files_check
@@ -68,100 +82,29 @@
             msg: "File ~/tmp/{{ item.item }} exists: {{ item.stat.exists }}, size: {{ item.stat.size | default('N/A') }}"
           loop: "{{ md_files_check.results }}"
 
-        - name: "Debug - Check pandoc availability"
-          ansible.builtin.command: which pandoc
-          register: pandoc_check
-          changed_when: false
-
-        - name: "Debug - Show pandoc version"
-          ansible.builtin.command: pandoc --version
-          register: pandoc_version
-          changed_when: false
-
-        - name: "Debug - Show pandoc info"
-          ansible.builtin.debug:
-            msg: "Pandoc found at: {{ pandoc_check.stdout }}"
-
-        - name: "Debug - Show pandoc conversion command"
-          ansible.builtin.debug:
-            msg: |
-              About to convert: ~/tmp/{{ item }}
-              Command: pandoc "~/tmp/{{ item }}" -f markdown -t html -o "~/tmp/{{ item }}.html"
-              Expected output: ~/tmp/{{ item }}.html
-          loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
-
-        - name: "Convert markdown files to HTML with error handling"
-          ansible.builtin.shell: |
-            set -e
-            echo "Converting ~/tmp/{{ item }} to HTML..."
-            if [ ! -f "$HOME/tmp/{{ item }}" ]; then
-              echo "ERROR: Source file ~/tmp/{{ item }} does not exist"
-              exit 1
-            fi
-
-            echo "File size: $(stat -c%s "$HOME/tmp/{{ item }}") bytes"
-            echo "File content preview:"
-            head -3 "$HOME/tmp/{{ item }}"
-            echo "---"
-
-            # Ensure output directory is writable
-            touch "$HOME/tmp/{{ item }}.html.tmp"
-
-            # Run pandoc with verbose output
-            pandoc "$HOME/tmp/{{ item }}" -f markdown -t html -o "$HOME/tmp/{{ item }}.html.tmp" 2>&1
-
-            # Check if output was created successfully
-            if [ ! -f "$HOME/tmp/{{ item }}.html.tmp" ]; then
-              echo "ERROR: Pandoc failed to create output file"
-              exit 1
-            fi
-
-            # Move temp file to final location
-            mv "$HOME/tmp/{{ item }}.html.tmp" "$HOME/tmp/{{ item }}.html"
-
-            echo "SUCCESS: Created ~/tmp/{{ item }}.html ($(stat -c%s "$HOME/tmp/{{ item }}.html") bytes)"
-          register: pandoc_conversion
-          loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
+        - name: "Convert markdown to HTML using make"
+          ansible.builtin.command: make convert-markdown
+          register: markdown_conversion
           changed_when: true
 
-        - name: "Debug - Show conversion results"
+        - name: "Debug - Show markdown conversion result"
           ansible.builtin.debug:
-            msg: "Conversion result for {{ item.item }}: {{ 'SUCCESS' if item.rc == 0 else 'FAILED' }}"
-          loop: "{{ pandoc_conversion.results }}"
+            msg: |
+              Markdown conversion result:
+              Return code: {{ markdown_conversion.rc }}
+              Output: {{ markdown_conversion.stdout }}
+              Errors: {{ markdown_conversion.stderr | default('None') }}
 
-        - name: "Debug - Show any conversion errors"
+        - name: "Verify HTML files using make"
+          ansible.builtin.command: make verify-html
+          register: html_verification
+          changed_when: false
+
+        - name: "Debug - Show HTML verification result"
           ansible.builtin.debug:
-            msg: "Error for {{ item.item }}: {{ item.stderr | default('No errors') }}"
-          loop: "{{ pandoc_conversion.results }}"
-          when: item.rc != 0
-
-        - name: "Verify HTML files were created"
-          ansible.builtin.stat:
-            path: "~/tmp/{{ item }}.html"
-          register: html_files_check
-          loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
-
-        - name: "Debug - Show HTML file verification"
-          ansible.builtin.debug:
-            msg: >-
-              HTML file ~/tmp/{{ item.item }}.html exists: {{ item.stat.exists }},
-              size: {{ item.stat.size | default('N/A') }}
-          loop: "{{ html_files_check.results }}"
+            msg: |
+              HTML verification result:
+              {{ html_verification.stdout }}
 
       rescue:
         - name: "Handle conversion errors"
@@ -416,43 +359,25 @@
             - child_page_query.results[ansible_loop.index0].json.results is defined
             - child_page_query.results[ansible_loop.index0].json.results | length > 0
 
-    - name: "Fallback conversion and final verification"
+    - name: "Fallback conversion if make failed"
       block:
-        - name: "Fallback: Simple pandoc conversion if detailed version failed"
-          ansible.builtin.command: >
-            pandoc "{{ ansible_env.HOME }}/tmp/{{ item }}" -f markdown -t html -o "{{ ansible_env.HOME }}/tmp/{{ item }}.html"
-          register: simple_conversion
-          loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
-          loop_control:
-            index_var: conversion_index
-          when: pandoc_conversion.results[conversion_index].rc != 0
+        - name: "Fallback: Try make convert-all"
+          ansible.builtin.command: make convert-all
+          register: fallback_conversion
+          when: markdown_conversion.rc != 0
           changed_when: true
           failed_when: false
 
         - name: "Final verification of HTML files"
-          ansible.builtin.stat:
-            path: "{{ ansible_env.HOME }}/tmp/{{ item }}.html"
-          register: final_html_check
-          loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
+          ansible.builtin.command: make verify-html
+          register: final_verification
+          changed_when: false
 
         - name: "Report final conversion status"
           ansible.builtin.debug:
             msg: |
-              Final conversion status:
-              {% for result in final_html_check.results %}
-              - {{ result.item }}: {{ 'SUCCESS' if result.stat.exists else 'FAILED' }}
-                ({{ result.stat.size | default(0) }} bytes)
-              {% endfor %}
+              Final verification result:
+              {{ final_verification.stdout }}
 
       rescue:
         - name: "Handle fallback conversion errors"
