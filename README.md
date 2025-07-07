@@ -53,6 +53,24 @@ cp vars/vars.yml.example vars/vars.yml
 make validate
 ```
 
+### Restricted Environment Installation
+
+For environments with limited internet access or where PyPI is blocked:
+
+**RHEL/CentOS/Fedora (DNF only):**
+```bash
+# Install only via system packages, no pip required
+make install-rhel-dnf-only
+```
+
+**Ubuntu/Debian (APT only):**
+```bash
+# Install only via system packages, no pip required
+make install-ubuntu-apt-only
+```
+
+These options install available tools through system package managers and provide guidance on what functionality is available without PyPI access.
+
 ### Basic Usage
 
 1. **Configure your environment**:
@@ -129,6 +147,9 @@ make validate
 
 | Command | Description |
 |---------|-------------|
+| `make install-tools` | Install all required tools via package managers and pip |
+| `make install-rhel-dnf-only` | Install tools via DNF only (RHEL restricted environments) |
+| `make install-ubuntu-apt-only` | Install tools via APT only (Ubuntu restricted environments) |
 | `make sanity-check` | Quick development validation |
 | `make security-check` | Security compliance verification |
 | `make validate-templates` | Template structure validation |

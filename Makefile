@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only secure-setup debug-conversion
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only
 
 # Default target
 help:
@@ -12,6 +12,7 @@ help:
 	@echo "  install-tools    - Install required linting tools"
 	@echo "  install-rhel-prereqs - Install RHEL/CentOS prerequisites"
 	@echo "  install-rhel-dnf-only - Install tools via DNF only (restricted environments)"
+	@echo "  install-ubuntu-apt-only - Install tools via APT only (restricted environments)"
 	@echo "  test             - Run ansible playbook syntax check"
 	@echo "  test-syntax      - Comprehensive syntax validation"
 	@echo "  sanity-check     - Quick sanity checks for development"
@@ -71,6 +72,8 @@ install-tools:
 			echo "❌ pip installation failed"; \
 			if [ -f /etc/redhat-release ] && command -v dnf >/dev/null 2>&1; then \
 				echo "💡 For restricted RHEL environments, try: make install-rhel-dnf-only"; \
+			elif [ -f /etc/debian_version ]; then \
+				echo "💡 For restricted Ubuntu/Debian environments, try: make install-ubuntu-apt-only"; \
 			fi; \
 		fi; \
 	fi
@@ -151,6 +154,58 @@ install-rhel-dnf-only:
 	@echo "   make test              - Ansible syntax check"
 	@echo "   make validate-templates - Template validation"
 	@echo "   make sanity-check      - Core functionality tests"
+
+# Install tools via APT only (for restricted Ubuntu/Debian environments without pip access)
+install-ubuntu-apt-only:
+	@echo "🔧 Installing tools via APT only (restricted environment mode)..."
+	@if ! [ -f /etc/debian_version ]; then \
+		echo "❌ This target is only for Ubuntu/Debian systems"; \
+		exit 1; \
+	fi
+	@echo "📦 Installing core tools and available linting packages..."
+	@echo "   Updating package lists..."
+	@sudo apt update
+	@echo "   Installing core development tools..."
+	@sudo apt install -y make python3 git build-essential
+	@echo "   Installing Ansible and available linting tools..."
+	@sudo apt install -y ansible yamllint pandoc python3-pip || echo "⚠️  Some packages may not be available"
+	@echo ""
+	@echo "🔍 Checking what was successfully installed..."
+	@installed_tools=""; \
+	missing_tools=""; \
+	for tool in make python3 ansible yamllint pandoc; do \
+		if command -v $$tool >/dev/null 2>&1; then \
+			installed_tools="$$installed_tools $$tool"; \
+		else \
+			missing_tools="$$missing_tools $$tool"; \
+		fi; \
+	done; \
+	echo "✅ Successfully installed:$$installed_tools"; \
+	if [ -n "$$missing_tools" ]; then \
+		echo "❌ Could not install:$$missing_tools"; \
+	fi
+	@echo ""
+	@echo "📋 ansible-lint status:"
+	@if command -v ansible-lint >/dev/null 2>&1; then \
+		echo "✅ ansible-lint is available"; \
+	else \
+		echo "⚠️  ansible-lint not available via APT"; \
+		echo "   Trying to install via system packages..."; \
+		if sudo apt install -y ansible-lint 2>/dev/null; then \
+			echo "✅ ansible-lint installed via APT"; \
+		else \
+			echo "❌ ansible-lint not available via APT"; \
+			echo "   This is normal in restricted environments"; \
+			echo "   You can still use: make lint-yaml, make test, make validate-templates"; \
+		fi; \
+	fi
+	@echo ""
+	@echo "✅ APT-only installation complete!"
+	@echo "💡 Available targets without ansible-lint:"
+	@echo "   make lint-yaml          - YAML linting only"
+	@echo "   make test               - Ansible syntax checking"
+	@echo "   make validate-templates - Template validation"
+	@echo "   make security-check     - Security validation"
 
 # Run all linting checks
 lint: lint-yaml lint-ansible

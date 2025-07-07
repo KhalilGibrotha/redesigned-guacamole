@@ -115,6 +115,10 @@ elif [ ${#missing_core_tools[@]} -gt 0 ]; then
         echo "Debian/Ubuntu detected:"
         echo "  sudo apt update"
         echo "  sudo apt install -y build-essential python3 python3-pip"
+        echo "  OR run: make install-tools"
+        echo ""
+        echo "  For restricted environments without PyPI access:"
+        echo "    make install-ubuntu-apt-only"
     elif [ -f /etc/arch-release ]; then
         echo "Arch Linux detected:"
         echo "  sudo pacman -S base-devel python python-pip"
@@ -139,6 +143,11 @@ else
         echo -e "${BLUE}💡 RHEL Note: If pip access is restricted in your environment:${NC}"
         echo "  Use: make install-rhel-dnf-only"
         echo "  This installs available tools via DNF without requiring pip"
+    elif [ -f /etc/debian_version ]; then
+        echo
+        echo -e "${BLUE}💡 Ubuntu/Debian Note: If pip access is restricted in your environment:${NC}"
+        echo "  Use: make install-ubuntu-apt-only"
+        echo "  This installs available tools via APT without requiring pip"
     fi
 fi
 
@@ -156,6 +165,7 @@ echo "Useful commands:"
 echo "  make check-os           - Check system compatibility"
 echo "  make test-compatibility - Run comprehensive tests"
 echo "  make install-rhel-dnf-only - Install via DNF only (restricted environments)"
+echo "  make install-ubuntu-apt-only - Install via APT only (restricted environments)"
 echo "  make help              - Show all available targets"
 echo
 echo "For more information, see README.md"
