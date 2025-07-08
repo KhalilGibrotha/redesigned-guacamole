@@ -287,7 +287,7 @@ validate-templates:
 	@echo "1. Checking template directory..."
 	@test -d docs/ || (echo "❌ docs/ directory missing" && exit 1)
 	@echo "2. Checking for main template..."
-	@test -f docs/main.md.j2 || (echo "❌ main.md.j2 template missing" && exit 1)
+	@test -f docs/main.j2 || (echo "❌ main.j2 template missing" && exit 1)
 	@echo "3. Checking template syntax..."
 	@for template in docs/*.j2; do \
 		echo "   Checking $$template..."; \
@@ -598,12 +598,19 @@ convert-templates:
 	@echo "🔄 Converting Jinja templates to markdown..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering templates with vars.yml..."; \
-		ansible localhost -m template -a "src=docs/main.md.j2 dest=~/tmp/main.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ main.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_governance.md.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_runbook.md.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/operator_runbook.md.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/training_enablement.md.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		echo "   📝 Rendering templates with vars.yml and aap.yml..."; \
+		ansible localhost -m template -a "src=docs/main.j2 dest=~/tmp/main.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ main.md template failed"; \
+		ansible localhost -m template -a "src=docs/platform_governance.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
+		ansible localhost -m template -a "src=docs/platform_runbook.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/operator_runbook.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/training_enablement.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		for template in docs/aap_*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				echo "   📝 Rendering $$basename..."; \
+				ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ $$basename template failed"; \
+			fi; \
+		done; \
 		echo "   ✅ Template rendering complete"; \
 	else \
 		echo "   ❌ vars/vars.yml not found"; \
@@ -613,14 +620,17 @@ convert-templates:
 convert-markdown:
 	@echo "🔄 Converting markdown files to HTML..."
 	@if command -v pandoc >/dev/null 2>&1; then \
-		for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
+		for file in main platform_governance platform_runbook operator_runbook training_enablement aap_operations_manual aap_platform_admin_guide aap_policy_governance; do \
 			if [ -f ~/tmp/$$file.md ]; then \
-				echo "   📄 Converting $$file.md to HTML..."; \
-				pandoc ~/tmp/$$file.md -f markdown -t html -o ~/tmp/$$file.md.html 2>&1 && \
+				echo "   📄 Converting $$file.md to HTML with Lua filters..."; \
+				pandoc ~/tmp/$$file.md -f markdown -t html \
+					--lua-filter=lua/pagebreak.lua \
+					--lua-filter=lua/list_formatter.lua \
+					-o ~/tmp/$$file.md.html 2>&1 && \
 				echo "      ✅ $$file.md.html created ($$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0) bytes)" || \
 				echo "      ❌ Failed to convert $$file.md"; \
 			else \
-				echo "   ❌ ~/tmp/$$file.md not found"; \
+				echo "   ⚠️  ~/tmp/$$file.md not found (may not exist)"; \
 			fi; \
 		done; \
 	else \

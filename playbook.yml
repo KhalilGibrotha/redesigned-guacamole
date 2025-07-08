@@ -4,6 +4,7 @@
   gather_facts: false
   vars_files:
     - vars/vars.yml
+    - vars/aap.yml
 
   tasks:
 
@@ -14,11 +15,11 @@
             path: "{{ item }}"
           register: template_check
           loop:
-            - docs/main.md.j2
-            - docs/platform_governance.md.j2
-            - docs/platform_runbook.md.j2
-            - docs/operator_runbook.md.j2
-            - docs/training_enablement.md.j2
+            - docs/main.j2
+            - docs/platform_governance.j2
+            - docs/platform_runbook.j2
+            - docs/operator_runbook.j2
+            - docs/training_enablement.j2
 
         - name: "Fail if templates are missing"
           ansible.builtin.fail:
@@ -45,11 +46,11 @@
           Source: {{ item }}
           Destination: ~/tmp/{{ item | basename | replace('.j2', '') }}
       loop:
-        - docs/main.md.j2
-        - docs/platform_governance.md.j2
-        - docs/platform_runbook.md.j2
-        - docs/operator_runbook.md.j2
-        - docs/training_enablement.md.j2
+        - docs/main.j2
+        - docs/platform_governance.j2
+        - docs/platform_runbook.j2
+        - docs/operator_runbook.j2
+        - docs/training_enablement.j2
 
     - name: "Render Jinja templates to markdown using make"
       ansible.builtin.command: make convert-templates
