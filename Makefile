@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-markdown convert-all verify-html clean-conversion
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy
 
 # Default target
 help:
@@ -640,3 +640,32 @@ clean-conversion:
 	@echo "🧹 Cleaning up conversion files..."
 	@rm -rf ~/tmp/main.md ~/tmp/*.md.html ~/tmp/platform_*.md ~/tmp/operator_*.md ~/tmp/training_*.md
 	@echo "   ✅ Cleanup complete"
+
+# Modular Playbook Execution Targets
+run-full:
+	@echo "🚀 Running complete Confluence automation..."
+	ansible-playbook playbooks/main.yml
+
+run-validate:
+	@echo "✅ Validating environment..."
+	ansible-playbook playbooks/01-validate-environment.yml
+
+run-templates:
+	@echo "🔄 Converting templates..."
+	ansible-playbook playbooks/02-convert-templates.yml
+
+run-html:
+	@echo "📄 Converting to HTML..."
+	ansible-playbook playbooks/03-convert-html.yml
+
+run-publish:
+	@echo "☁️  Publishing to Confluence..."
+	ansible-playbook playbooks/04-publish-confluence.yml
+
+run-cleanup:
+	@echo "🧹 Running cleanup..."
+	ansible-playbook playbooks/cleanup.yml
+
+run-legacy:
+	@echo "🔄 Running legacy playbook..."
+	ansible-playbook playbook.yml

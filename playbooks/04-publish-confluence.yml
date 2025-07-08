@@ -1,0 +1,216 @@
+---
+# Confluence Publishing Playbook
+# Publishes generated HTML content to Confluence
+
+- name: "Confluence Publishing"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - ../vars/vars.yml
+
+  tasks:
+    - name: "Publish to Confluence"
+      block:
+        - name: "Debug - Show Confluence API call details"
+          ansible.builtin.debug:
+            msg: |
+              Confluence API Details:
+              URL: {{ confluence_url }}/rest/api/content
+              Space: {{ confluence_space }}
+              Project: {{ project_name }}
+
+        - name: "Get main page ID if exists"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content?spaceKey={{ confluence_space | urlencode }}&title={{ (project_name + ' Documentation') | urlencode }}&expand=version"
+            method: GET
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+            status_code: [200, 404]
+          register: main_page_query
+
+        - name: "Debug - Show main page query result"
+          ansible.builtin.debug:
+            msg: |
+              Main page query result:
+              Status: {{ main_page_query.status }}
+              Found pages: {{ main_page_query.json.results | length if main_page_query.json is defined else 0 }}
+              {% if main_page_query.json is defined and main_page_query.json.results | length > 0 %}
+              Existing page ID: {{ main_page_query.json.results[0].id }}
+              Current version: {{ main_page_query.json.results[0].version.number }}
+              {% endif %}
+
+        - name: "Try to create main page"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content"
+            method: POST
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              type: page
+              title: "{{ project_name }} Documentation"
+              space:
+                key: "{{ confluence_space }}"
+              body:
+                storage:
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
+                  representation: storage
+          register: main_page
+          failed_when: false
+
+        - name: "Debug - Show main page creation result"
+          ansible.builtin.debug:
+            msg: |
+              Main page creation result:
+              Status: {{ main_page.status }}
+              {% if main_page.status == 200 %}
+              ✅ Page created successfully
+              Page ID: {{ main_page.json.id }}
+              {% elif main_page.status == 400 and 'already exists' in (main_page.json.message | default('')) %}
+              ℹ️  Page already exists, will update instead
+              {% else %}
+              ❌ Creation failed: {{ main_page.json.message | default('Unknown error') }}
+              {% endif %}
+
+        - name: "Update main page if it already exists"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content/{{ main_page_query.json.results[0].id }}"
+            method: PUT
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              version:
+                number: "{{ main_page_query.json.results[0].version.number + 1 }}"
+              title: "{{ project_name }} Documentation"
+              type: page
+              body:
+                storage:
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
+                  representation: storage
+          register: main_page_update
+          when:
+            - main_page_query is defined
+            - main_page_query.status == 200
+            - main_page_query.json is defined
+            - main_page_query.json.results is defined
+            - main_page_query.json.results | length > 0
+
+        - name: "Debug - Show main page update result"
+          ansible.builtin.debug:
+            msg: |
+              Main page update result:
+              Status: {{ main_page_update.status | default('Not executed') }}
+              Response: {{ main_page_update.json | default('No response') | to_nice_json }}
+          when: main_page_update is defined
+
+        - name: "Try to create child page"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content"
+            method: POST
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              type: page
+              title: "{{ item.title }}"
+              space:
+                key: "{{ confluence_space }}"
+              ancestors:
+                - id: >-
+                    {{ main_page.json.id if main_page.status == 200
+                    else main_page_query.json.results[0].id }}
+              body:
+                storage:
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/' + item.file + '.html') }}"
+                  representation: storage
+          register: create_child_page
+          failed_when: false
+          loop: "{{ child_pages }}"
+
+        - name: "Debug - Show child page creation details"
+          ansible.builtin.debug:
+            msg: |
+              Child page creation details:
+              Title: {{ item.title }}
+              File: {{ item.file }}
+              Parent ID: {{ main_page.json.id if main_page.status == 200 else main_page_query.json.results[0].id }}
+              URL: {{ confluence_url }}/rest/api/content
+              Status: {{ create_child_page.results[ansible_loop.index0].status | default('Not executed') }}
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+
+        - name: "Query existing child pages for updates"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content?spaceKey={{ confluence_space | urlencode }}&title={{ item.title | urlencode }}&expand=version"
+            method: GET
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+            status_code: [200, 404]
+          register: child_page_query
+          loop: "{{ child_pages }}"
+
+        - name: "Update existing child pages"
+          ansible.builtin.uri:
+            url: "{{ confluence_url }}/rest/api/content/{{ child_page_query.results[ansible_loop.index0].json.results[0].id }}"
+            method: PUT
+            headers:
+              Authorization: "Basic {{ confluence_auth }}"
+              Content-Type: "application/json"
+            body_format: json
+            body:
+              version:
+                number: >-
+                  {{ child_page_query.results[ansible_loop.index0].json.results[0].version.number + 1 }}
+              title: "{{ item.title }}"
+              type: page
+              ancestors:
+                - id: >-
+                    {{ main_page.json.id if main_page.status == 200
+                    else main_page_query.json.results[0].id }}
+              body:
+                storage:
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/' + item.file + '.html') }}"
+                  representation: storage
+          when:
+            - child_page_query is defined
+            - child_page_query.results[ansible_loop.index0].status == 200
+            - child_page_query.results[ansible_loop.index0].json.results is defined
+            - child_page_query.results[ansible_loop.index0].json.results | length > 0
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+
+        - name: "Debug - Show child page update details"
+          ansible.builtin.debug:
+            msg: |
+              Child page update details:
+              Title: {{ item.title }}
+              Status: {{ child_page_query.results[ansible_loop.index0].status | default('Not executed') }}
+          loop: "{{ child_pages }}"
+          loop_control:
+            extended: true
+
+      rescue:
+        - name: "Handle Confluence API errors"
+          ansible.builtin.debug:
+            msg: |
+              Confluence publishing failed. Please check:
+              1. Confluence URL is correct: {{ confluence_url }}
+              2. Space key exists: {{ confluence_space }}
+              3. Authentication credentials are valid
+              4. HTML files exist in ~/tmp/
+              5. Network connectivity to Confluence
+
+        - name: "Show Confluence troubleshooting info"
+          ansible.builtin.debug:
+            msg: |
+              Troubleshooting:
+              - Test URL manually: {{ confluence_url }}/rest/api/content
+              - Verify space: {{ confluence_space }}
+              - Check credentials: echo "{{ confluence_auth }}" | base64 -d

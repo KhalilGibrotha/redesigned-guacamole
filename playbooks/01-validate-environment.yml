@@ -1,0 +1,43 @@
+---
+# Environment Validation Playbook
+# Validates that all required tools and templates are available
+
+- name: "Environment Validation"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - ../vars/vars.yml
+
+  tasks:
+    - name: "Verify template files exist"
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: template_files
+      loop:
+        - docs/main.md.j2
+        - docs/platform_governance.md.j2
+        - docs/platform_runbook.md.j2
+        - docs/operator_runbook.md.j2
+        - docs/training_enablement.md.j2
+
+    - name: "Fail if templates are missing"
+      ansible.builtin.fail:
+        msg: "Missing template file: {{ item.item }}"
+      loop: "{{ template_files.results }}"
+      when: not item.stat.exists
+
+    - name: "Check pandoc availability"
+      ansible.builtin.command: which pandoc
+      register: pandoc_available
+      changed_when: false
+      failed_when: pandoc_available.rc != 0
+
+    - name: "Display environment info"
+      ansible.builtin.debug:
+        msg: |
+          Environment validation complete:
+          ✅ All template files found
+          ✅ Pandoc available at: {{ pandoc_available.stdout }}
+          ✅ User: {{ ansible_env.USER }}
+          ✅ Working directory: {{ ansible_env.PWD }}
