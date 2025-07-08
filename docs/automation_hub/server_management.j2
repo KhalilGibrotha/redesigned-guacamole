@@ -1,0 +1,63 @@
+{%- from 'macros.j2' import oxford_comma_list -%}
+
+# Server Management
+
+**🖥️ Infrastructure Management - Updated [Auto-generated]**
+
+## Overview
+Server management procedures and documentation for the Ansible Automation Platform infrastructure.
+
+## Server Inventory
+
+### 🏢 Environment Details
+- **Environment**: {{ env }}
+- **Project**: {{ project_name }}
+- **Management URL**: {{ database_url }}
+
+### 📊 Server Specifications
+| Server Type | Count | Specifications | Purpose |
+|-------------|-------|----------------|---------|
+| Controller Nodes | [TBD] | [CPU/Memory/Storage] | Automation execution |
+| Database Servers | [TBD] | [CPU/Memory/Storage] | Data persistence |
+| Web UI Servers | [TBD] | [CPU/Memory/Storage] | User interface |
+| Execution Nodes | [TBD] | [CPU/Memory/Storage] | Job execution |
+
+## Configuration Management
+
+### ⚙️ Standard Configurations
+- Operating system standards and patches
+- Security hardening configurations
+- Monitoring and logging setup
+- Backup and recovery configurations
+
+### 🔧 Maintenance Procedures
+- **Regular Updates**: Monthly patch cycles
+- **Security Updates**: As needed/emergency
+- **Capacity Planning**: Quarterly reviews
+- **Performance Tuning**: Ongoing optimization
+
+## Monitoring and Alerts
+
+### 📊 System Monitoring
+- CPU, memory, and storage utilization
+- Network connectivity and performance
+- Service availability and response times
+- Log analysis and error tracking
+
+### 🚨 Alert Thresholds
+- CPU > 80% for 5 minutes
+- Memory > 85% for 5 minutes
+- Storage > 90%
+- Service unavailability > 2 minutes
+
+## Backup and Recovery
+
+### 💾 Backup Procedures
+- **Frequency**: Daily automated backups
+- **Retention**: 30 days online, 1 year archive
+- **Testing**: Monthly recovery testing
+- **Documentation**: Backup verification logs
+
+---
+
+*Server management documentation is part of the Automation Hub infrastructure guide.*

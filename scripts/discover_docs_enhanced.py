@@ -50,13 +50,14 @@ class DocumentationDiscovery:
         
         if not self.base_dir.exists():
             return sections
-            
+        
+        # Discover sections from folder structure
         for item in self.base_dir.iterdir():
-            if item.is_dir() and item.name not in ['auto_document', '__pycache__']:
+            if item.is_dir():
                 section_info = self._analyze_section(item)
                 if section_info:
                     sections[item.name] = section_info
-                    
+            
         return sections
     
     def _discover_auto_document_sections(self) -> Dict[str, Any]:
