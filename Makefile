@@ -645,8 +645,12 @@ convert-templates-dynamic:
 	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering automation_hub main page..."; \
-		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		if grep -q "skip_main_page: true" vars/vars.yml; then \
+			echo "   ⏩ Skipping main page (skip_main_page=true in config)"; \
+		else \
+			echo "   📝 Rendering automation_hub main page..."; \
+			ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		fi; \
 		echo "   📝 Rendering automation_hub child pages..."; \
 		for template in docs/automation_hub/*.j2; do \
 			if [ -f "$$template" ]; then \
