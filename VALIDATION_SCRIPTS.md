@@ -62,23 +62,63 @@ Validates a branch and safely merges it with main:
 ./merge-branch.sh --dry-run feature/test
 ```
 
+### 4. `git-flow.sh` - Git Flow Helper
+Manages Git Flow workflow with feature, release, and hotfix branches:
+
+```bash
+# Initialize Git Flow (creates develop branch)
+./git-flow.sh init
+
+# Feature development
+./git-flow.sh feature start user-auth       # Create feature/user-auth
+./git-flow.sh feature finish user-auth      # Merge to develop with validation
+
+# Release management
+./git-flow.sh release start v1.0            # Create release/v1.0
+./git-flow.sh release finish v1.0           # Merge to main, tag, merge back to develop
+
+# Hotfix management
+./git-flow.sh hotfix start critical-bug     # Create hotfix/critical-bug
+./git-flow.sh hotfix finish critical-bug    # Merge to main and develop
+
+# Status and cleanup
+./git-flow.sh status                         # Show Git Flow status
+./git-flow.sh cleanup                        # Clean up merged branches
+```
+
 ## Workflow Examples
 
-### Quick Development Check
+### Git Flow Development Workflow
+```bash
+# 1. Start a new feature
+./git-flow.sh feature start user-dashboard
+
+# 2. Develop your feature (make commits)
+# ... work on feature ...
+
+# 3. Quick validation during development
+./quick-validate.sh
+
+# 4. Finish the feature (validates and merges to develop)
+./git-flow.sh feature finish user-dashboard
+
+# 5. When ready for release
+./git-flow.sh release start v1.2.0
+
+# 6. Finalize release and deploy to production
+./git-flow.sh release finish v1.2.0
+```
+
+### Traditional Workflow (Manual Branch Management)
 ```bash
 # Before committing changes
 ./quick-validate.sh
-```
 
-### Before Merging a Branch
-```bash
-# Full validation and merge
+# Before merging a feature branch to develop
 ./merge-branch.sh feature/my-feature
 
-# Or step by step
-git checkout feature/my-feature
-./validate-all.sh
-./merge-branch.sh feature/my-feature
+# Before merging a release to main
+./merge-branch.sh --to-main release/v1.0
 ```
 
 ### CI/CD Integration
@@ -93,19 +133,35 @@ else
 fi
 ```
 
-## Integration with Makefile
+## Git Flow Integration
 
-These scripts complement the existing Makefile targets:
+The project now follows Git Flow with two main branches:
+- **`main`**: Production-ready code
+- **`develop`**: Integration branch for features
+
+### Branch Types and Merge Destinations
+
+| Branch Type | Merge To | Use Case |
+|-------------|----------|----------|
+| `feature/*` | `develop` | New features and improvements |
+| `release/*` | `main` | Release preparation |
+| `hotfix/*`  | `main` | Emergency production fixes |
+
+### Updated Merge Script Behavior
+
+The `merge-branch.sh` script now automatically detects branch types:
 
 ```bash
-# Manual validation using Make
-make validate          # Full validation
-make dev               # Development checks
-make ci                # CI/CD checks
+# Feature branches automatically merge to develop
+./merge-branch.sh feature/new-docs          # → merges to develop
 
-# Or use the scripts
-./validate-all.sh      # Equivalent to make validate
-./quick-validate.sh    # Quick essential checks
+# Release/hotfix branches automatically merge to main  
+./merge-branch.sh release/v1.0              # → merges to main
+./merge-branch.sh hotfix/critical-fix       # → merges to main
+
+# Override automatic detection
+./merge-branch.sh --to-main feature/special # → force merge to main
+./merge-branch.sh --to-develop hotfix/test  # → force merge to develop
 ```
 
 ## Exit Codes
@@ -133,6 +189,10 @@ All scripts follow standard exit codes:
 - `git`
 - One of the validation scripts
 - Write access to the repository
+
+### For Git Flow (`git-flow.sh`)
+- `git`
+- `git-flow` (installed and initialized)
 
 ## Troubleshooting
 

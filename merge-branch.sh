@@ -18,6 +18,7 @@ NC='\033[0m'
 
 # Configuration
 MAIN_BRANCH="main"
+DEVELOP_BRANCH="develop"
 VALIDATION_SCRIPT="./validate-all.sh"
 QUICK_VALIDATION_SCRIPT="./quick-validate.sh"
 
@@ -39,7 +40,7 @@ log_error() {
 }
 
 show_help() {
-    echo "Safe Branch Merge Script"
+    echo "Safe Branch Merge Script with Git Flow Support"
     echo ""
     echo "Usage: $0 [options] [branch-name]"
     echo ""
@@ -49,19 +50,28 @@ show_help() {
     echo "  --no-validation      Skip validation (not recommended)"
     echo "  --dry-run           Show what would be done without executing"
     echo "  --force             Force merge even if validation warns"
+    echo "  --to-main           Merge to main branch (for releases)"
+    echo "  --to-develop        Merge to develop branch (default for features)"
     echo ""
     echo "Examples:"
-    echo "  $0                           # Interactive mode - select branch"
-    echo "  $0 feature/new-docs          # Merge specific branch"
-    echo "  $0 --quick feature/hotfix    # Quick validation and merge"
+    echo "  $0                           # Interactive mode - select branch, merge to develop"
+    echo "  $0 feature/new-docs          # Merge feature branch to develop"
+    echo "  $0 --to-main release/v1.0    # Merge release branch to main"
+    echo "  $0 --quick feature/hotfix    # Quick validation and merge to develop"
+    echo ""
+    echo "Git Flow Integration:"
+    echo "  • Feature branches -> develop (default)"
+    echo "  • Release branches -> main (use --to-main)"
+    echo "  • Hotfix branches  -> main (use --to-main)"
     echo ""
     echo "The script will:"
     echo "  1. Fetch latest changes"
     echo "  2. Checkout the target branch"
     echo "  3. Run validation checks"
-    echo "  4. Switch to main and update"
+    echo "  4. Switch to target branch (develop/main)"
     echo "  5. Merge the branch"
-    echo "  6. Optionally clean up"
+    echo "  6. Push changes"
+    echo "  7. Optionally clean up"
 }
 
 # Parse command line arguments
@@ -70,6 +80,8 @@ NO_VALIDATION=false
 DRY_RUN=false
 FORCE=false
 TARGET_BRANCH=""
+MERGE_TO_MAIN=false
+MERGE_TO_DEVELOP=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -93,6 +105,14 @@ while [[ $# -gt 0 ]]; do
             FORCE=true
             shift
             ;;
+        --to-main)
+            MERGE_TO_MAIN=true
+            shift
+            ;;
+        --to-develop)
+            MERGE_TO_DEVELOP=true
+            shift
+            ;;
         -*)
             echo "Unknown option $1"
             show_help
@@ -105,16 +125,37 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Determine target merge branch
+if [ "$MERGE_TO_MAIN" = true ] && [ "$MERGE_TO_DEVELOP" = true ]; then
+    log_error "Cannot specify both --to-main and --to-develop"
+    exit 1
+fi
+
+if [ "$MERGE_TO_MAIN" = true ]; then
+    MERGE_TARGET="$MAIN_BRANCH"
+elif [ "$MERGE_TO_DEVELOP" = true ]; then
+    MERGE_TARGET="$DEVELOP_BRANCH"
+else
+    # Default: determine based on branch type
+    if [[ "$TARGET_BRANCH" =~ ^(release|hotfix)/ ]]; then
+        MERGE_TARGET="$MAIN_BRANCH"
+        log_info "🎯 Detected $TARGET_BRANCH - defaulting to merge into $MAIN_BRANCH"
+    else
+        MERGE_TARGET="$DEVELOP_BRANCH"
+        log_info "🎯 Detected feature/other branch - defaulting to merge into $DEVELOP_BRANCH"
+    fi
+fi
+
 # Dry run mode
 if [ "$DRY_RUN" = true ]; then
     echo "DRY RUN MODE - Would execute:"
     echo "1. git fetch --all"
     echo "2. git checkout $TARGET_BRANCH (or select interactively)"
     echo "3. Run validation checks"
-    echo "4. git checkout $MAIN_BRANCH"
-    echo "5. git pull origin $MAIN_BRANCH"
+    echo "4. git checkout $MERGE_TARGET"
+    echo "5. git pull origin $MERGE_TARGET"
     echo "6. git merge $TARGET_BRANCH"
-    echo "7. git push origin $MAIN_BRANCH"
+    echo "7. git push origin $MERGE_TARGET"
     exit 0
 fi
 
@@ -146,7 +187,15 @@ git fetch --all
 # Step 2: Select or validate target branch
 if [ -z "$TARGET_BRANCH" ]; then
     log_info "📋 Available branches:"
-    git branch -a | grep -v "HEAD" | sed 's/^../  /'
+    echo "  Local branches:"
+    git branch | sed 's/^../    /'
+    echo "  Remote branches:"
+    git branch -r | grep -v "HEAD" | sed 's/^../    /'
+    echo ""
+    echo "Git Flow Guidelines:"
+    echo "  • feature/* branches -> merge to develop"
+    echo "  • release/* branches -> merge to main"
+    echo "  • hotfix/* branches  -> merge to main"
     echo ""
     read -p "Enter branch name to merge: " TARGET_BRANCH
 fi
@@ -157,7 +206,19 @@ if ! git show-ref --verify --quiet "refs/heads/$TARGET_BRANCH" && ! git show-ref
     exit 1
 fi
 
+# Re-determine merge target now that we have the branch name
+if [ "$MERGE_TO_MAIN" = false ] && [ "$MERGE_TO_DEVELOP" = false ]; then
+    if [[ "$TARGET_BRANCH" =~ ^(release|hotfix)/ ]]; then
+        MERGE_TARGET="$MAIN_BRANCH"
+        log_info "🎯 Detected $TARGET_BRANCH - will merge into $MAIN_BRANCH"
+    else
+        MERGE_TARGET="$DEVELOP_BRANCH"
+        log_info "🎯 Detected feature/other branch - will merge into $DEVELOP_BRANCH"
+    fi
+fi
+
 log_info "🎯 Target branch: $TARGET_BRANCH"
+log_info "🎯 Merge destination: $MERGE_TARGET"
 
 # Step 3: Checkout target branch
 log_info "📂 Checking out target branch..."
@@ -200,13 +261,13 @@ else
     log_warning "Skipping validation (not recommended)"
 fi
 
-# Step 5: Switch to main branch
-log_info "🔄 Switching to $MAIN_BRANCH branch..."
-git checkout "$MAIN_BRANCH"
+# Step 5: Switch to target merge branch
+log_info "🔄 Switching to $MERGE_TARGET branch..."
+git checkout "$MERGE_TARGET"
 
-# Step 6: Update main branch
-log_info "⬇️  Updating $MAIN_BRANCH branch..."
-git pull origin "$MAIN_BRANCH"
+# Step 6: Update target merge branch
+log_info "⬇️  Updating $MERGE_TARGET branch..."
+git pull origin "$MERGE_TARGET"
 
 # Step 7: Check for conflicts before merging
 log_info "🔍 Checking for potential merge conflicts..."
@@ -217,24 +278,38 @@ if ! git merge --no-commit --no-ff "$TARGET_BRANCH" > /dev/null 2>&1; then
     log_info "  1. git merge $TARGET_BRANCH"
     log_info "  2. Resolve conflicts"
     log_info "  3. git commit"
-    log_info "  4. git push origin $MAIN_BRANCH"
+    log_info "  4. git push origin $MERGE_TARGET"
     exit 1
 else
     git reset --hard HEAD > /dev/null 2>&1
 fi
 
 # Step 8: Perform the actual merge
-log_info "🔀 Merging $TARGET_BRANCH into $MAIN_BRANCH..."
-git merge --no-ff "$TARGET_BRANCH" -m "Merge branch '$TARGET_BRANCH' into $MAIN_BRANCH
+log_info "🔀 Merging $TARGET_BRANCH into $MERGE_TARGET..."
+MERGE_MESSAGE="Merge branch '$TARGET_BRANCH' into $MERGE_TARGET
 
 - Passed validation checks
 - Merged via safe-merge script"
 
+# Add additional context for different branch types
+if [[ "$TARGET_BRANCH" =~ ^feature/ ]]; then
+    MERGE_MESSAGE="$MERGE_MESSAGE
+- Feature branch integration"
+elif [[ "$TARGET_BRANCH" =~ ^release/ ]]; then
+    MERGE_MESSAGE="$MERGE_MESSAGE
+- Release branch merge"
+elif [[ "$TARGET_BRANCH" =~ ^hotfix/ ]]; then
+    MERGE_MESSAGE="$MERGE_MESSAGE
+- Hotfix branch merge"
+fi
+
+git merge --no-ff "$TARGET_BRANCH" -m "$MERGE_MESSAGE"
+
 # Step 9: Push to remote
 log_info "⬆️  Pushing to remote..."
-git push origin "$MAIN_BRANCH"
+git push origin "$MERGE_TARGET"
 
-log_success "🎉 Successfully merged $TARGET_BRANCH into $MAIN_BRANCH!"
+log_success "🎉 Successfully merged $TARGET_BRANCH into $MERGE_TARGET!"
 
 # Step 10: Cleanup options
 echo ""
@@ -255,6 +330,28 @@ fi
 log_success "✨ Merge process completed successfully!"
 log_info "📋 Summary:"
 log_info "  • Branch: $TARGET_BRANCH"
-log_info "  • Merged into: $MAIN_BRANCH"
+log_info "  • Merged into: $MERGE_TARGET"
 log_info "  • Validation: $([ "$NO_VALIDATION" = true ] && echo "Skipped" || ([ "$QUICK_MODE" = true ] && echo "Quick" || echo "Comprehensive"))"
 log_info "  • Status: Success"
+
+# Additional Git Flow guidance
+if [ "$MERGE_TARGET" = "$DEVELOP_BRANCH" ]; then
+    log_info ""
+    log_info "🌟 Next Steps (Git Flow):"
+    log_info "  • Your feature is now in the develop branch"
+    log_info "  • When ready for release, create a release branch:"
+    log_info "    git checkout -b release/v1.0 develop"
+    log_info "  • Then merge the release to main:"
+    log_info "    ./merge-branch.sh --to-main release/v1.0"
+elif [ "$MERGE_TARGET" = "$MAIN_BRANCH" ]; then
+    log_info ""
+    log_info "🚀 Production Deployment:"
+    log_info "  • Your changes are now in the main branch"
+    log_info "  • Consider creating a tag for this release:"
+    log_info "    git tag -a v1.0 -m 'Release version 1.0'"
+    log_info "    git push origin v1.0"
+    if [[ "$TARGET_BRANCH" =~ ^release/ ]]; then
+        log_info "  • Don't forget to merge back to develop:"
+        log_info "    git checkout develop && git merge main"
+    fi
+fi
