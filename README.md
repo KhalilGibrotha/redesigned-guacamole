@@ -7,14 +7,19 @@
 
 An enterprise-grade Ansible automation solution for generating and publishing documentation to Atlassian Confluence. This project includes comprehensive testing, linting, and quality assurance tools designed for Ansible Automation Platform (AAP) environments.
 
+Because writing docs by hand is almost as fun as debugging YAML at 2 a.m., this project does the heavy lifting for you.
+
 ## Features
 
 - 🚀 **Automated Documentation**: Convert Markdown templates to HTML and publish to Confluence
 - 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint ✅
 - 🛡️ **Security First**: Built-in security scanning and credential protection ✅
 - 📝 **Template System**: Jinja2-based markdown templates with variable substitution ✅
-- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
+- 🔧 **Multi-Platform CI/CD**: Config templates for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️
 - 📊 **Quality Gates**: Production-ready linting standards and validation ✅
+- 🖥️ **Cross-Platform Support**: Runs on RHEL, Ubuntu, macOS, and even that lonely Arch box ✅
+- 📚 **Modular Playbooks**: Reusable playbooks for easier maintenance and debugging ✅
+- 🔒 **Secure Setup**: Interactive scripts for safe credential management ✅
 
 > **Note**: Features marked with ⚠️ are work-in-progress and may require additional testing and customization.
 
