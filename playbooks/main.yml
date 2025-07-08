@@ -2,12 +2,12 @@
 # Main Orchestrator Playbook
 # Coordinates all the modular playbooks for complete Confluence automation
 
-- name: "Confluence Documentation Automation - Orchestrator"
+- name: "🚀 Confluence Documentation Automation - Start"
   hosts: localhost
   connection: local
   gather_facts: true
   vars_files:
-    - vars/vars.yml
+    - ../vars/vars.yml
 
   tasks:
     - name: "🚀 Starting Confluence Documentation Automation"
@@ -22,34 +22,42 @@
           Space: {{ confluence_space }}
           ================================================
 
-    - name: "📋 Step 1: Environment Validation"
-      ansible.builtin.include: playbooks/01-validate-environment.yml
+# Environment Validation
+- import_playbook: 01-validate-environment.yml
 
-    - name: "🔄 Step 2: Template Conversion"
-      ansible.builtin.include: playbooks/02-convert-templates.yml
+# Template Conversion
+- import_playbook: 02-convert-templates.yml
 
-    - name: "📄 Step 3: HTML Conversion"
-      ansible.builtin.include: playbooks/03-convert-html.yml
+# HTML Conversion
+- import_playbook: 03-convert-html.yml
 
-    - name: "☁️  Step 4: Confluence Publishing"
-      ansible.builtin.include: playbooks/04-publish-confluence.yml
+# Confluence Publishing
+- import_playbook: 04-publish-confluence.yml
 
+- name: "✅ Confluence Documentation Automation - Complete"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../vars/vars.yml
+
+  tasks:
     - name: "✅ Automation Complete"
       ansible.builtin.debug:
         msg: |
           ================================================
           🎉 Confluence Documentation Automation Complete!
           ================================================
-          
+
           📊 Summary:
           ✅ Environment validated
           ✅ Templates converted to markdown
           ✅ Markdown converted to HTML
           ✅ Content published to Confluence
-          
+
           🔗 Access your documentation:
           {{ confluence_url }}/spaces/{{ confluence_space }}
-          
+
           📁 Temporary files available in: ~/tmp/
           🧹 Clean up with: make clean-conversion
           ================================================

@@ -257,7 +257,13 @@ security-check:
 	@echo "1. Checking for exposed secrets..."
 	@! grep -r "password\|secret\|ATAT\|api_token" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token" || (echo "⚠️  Potential secrets found" && exit 1)
 	@echo "2. Checking file permissions..."
-	@find . -name "*.yml" -perm /002 | head -1 > /dev/null && (echo "❌ World-writable YAML files found" && exit 1) || echo "✅ File permissions OK"
+	@if find . -name "*.yml" -perm /002 | grep -q .; then \
+		echo "❌ World-writable YAML files found"; \
+		find . -name "*.yml" -perm /002; \
+		exit 1; \
+	else \
+		echo "✅ File permissions OK"; \
+	fi
 	@echo "3. Checking for hardcoded production URLs..."
 	@! grep -r "https://.*\.atlassian\.net\|https://.*\.confluence\." . --include="*.yml" | grep -v "example\|test\|mock\|template\|your-domain" || echo "⚠️  Production URLs found (review recommended)"
 	@echo "4. Checking if vars/vars.yml is protected..."

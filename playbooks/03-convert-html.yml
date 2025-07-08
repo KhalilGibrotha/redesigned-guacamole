@@ -13,7 +13,7 @@
     - name: "Convert markdown to HTML using make"
       block:
         - name: "Convert markdown files to HTML"
-          ansible.builtin.command: make convert-markdown
+          ansible.builtin.command: make -C .. convert-markdown
           register: markdown_conversion
           changed_when: true
 
@@ -26,7 +26,7 @@
               Errors: {{ markdown_conversion.stderr | default('None') }}
 
         - name: "Verify HTML files using make"
-          ansible.builtin.command: make verify-html
+          ansible.builtin.command: make -C .. verify-html
           register: html_verification
           changed_when: false
 
@@ -63,14 +63,14 @@
     - name: "Fallback conversion if make failed"
       block:
         - name: "Fallback: Try make convert-all"
-          ansible.builtin.command: make convert-all
+          ansible.builtin.command: make -C .. convert-all
           register: fallback_conversion
           when: markdown_conversion.rc != 0
           changed_when: true
           failed_when: false
 
         - name: "Final verification of HTML files"
-          ansible.builtin.command: make verify-html
+          ansible.builtin.command: make -C .. verify-html
           register: final_verification
           changed_when: false
 
@@ -84,7 +84,7 @@
         - name: "Handle fallback conversion errors"
           ansible.builtin.debug:
             msg: |
-              Fallback conversion also failed. 
+              Fallback conversion also failed.
               Please check the system manually:
               - Ensure pandoc is installed: which pandoc
               - Test manually: make convert-all

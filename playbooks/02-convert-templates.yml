@@ -23,14 +23,14 @@
           Source: {{ item }}
           Destination: ~/tmp/{{ item | basename | replace('.j2', '') }}
       loop:
-        - docs/main.md.j2
-        - docs/platform_governance.md.j2
-        - docs/platform_runbook.md.j2
-        - docs/operator_runbook.md.j2
-        - docs/training_enablement.md.j2
+        - ../docs/main.md.j2
+        - ../docs/platform_governance.md.j2
+        - ../docs/platform_runbook.md.j2
+        - ../docs/operator_runbook.md.j2
+        - ../docs/training_enablement.md.j2
 
     - name: "Render Jinja templates to markdown using make"
-      ansible.builtin.command: make convert-templates
+      ansible.builtin.command: make -C .. convert-templates
       register: template_conversion
       changed_when: true
 

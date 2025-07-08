@@ -15,11 +15,11 @@
         path: "{{ item }}"
       register: template_files
       loop:
-        - docs/main.md.j2
-        - docs/platform_governance.md.j2
-        - docs/platform_runbook.md.j2
-        - docs/operator_runbook.md.j2
-        - docs/training_enablement.md.j2
+        - ../docs/main.md.j2
+        - ../docs/platform_governance.md.j2
+        - ../docs/platform_runbook.md.j2
+        - ../docs/operator_runbook.md.j2
+        - ../docs/training_enablement.md.j2
 
     - name: "Fail if templates are missing"
       ansible.builtin.fail:

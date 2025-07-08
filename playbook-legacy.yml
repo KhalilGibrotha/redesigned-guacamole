@@ -1,13 +1,13 @@
 ---
 # Legacy Playbook - Maintained for Backward Compatibility
-# 
+#
 # 🔄 MODERNIZED STRUCTURE AVAILABLE!
 # This playbook has been modularized for better maintainability.
-# 
+#
 # New structure:
 # - playbooks/main.yml              # Main orchestrator
 # - playbooks/01-validate-environment.yml
-# - playbooks/02-convert-templates.yml  
+# - playbooks/02-convert-templates.yml
 # - playbooks/03-convert-html.yml
 # - playbooks/04-publish-confluence.yml
 # - playbooks/cleanup.yml
@@ -30,9 +30,9 @@
           ================================================
           📢 NOTICE: Using Legacy Playbook
           ================================================
-          
+
           This playbook has been modularized for better maintainability!
-          
+
           🆕 New modular structure available:
           - playbooks/main.yml (main orchestrator)
           - playbooks/01-validate-environment.yml
@@ -40,12 +40,12 @@
           - playbooks/03-convert-html.yml
           - playbooks/04-publish-confluence.yml
           - playbooks/cleanup.yml
-          
+
           💡 Recommended usage:
           ansible-playbook playbooks/main.yml
-          
+
           ⏳ Continuing with legacy execution...
           ================================================
 
-    - name: "🚀 Executing modular playbook"
-      ansible.builtin.include: playbooks/main.yml
+# Import the modular playbook
+- import_playbook: playbooks/main.yml

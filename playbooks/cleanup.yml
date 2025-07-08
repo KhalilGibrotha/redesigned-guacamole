@@ -13,7 +13,7 @@
         msg: "Starting cleanup of temporary conversion files..."
 
     - name: "Clean conversion files using make"
-      ansible.builtin.command: make clean-conversion
+      ansible.builtin.command: make -C .. clean-conversion
       register: cleanup_result
       changed_when: true
 
@@ -37,11 +37,11 @@
           {% else %}
           ✅ ~/tmp directory removed completely
           {% endif %}
-          
+
           💡 Available commands:
           - make clean-conversion  # Clean conversion files only
           - make clean            # Clean all temporary files
-          
+
           🔄 To run automation again:
           - ansible-playbook playbooks/main.yml
           - OR: ansible-playbook playbook.yml (legacy)
