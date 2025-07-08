@@ -13,7 +13,7 @@ confluence_space: "YOUR_SPACE_KEY"
 
 # === SECURITY: CREDENTIAL MANAGEMENT ===
 # NEVER commit real credentials to version control!
-# 
+#
 # Recommended approaches:
 # 1. Use ansible-vault to encrypt this entire file:
 #    ansible-vault encrypt vars/vars.yml
@@ -61,7 +61,7 @@ branding:
   company_name: "Your Company"
   logo_url: "https://your-company.com/logo.png"
   primary_color: "#1e88e5"
-  
+
 # === PLATFORM-SPECIFIC CONFIGURATIONS ===
 # Customize these based on your infrastructure
 platforms:
@@ -69,12 +69,12 @@ platforms:
     cluster_name: "your-cluster-name"
     namespace: "default"
     dashboard_url: "https://k8s-dashboard.your-company.com"
-  
+
   cloud_provider:
     name: "AWS"  # or Azure, GCP, etc.
     region: "us-east-1"
     account_id: "123456789012"
-  
+
   automation_platform:
     name: "Ansible Automation Platform"
     version: "2.4"
