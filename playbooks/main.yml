@@ -36,13 +36,13 @@
         cmd: make sync-repos
         chdir: ".."
       register: sync_result
-      
+
     - name: "📝 Convert mixed content (templates + markdown)"
       ansible.builtin.command:
         cmd: make convert-mixed-content
         chdir: ".."
       register: convert_result
-      
+
     - name: "🔄 Convert markdown to HTML"
       ansible.builtin.command:
         cmd: make convert-markdown
@@ -50,7 +50,7 @@
       register: html_result
 
 # Enhanced Confluence Publishing
-- import_playbook: enhanced_confluence_publishing_clean.yml
+- import_playbook: publish_confluence.yml
 
 - name: "✅ Confluence Documentation Automation - Complete"
   hosts: localhost

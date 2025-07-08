@@ -1,16 +1,34 @@
-# Makefile for Ansible project linting and validation
+# Modern Documentation Automation Makefile
+# Dynamic discovery, processing, and publishing
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-templates-dynamic convert-markdown convert-all verify-html clean-conversion run-full run-dynamic-publish run-legacy-full run-validate run-templates run-html run-publish run-legacy sync-repos sync-repos-force discover-enhanced
+.PHONY: help lint test install-tools clean run-full convert-templates-dynamic convert-markdown discover-enhanced test-confluence validate-confluence-page debug-conversion verify-html clean-conversion check-deps
 
 # Default target
 help:
-	@echo "Available targets:"
+	@echo "🚀 Modern Documentation Automation"
 	@echo ""
-	@echo "🔧 Development & Validation:"
+	@echo "🎯 PRIMARY WORKFLOW:"
+	@echo "  run-full         - Complete automation (recommended) ✅"
+	@echo ""
+	@echo "🔧 INDIVIDUAL STEPS:"
+	@echo "  convert-templates-dynamic - Dynamic template discovery and conversion"
+	@echo "  convert-markdown - Convert markdown files to HTML"  
+	@echo "  discover-enhanced - Show discovered documentation structure"
+	@echo ""
+	@echo "🔍 CONFLUENCE INTERACTION:"
+	@echo "  test-confluence  - Test Confluence connectivity"
+	@echo "  validate-confluence-page - Validate specific page content"
+	@echo ""
+	@echo "�️ DEVELOPMENT:"
 	@echo "  lint             - Run all linting checks"
-	@echo "  lint-yaml        - Run yamllint only"
-	@echo "  lint-ansible     - Run ansible-lint only"
-	@echo "  fix              - Auto-fix some linting issues"
+	@echo "  test             - Ansible syntax validation"
+	@echo "  install-tools    - Install required dependencies"
+	@echo "  debug-conversion - Debug conversion issues"
+	@echo "  verify-html      - Verify HTML generation"
+	@echo ""
+	@echo "🧹 MAINTENANCE:"
+	@echo "  clean            - Remove temporary files"
+	@echo "  clean-conversion - Clean conversion artifacts"
 	@echo "  test             - Run ansible playbook syntax check"
 	@echo "  test-syntax      - Comprehensive syntax validation"
 	@echo "  sanity-check     - Quick sanity checks for development"
@@ -710,7 +728,7 @@ run-dynamic-publish:
 	@echo "📊 Generated files:"
 	@ls -la ~/tmp/*.md ~/tmp/*.html 2>/dev/null | head -10 || echo "No files generated"
 	@echo "📋 Publishing to Confluence..."
-	ansible-playbook playbooks/automation_hub_publishing.yml
+	ansible-playbook playbooks/publish_confluence.yml
 
 # Streamlined workflow targets
 run-full: run-dynamic-publish
@@ -735,7 +753,7 @@ run-html:
 
 run-publish:
 	@echo "☁️  Publishing to Confluence..."
-	ansible-playbook playbooks/04-publish-confluence.yml
+	ansible-playbook playbooks/publish_confluence.yml
 
 run-legacy:
 	@echo "🔄 Running legacy playbook..."
@@ -762,5 +780,13 @@ sync-repos-force:
 discover-enhanced:
 	@echo "� Enhanced documentation discovery..."
 	python3 scripts/discover_docs_enhanced.py
+
+test-confluence:
+	@echo "🔍 Testing Confluence connectivity..."
+	@python3 scripts/confluence_manager.py --action find --title "Automation Hub" || echo "   ❌ Connection failed"
+
+validate-confluence-page:
+	@echo "🔍 Validating Confluence page content..."
+	@python3 scripts/confluence_manager.py --action validate --page-id $(CONFLUENCE_PAGE_ID) || echo "   ❌ Validation failed"
 
 

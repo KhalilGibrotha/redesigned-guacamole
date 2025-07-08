@@ -164,10 +164,10 @@
           {% else %}
           ❌ Update failed or not executed
           {% endif %}
-          
+
           Child Pages:
           {% for item in doc_sections.automation_hub.children | default([]) %}
-          - {{ item.name | title | replace('_', ' ') }}: 
+          - {{ item.name | title | replace('_', ' ') }}:
             {% if child_page_queries.results[loop.index0].status == 404 %}
               {% if create_child_pages.results[loop.index0].status == 200 %}
                 ✅ Created successfully
