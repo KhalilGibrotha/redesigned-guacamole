@@ -1,5 +1,5 @@
 ---
-- name: "Markdown → Confluence Automation"
+- name: "Markdown → Confluence Automation (Dynamic Structure)"
   hosts: localhost
   gather_facts: false
   vars_files:
@@ -10,22 +10,31 @@
 
     - name: "Pre-flight checks"
       block:
-        - name: "Verify template files exist"
+        - name: "Verify main automation_hub template exists"
+          ansible.builtin.stat:
+            path: "docs/automation_hub/automation_hub.j2"
+          register: main_template_check
+
+        - name: "Verify automation_hub child templates exist"
           ansible.builtin.stat:
             path: "{{ item }}"
-          register: template_check
+          register: child_template_check
           loop:
-            - docs/main.j2
-            - docs/platform_governance.j2
-            - docs/platform_runbook.j2
-            - docs/operator_runbook.j2
-            - docs/training_enablement.j2
+            - docs/automation_hub/platform_governance.j2
+            - docs/automation_hub/platform_runbook.j2
+            - docs/automation_hub/operator_runbook.j2
+            - docs/automation_hub/training_enablement.j2
 
-        - name: "Fail if templates are missing"
+        - name: "Fail if main template is missing"
           ansible.builtin.fail:
-            msg: "Missing template file: {{ item.item }}"
+            msg: "Missing main template file: docs/automation_hub/automation_hub.j2"
+          when: not main_template_check.stat.exists
+
+        - name: "Fail if child templates are missing"
+          ansible.builtin.fail:
+            msg: "Missing child template file: {{ item.item }}"
           when: not item.stat.exists
-          loop: "{{ template_check.results }}"
+          loop: "{{ child_template_check.results }}"
 
         - name: "Check pandoc availability"
           ansible.builtin.command: which pandoc
@@ -42,18 +51,12 @@
     - name: "Debug - Show template rendering details"
       ansible.builtin.debug:
         msg: |
-          About to render Jinja2 templates:
-          Source: {{ item }}
-          Destination: ~/tmp/{{ item | basename | replace('.j2', '') }}
-      loop:
-        - docs/main.j2
-        - docs/platform_governance.j2
-        - docs/platform_runbook.j2
-        - docs/operator_runbook.j2
-        - docs/training_enablement.j2
+          About to render Jinja2 templates from automation_hub folder:
+          Main page: docs/automation_hub/automation_hub.j2 -> ~/tmp/automation_hub.md
+          Child pages: platform_governance, platform_runbook, operator_runbook, training_enablement
 
-    - name: "Render Jinja templates to markdown using make"
-      ansible.builtin.command: make convert-templates
+    - name: "Render main page templates to markdown using make"
+      ansible.builtin.command: make convert-templates-dynamic
       register: template_conversion
       changed_when: true
 
@@ -69,18 +72,18 @@
       block:
         - name: "Debug - Check if markdown files exist first"
           ansible.builtin.stat:
-            path: "~/tmp/{{ item }}"
+            path: "~/tmp/{{ item }}.md"
           register: md_files_check
           loop:
-            - main.md
-            - platform_governance.md
-            - platform_runbook.md
-            - operator_runbook.md
-            - training_enablement.md
+            - automation_hub
+            - platform_governance
+            - platform_runbook
+            - operator_runbook
+            - training_enablement
 
         - name: "Debug - Show markdown file status"
           ansible.builtin.debug:
-            msg: "File ~/tmp/{{ item.item }} exists: {{ item.stat.exists }}, size: {{ item.stat.size | default('N/A') }}"
+            msg: "File ~/tmp/{{ item.item }}.md exists: {{ item.stat.exists }}, size: {{ item.stat.size | default('N/A') }}"
           loop: "{{ md_files_check.results }}"
 
         - name: "Convert markdown to HTML using make"
@@ -141,7 +144,7 @@
               Confluence API Configuration:
               Base URL: {{ confluence_url }}
               Space: {{ confluence_space }}
-              Main page title: {{ project_name }} Documentation
+              Main page title: Automation Hub
               Main page URL: {{ confluence_url }}/rest/api/content
 
         - name: "Ensure main page exists"
@@ -154,12 +157,12 @@
             body_format: json
             body:
               type: page
-              title: "{{ project_name }} Documentation"
+              title: "Automation Hub"
               space:
                 key: "{{ confluence_space }}"
               body:
                 storage:
-                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/automation_hub.md.html') }}"
                   representation: storage
           register: main_page
           failed_when: false
@@ -175,7 +178,7 @@
         - name: "Get main page ID if exists"
           ansible.builtin.uri:
             url: >-
-              {{ confluence_url }}/rest/api/content?title={{ (project_name + ' Documentation') | urlencode }}&spaceKey={{ confluence_space }}&expand=version
+              {{ confluence_url }}/rest/api/content?title={{ 'Automation Hub' | urlencode }}&spaceKey={{ confluence_space }}&expand=version
             method: GET
             headers:
               Authorization: "Basic {{ confluence_auth }}"
@@ -187,7 +190,7 @@
           ansible.builtin.debug:
             msg: |
               Main page query details:
-              URL: {{ confluence_url }}/rest/api/content?title={{ (project_name + ' Documentation') | urlencode }}&spaceKey={{ confluence_space }}&expand=version
+              URL: {{ confluence_url }}/rest/api/content?title={{ 'Automation Hub' | urlencode }}&spaceKey={{ confluence_space }}&expand=version
               Status: {{ main_page_query.status | default('Not executed') }}
               Response: {{ main_page_query.json | default('No response') | to_nice_json }}
           when: main_page.status != 200
@@ -218,11 +221,11 @@
             body:
               version:
                 number: "{{ main_page_query.json.results[0].version.number + 1 }}"
-              title: "{{ project_name }} Documentation"
+              title: "Automation Hub"
               type: page
               body:
                 storage:
-                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/main.md.html') }}"
+                  value: "{{ lookup('file', lookup('env', 'HOME') + '/tmp/automation_hub.md.html') }}"
                   representation: storage
           register: main_page_update
           when:
@@ -240,6 +243,18 @@
               Response: {{ main_page_update.json | default('No response') | to_nice_json }}
           when: main_page_update is defined
 
+
+        - name: "Define dynamic child pages"
+          ansible.builtin.set_fact:
+            automation_hub_children:
+              - title: "Platform Governance"
+                file: "platform_governance.md"
+              - title: "Platform Runbook"
+                file: "platform_runbook.md"
+              - title: "Operator Runbook"
+                file: "operator_runbook.md"
+              - title: "Training Enablement"
+                file: "training_enablement.md"
 
         - name: "Try to create child page"
           ansible.builtin.uri:
@@ -264,7 +279,7 @@
                   representation: storage
           register: create_child_page
           failed_when: false
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
 
         - name: "Debug - Show child page creation details"
           ansible.builtin.debug:
@@ -275,7 +290,7 @@
               Parent ID: {{ main_page.json.id if main_page.status == 200 else main_page_query.json.results[0].id }}
               URL: {{ confluence_url }}/rest/api/content
               Status: {{ create_child_page.results[ansible_loop.index0].status | default('Not executed') }}
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
           loop_control:
             extended: true
           when: create_child_page is defined
@@ -290,7 +305,7 @@
               Content-Type: "application/json"
           register: child_page_query
           when: create_child_page.results[ansible_loop.index0].status != 200
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
           loop_control:
             extended: true
 
@@ -302,7 +317,7 @@
               URL: {{ confluence_url }}/rest/api/content?title={{ item.title | urlencode }}&spaceKey={{ confluence_space }}&expand=version
               Status: {{ child_page_query.results[ansible_loop.index0].status | default('Not executed') }}
               Response: {{ child_page_query.results[ansible_loop.index0].json | default('No response') | to_nice_json }}
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
           loop_control:
             extended: true
           when: child_page_query is defined and child_page_query.results is defined
@@ -337,7 +352,7 @@
             - child_page_query.results[ansible_loop.index0].status == 200
             - child_page_query.results[ansible_loop.index0].json.results is defined
             - child_page_query.results[ansible_loop.index0].json.results | length > 0
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
           loop_control:
             extended: true
 
@@ -349,7 +364,7 @@
               Page ID: {{ child_page_query.results[ansible_loop.index0].json.results[0].id | default('Not found') }}
               Current version: {{ child_page_query.results[ansible_loop.index0].json.results[0].version.number | default('Unknown') }}
               Update URL: {{ confluence_url }}/rest/api/content/{{ child_page_query.results[ansible_loop.index0].json.results[0].id | default('NO_ID') }}
-          loop: "{{ child_pages }}"
+          loop: "{{ automation_hub_children }}"
           loop_control:
             extended: true
           when:

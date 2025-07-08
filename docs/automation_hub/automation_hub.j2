@@ -1,6 +1,6 @@
-{%- from 'docs/macros.j2' import oxford_comma_list -%}
+{%- from 'docs/automation_hub/macros.j2' import oxford_comma_list -%}
 
-# {{ project_name | default(ORGANIZATION_NAME) }} Documentation
+# Automation Hub - {{ project_name | default(ORGANIZATION_NAME) }} Documentation
 
 Environment: **{{ env }}**
 
@@ -33,7 +33,9 @@ The following Windows versions are supported: {{ oxford_comma_list(WINDOWS_VERSI
 {{ oxford_comma_list(AAP_COMPUTE_TECH) }}.
 
 ## Subpages
-{% for page in child_pages -%}
-- [{{ page.title }}]({{ page.file | replace('.md', '') }})
-{% endfor %}
+{# Dynamic child page detection - these are automatically discovered from the automation_hub folder #}
+- [Operator Runbook](operator_runbook)
+- [Platform Governance](platform_governance)
+- [Platform Runbook](platform_runbook)
+- [Training Enablement](training_enablement)
 

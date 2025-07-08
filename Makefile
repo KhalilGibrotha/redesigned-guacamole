@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-templates-dynamic convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy
 
 # Default target
 help:
@@ -286,10 +286,12 @@ validate-templates:
 	@echo "Validating template structure..."
 	@echo "1. Checking template directory..."
 	@test -d docs/ || (echo "❌ docs/ directory missing" && exit 1)
-	@echo "2. Checking for main template..."
-	@test -f docs/main.j2 || (echo "❌ main.j2 template missing" && exit 1)
-	@echo "3. Checking template syntax..."
-	@for template in docs/*.j2; do \
+	@echo "2. Checking for main template folders..."
+	@test -d docs/automation_hub/ || (echo "❌ docs/automation_hub/ directory missing" && exit 1)
+	@echo "3. Checking for main template..."
+	@test -f docs/automation_hub/automation_hub.j2 || (echo "❌ automation_hub.j2 template missing" && exit 1)
+	@echo "4. Checking template syntax..."
+	@for template in docs/automation_hub/*.j2; do \
 		echo "   Checking $$template..."; \
 		echo "---\n- hosts: localhost\n  tasks:\n    - template: src=$$template dest=/tmp/test" | ansible-playbook --syntax-check /dev/stdin || exit 1; \
 	done
@@ -594,16 +596,38 @@ test-pandoc:
 # Confluence Documentation Conversion Targets
 # These targets are used by the Ansible playbook for markdown to HTML conversion
 
+convert-templates-dynamic:
+	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Rendering automation_hub main page..."; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		echo "   📝 Rendering automation_hub child pages..."; \
+		for template in docs/automation_hub/*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
+					echo "      📄 Rendering $$basename..."; \
+					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename template failed"; \
+				fi; \
+			fi; \
+		done; \
+		echo "   ✅ Dynamic template rendering complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi
+
 convert-templates:
 	@echo "🔄 Converting Jinja templates to markdown..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
 		echo "   📝 Rendering templates with vars.yml and aap.yml..."; \
-		ansible localhost -m template -a "src=docs/main.j2 dest=~/tmp/main.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ main.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_governance.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_runbook.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/operator_runbook.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/training_enablement.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/platform_governance.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/platform_runbook.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/operator_runbook.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/training_enablement.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
 		for template in docs/aap_*.j2; do \
 			if [ -f "$$template" ]; then \
 				basename=$$(basename $$template .j2); \
@@ -620,7 +644,7 @@ convert-templates:
 convert-markdown:
 	@echo "🔄 Converting markdown files to HTML..."
 	@if command -v pandoc >/dev/null 2>&1; then \
-		for file in main platform_governance platform_runbook operator_runbook training_enablement aap_operations_manual aap_platform_admin_guide aap_policy_governance; do \
+		for file in automation_hub platform_governance platform_runbook operator_runbook training_enablement aap_operations_manual aap_platform_admin_guide aap_policy_governance; do \
 			if [ -f ~/tmp/$$file.md ]; then \
 				echo "   📄 Converting $$file.md to HTML with Lua filters..."; \
 				pandoc ~/tmp/$$file.md -f markdown -t html \
@@ -638,12 +662,12 @@ convert-markdown:
 		exit 1; \
 	fi
 
-convert-all: convert-templates convert-markdown
+convert-all: convert-templates-dynamic convert-markdown
 	@echo "✅ All conversion steps completed"
 
 verify-html:
 	@echo "🔍 Verifying HTML files..."
-	@for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
+	@for file in automation_hub platform_governance platform_runbook operator_runbook training_enablement; do \
 		if [ -f ~/tmp/$$file.md.html ]; then \
 			size=$$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0); \
 			echo "   ✅ $$file.md.html exists ($$size bytes)"; \
