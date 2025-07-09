@@ -3,7 +3,8 @@
 
 - name: Converge
   hosts: all
-  gather_facts: false
+  import_playbook: ../../playbook.yml
+
   vars:
     # Test variables - override sensitive values for testing
     project_name: "Test Project"

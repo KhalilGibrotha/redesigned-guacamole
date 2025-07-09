@@ -1,8 +1,8 @@
 # Confluence Documentation Automation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ansible Lint](https://img.shields.io/badge/ansible--lint-passing-brightgreen)](https://ansible-lint.readthedocs.io/)
-[![YAML Lint](https://img.shields.io/badge/yamllint-passing-brightgreen)](https://yamllint.readthedocs.io/)
+[![Super Linter](https://img.shields.io/badge/Super--Linter-15%2B%20Languages-brightgreen)](https://github.com/super-linter/super-linter)
+[![Code Quality](https://img.shields.io/badge/Code%20Quality-Enterprise%20Grade-blue)](./docs/GITHUB_ACTIONS_LINTING.md)
 [![Multi-Platform CI/CD](https://img.shields.io/badge/CI%2FCD-Multi--Platform-blue)](./ci-cd-templates/)
 
 An enterprise-grade Ansible automation solution for generating and publishing documentation to Atlassian Confluence. This project includes comprehensive testing, linting, and quality assurance tools designed for Ansible Automation Platform (AAP) environments.
@@ -383,8 +383,13 @@ This document covers {{ item.title | lower }} procedures.
 
 **Linting Failures**
 ```bash
+# GitHub Actions (recommended)
+# Comprehensive linting runs automatically on push/PR
+# See .github/workflows/lint.yml
+
+# Local development (quick checks)
 make fix  # Auto-fix common issues
-yamllint -c .yamllint playbook.yml  # Check specific file
+make lint  # Run local linting suite
 ```
 
 **Template Rendering**

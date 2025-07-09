@@ -67,3 +67,22 @@
     - name: "Display security check results"
       ansible.builtin.debug:
         msg: "Security scan completed: {{ security_check.stdout }}"
+
+    - name: "Check if HTML files were created"
+      ansible.builtin.stat:
+        path: "~/tmp/{{ item.file | replace('.md', '.html') }}"
+      register: html_files
+      loop: "{{ child_pages }}"
+      loop_control:
+        label: "{{ item.title }}"
+
+    - name: "Assert that all HTML files exist"
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.size > 0
+        fail_msg: "Verification failed: {{ item.item.file | replace('.md', '.html') }} was not created or is empty."
+        success_msg: "Verification passed: {{ item.item.file | replace('.md', '.html') }} exists and is not empty."
+      loop: "{{ html_files.results }}"
+      loop_control:
+        label: "{{ item.item.title }}"
