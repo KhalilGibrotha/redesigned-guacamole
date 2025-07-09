@@ -1,6 +1,5 @@
-ansible
+ansible-core>=2.12
 ansible-lint
-molecule
-molecule-docker
 yamllint
-docker
+molecule==3.6.1
+molecule-docker~=1.1.0
