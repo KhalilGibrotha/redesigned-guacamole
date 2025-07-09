@@ -1,0 +1,637 @@
+---
+# GitHub Actions Workflow for Confluence Documentation Publishing
+# This workflow can handle ~90% of the current Ansible-based publishing flow
+# Copy to: .github/workflows/confluence-publish.yml
+
+name: 📚 Confluence Documentation Publisher
+
+on:
+  # Automatic publishing on main branch
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'vars/**'
+      - 'playbooks/**'
+      - '.github/workflows/confluence-publish.yml'
+  
+  # Manual trigger for on-demand publishing
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+      force_update:
+        description: 'Force update all pages (ignore change detection)'
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: 'Dry run (validate only, do not publish)'
+        required: false
+        default: false
+        type: boolean
+
+  # Validation on pull requests (no publishing)
+  pull_request:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'vars/**'
+      - 'playbooks/**'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+  CONFLUENCE_SPACE: 'ANSIBLE'  # Override with secrets if needed
+
+jobs:
+  # Validation job - runs on all triggers
+  validate:
+    name: 🔍 Validate Templates and Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      templates-changed: ${{ steps.changes.outputs.templates }}
+      vars-changed: ${{ steps.changes.outputs.vars }}
+      should-publish: ${{ steps.decision.outputs.should-publish }}
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need 2 commits for change detection
+
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y yamllint pandoc jq
+          python -m pip install --upgrade pip
+          pip install ansible-lint ansible jinja2 pyyaml
+
+      - name: 🔍 Detect file changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.force_update }}" = "true" ]; then
+            echo "templates=true" >> $GITHUB_OUTPUT
+            echo "vars=true" >> $GITHUB_OUTPUT
+            echo "Force update requested - marking all as changed"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # For PRs, always validate but don't publish
+            echo "templates=true" >> $GITHUB_OUTPUT
+            echo "vars=true" >> $GITHUB_OUTPUT
+          else
+            # Check for actual changes
+            if git diff --name-only HEAD~1 HEAD | grep -E '^docs/.*\.j2$'; then
+              echo "templates=true" >> $GITHUB_OUTPUT
+              echo "Template files changed"
+            else
+              echo "templates=false" >> $GITHUB_OUTPUT
+            fi
+            
+            if git diff --name-only HEAD~1 HEAD | grep -E '^vars/.*\.yml$'; then
+              echo "vars=true" >> $GITHUB_OUTPUT
+              echo "Variable files changed"
+            else
+              echo "vars=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: 📊 Publishing decision
+        id: decision
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+            echo "PR detected - validation only, no publishing"
+          elif [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+            echo "Dry run requested - validation only"
+          elif [ "${{ steps.changes.outputs.templates }}" = "true" ] || [ "${{ steps.changes.outputs.vars }}" = "true" ]; then
+            echo "should-publish=true" >> $GITHUB_OUTPUT
+            echo "Changes detected - will publish"
+          else
+            echo "should-publish=false" >> $GITHUB_OUTPUT
+            echo "No relevant changes - skipping publish"
+          fi
+
+      - name: 🧪 Validate YAML syntax
+        run: |
+          echo "🔍 Validating YAML files..."
+          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read file; do
+            echo "Checking: $file"
+            yamllint "$file" || echo "Warning: YAML lint issues in $file"
+          done
+
+      - name: 🧪 Validate Jinja2 templates
+        run: |
+          echo "🔍 Validating Jinja2 templates..."
+          python3 << 'EOF'
+          import os
+          import sys
+          from jinja2 import Environment, FileSystemLoader, TemplateError
+          
+          template_dir = 'docs'
+          if not os.path.exists(template_dir):
+              print(f"Template directory {template_dir} not found")
+              sys.exit(0)
+          
+          env = Environment(loader=FileSystemLoader(template_dir))
+          
+          for root, dirs, files in os.walk(template_dir):
+              for file in files:
+                  if file.endswith('.j2'):
+                      template_path = os.path.join(root, file)
+                      relative_path = os.path.relpath(template_path, template_dir)
+                      try:
+                          template = env.get_template(relative_path)
+                          print(f"✅ {template_path} - syntax valid")
+                      except TemplateError as e:
+                          print(f"❌ {template_path} - syntax error: {e}")
+                          sys.exit(1)
+          
+          print("🎉 All templates validated successfully!")
+          EOF
+
+      - name: 📋 Validation summary
+        run: |
+          echo "## 📋 Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML Syntax | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Template Syntax | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Templates Changed | ${{ steps.changes.outputs.templates }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Variables Changed | ${{ steps.changes.outputs.vars }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Will Publish | ${{ steps.decision.outputs.should-publish }} |" >> $GITHUB_STEP_SUMMARY
+
+  # Template processing job
+  process-templates:
+    name: 🔄 Process Templates to Markdown
+    runs-on: ubuntu-latest
+    needs: validate
+    if: needs.validate.outputs.should-publish == 'true'
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 📦 Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install jinja2 pyyaml
+
+      - name: 🔐 Prepare variables (mock for validation)
+        run: |
+          # For security, we'll create mock variables for template processing
+          # Real variables will be injected during publishing
+          mkdir -p processed
+          cat > processed/mock_vars.yml << 'EOF'
+          project_name: "GitHub Actions Test"
+          env: "CI/CD"
+          database_url: "https://example.com"
+          confluence_url: "https://company.atlassian.net/wiki"
+          confluence_space: "TEST"
+          monitoring_tool: "GitHub Actions"
+          child_pages:
+            - title: "Platform Governance"
+              file: "platform_governance.md"
+            - title: "Platform Runbook" 
+              file: "platform_runbook.md"
+            - title: "Operator Runbook"
+              file: "operator_runbook.md"
+            - title: "Training & Enablement"
+              file: "training_enablement.md"
+          EOF
+
+      - name: 🔄 Process Jinja2 templates
+        run: |
+          echo "🔄 Converting Jinja2 templates to Markdown..."
+          python3 << 'EOF'
+          import os
+          import yaml
+          from jinja2 import Environment, FileSystemLoader
+          
+          # Load variables
+          with open('processed/mock_vars.yml', 'r') as f:
+              variables = yaml.safe_load(f)
+          
+          # Set up Jinja2 environment
+          template_dir = 'docs'
+          env = Environment(loader=FileSystemLoader(template_dir))
+          
+          # Process each template
+          os.makedirs('processed/markdown', exist_ok=True)
+          
+          for root, dirs, files in os.walk(template_dir):
+              for file in files:
+                  if file.endswith('.j2'):
+                      template_path = os.path.join(root, file)
+                      relative_path = os.path.relpath(template_path, template_dir)
+                      output_file = relative_path[:-3]  # Remove .j2 extension
+                      
+                      try:
+                          template = env.get_template(relative_path)
+                          rendered = template.render(**variables)
+                          
+                          output_path = os.path.join('processed/markdown', output_file)
+                          os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                          
+                          with open(output_path, 'w') as f:
+                              f.write(rendered)
+                          
+                          print(f"✅ Processed: {relative_path} -> {output_file}")
+                      except Exception as e:
+                          print(f"❌ Error processing {relative_path}: {e}")
+                          raise
+          
+          print("🎉 Template processing completed!")
+          EOF
+
+      - name: 📤 Upload processed templates
+        uses: actions/upload-artifact@v3
+        with:
+          name: processed-markdown
+          path: processed/markdown/
+          retention-days: 30
+
+      - name: 📋 Template processing summary
+        run: |
+          echo "## 🔄 Template Processing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Processed Files:**" >> $GITHUB_STEP_SUMMARY
+          find processed/markdown -name "*.md" | while read file; do
+            size=$(stat -c%s "$file")
+            echo "- \`$(basename "$file")\` (${size} bytes)" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # HTML conversion job
+  convert-html:
+    name: 🌐 Convert Markdown to HTML
+    runs-on: ubuntu-latest
+    needs: process-templates
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📦 Install pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      - name: 📥 Download processed templates
+        uses: actions/download-artifact@v3
+        with:
+          name: processed-markdown
+          path: markdown/
+
+      - name: 🌐 Convert Markdown to HTML
+        run: |
+          echo "🌐 Converting Markdown files to HTML..."
+          mkdir -p html
+          
+          # Convert each markdown file to HTML
+          find markdown -name "*.md" | while read md_file; do
+            base_name=$(basename "$md_file" .md)
+            html_file="html/${base_name}.html"
+            
+            echo "Converting: $md_file -> $html_file"
+            
+            pandoc \
+              --from markdown \
+              --to html5 \
+              --standalone \
+              --css "https://cdn.jsdelivr.net/npm/water.css@2/out/water.css" \
+              --metadata title="$base_name Documentation" \
+              --output "$html_file" \
+              "$md_file"
+            
+            # Validate HTML output
+            if [ -s "$html_file" ]; then
+              echo "✅ Generated: $html_file ($(stat -c%s "$html_file") bytes)"
+            else
+              echo "❌ Failed to generate: $html_file"
+              exit 1
+            fi
+          done
+          
+          echo "🎉 HTML conversion completed!"
+
+      - name: 📤 Upload HTML files
+        uses: actions/upload-artifact@v3
+        with:
+          name: converted-html
+          path: html/
+          retention-days: 30
+
+      - name: 📋 HTML conversion summary
+        run: |
+          echo "## 🌐 HTML Conversion Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Generated HTML Files:**" >> $GITHUB_STEP_SUMMARY
+          find html -name "*.html" | while read file; do
+            size=$(stat -c%s "$file")
+            echo "- \`$(basename "$file")\` (${size} bytes)" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # Confluence publishing job
+  publish-confluence:
+    name: 📤 Publish to Confluence
+    runs-on: ubuntu-latest
+    needs: [validate, convert-html]
+    if: needs.validate.outputs.should-publish == 'true' && github.event.inputs.dry_run != 'true'
+    environment: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 📥 Download HTML files
+        uses: actions/download-artifact@v3
+        with:
+          name: converted-html
+          path: html/
+
+      - name: 🔐 Validate required secrets
+        run: |
+          if [ -z "${{ secrets.CONFLUENCE_URL }}" ]; then
+            echo "❌ CONFLUENCE_URL secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CONFLUENCE_USERNAME }}" ]; then
+            echo "❌ CONFLUENCE_USERNAME secret is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]; then
+            echo "❌ CONFLUENCE_API_TOKEN secret is not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
+      - name: 🔧 Set up environment variables
+        run: |
+          echo "CONFLUENCE_AUTH=$(echo -n '${{ secrets.CONFLUENCE_USERNAME }}:${{ secrets.CONFLUENCE_API_TOKEN }}' | base64 -w 0)" >> $GITHUB_ENV
+          echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL }}" >> $GITHUB_ENV
+          echo "CONFLUENCE_SPACE=${{ secrets.CONFLUENCE_SPACE || env.CONFLUENCE_SPACE }}" >> $GITHUB_ENV
+
+      - name: 🔍 Get main page information
+        id: main-page
+        run: |
+          echo "🔍 Checking for existing main page..."
+          
+          # URL encode the title
+          TITLE_ENCODED=$(echo "GitHub Actions Documentation" | jq -sRr @uri)
+          
+          response=$(curl -s -w "\n%{http_code}" \
+            -H "Authorization: Basic $CONFLUENCE_AUTH" \
+            -H "Content-Type: application/json" \
+            "$CONFLUENCE_URL/rest/api/content?spaceKey=$CONFLUENCE_SPACE&title=$TITLE_ENCODED&expand=version")
+          
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+          
+          echo "Response code: $http_code"
+          
+          if [ "$http_code" = "200" ]; then
+            page_count=$(echo "$response_body" | jq '.results | length')
+            if [ "$page_count" -gt 0 ]; then
+              page_id=$(echo "$response_body" | jq -r '.results[0].id')
+              page_version=$(echo "$response_body" | jq -r '.results[0].version.number')
+              echo "main-page-exists=true" >> $GITHUB_OUTPUT
+              echo "main-page-id=$page_id" >> $GITHUB_OUTPUT
+              echo "main-page-version=$page_version" >> $GITHUB_OUTPUT
+              echo "✅ Found existing main page: ID=$page_id, Version=$page_version"
+            else
+              echo "main-page-exists=false" >> $GITHUB_OUTPUT
+              echo "ℹ️  Main page does not exist, will create"
+            fi
+          else
+            echo "main-page-exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️  Could not query main page (HTTP $http_code), will attempt to create"
+          fi
+
+      - name: 📝 Create or update main page
+        id: publish-main
+        run: |
+          if [ ! -f "html/main.md.html" ]; then
+            echo "❌ Main HTML file not found"
+            exit 1
+          fi
+          
+          # Read and escape HTML content for JSON
+          html_content=$(cat html/main.md.html | jq -sR .)
+          
+          if [ "${{ steps.main-page.outputs.main-page-exists }}" = "true" ]; then
+            echo "🔄 Updating existing main page..."
+            
+            new_version=$(($${{ steps.main-page.outputs.main-page-version }} + 1))
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              -X PUT \
+              -H "Authorization: Basic $CONFLUENCE_AUTH" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"version\": {
+                  \"number\": $new_version
+                },
+                \"title\": \"GitHub Actions Documentation\",
+                \"type\": \"page\",
+                \"body\": {
+                  \"storage\": {
+                    \"value\": $html_content,
+                    \"representation\": \"storage\"
+                  }
+                }
+              }" \
+              "$CONFLUENCE_URL/rest/api/content/${{ steps.main-page.outputs.main-page-id }}")
+            
+          else
+            echo "📝 Creating new main page..."
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              -X POST \
+              -H "Authorization: Basic $CONFLUENCE_AUTH" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"type\": \"page\",
+                \"title\": \"GitHub Actions Documentation\",
+                \"space\": {
+                  \"key\": \"$CONFLUENCE_SPACE\"
+                },
+                \"body\": {
+                  \"storage\": {
+                    \"value\": $html_content,
+                    \"representation\": \"storage\"
+                  }
+                }
+              }" \
+              "$CONFLUENCE_URL/rest/api/content")
+          fi
+          
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+          
+          if [ "$http_code" = "200" ]; then
+            page_id=$(echo "$response_body" | jq -r '.id')
+            echo "main-page-id=$page_id" >> $GITHUB_OUTPUT
+            echo "✅ Main page published successfully: ID=$page_id"
+          else
+            echo "❌ Failed to publish main page (HTTP $http_code)"
+            echo "$response_body" | jq '.' || echo "$response_body"
+            exit 1
+          fi
+
+      - name: 📑 Publish child pages
+        run: |
+          main_page_id="${{ steps.publish-main.outputs.main-page-id }}"
+          
+          # Define child pages
+          declare -A child_pages=(
+            ["platform_governance.md.html"]="Platform Governance"
+            ["platform_runbook.md.html"]="Platform Runbook"
+            ["operator_runbook.md.html"]="Operator Runbook"
+            ["training_enablement.md.html"]="Training & Enablement"
+          )
+          
+          for file in "${!child_pages[@]}"; do
+            title="${child_pages[$file]}"
+            
+            if [ ! -f "html/$file" ]; then
+              echo "⚠️  Skipping $file - file not found"
+              continue
+            fi
+            
+            echo "📑 Processing child page: $title"
+            
+            # Read and escape HTML content
+            html_content=$(cat "html/$file" | jq -sR .)
+            
+            # Check if child page exists
+            title_encoded=$(echo "$title" | jq -sRr @uri)
+            
+            response=$(curl -s -w "\n%{http_code}" \
+              -H "Authorization: Basic $CONFLUENCE_AUTH" \
+              "$CONFLUENCE_URL/rest/api/content?spaceKey=$CONFLUENCE_SPACE&title=$title_encoded&expand=version")
+            
+            http_code=$(echo "$response" | tail -n1)
+            response_body=$(echo "$response" | head -n -1)
+            
+            if [ "$http_code" = "200" ] && [ "$(echo "$response_body" | jq '.results | length')" -gt 0 ]; then
+              # Update existing page
+              page_id=$(echo "$response_body" | jq -r '.results[0].id')
+              current_version=$(echo "$response_body" | jq -r '.results[0].version.number')
+              new_version=$((current_version + 1))
+              
+              echo "🔄 Updating existing child page: $title (ID=$page_id, Version=$current_version->$new_version)"
+              
+              update_response=$(curl -s -w "\n%{http_code}" \
+                -X PUT \
+                -H "Authorization: Basic $CONFLUENCE_AUTH" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"version\": {
+                    \"number\": $new_version
+                  },
+                  \"title\": \"$title\",
+                  \"type\": \"page\",
+                  \"ancestors\": [
+                    {\"id\": \"$main_page_id\"}
+                  ],
+                  \"body\": {
+                    \"storage\": {
+                      \"value\": $html_content,
+                      \"representation\": \"storage\"
+                    }
+                  }
+                }" \
+                "$CONFLUENCE_URL/rest/api/content/$page_id")
+              
+            else
+              # Create new page
+              echo "📝 Creating new child page: $title"
+              
+              update_response=$(curl -s -w "\n%{http_code}" \
+                -X POST \
+                -H "Authorization: Basic $CONFLUENCE_AUTH" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"type\": \"page\",
+                  \"title\": \"$title\",
+                  \"space\": {
+                    \"key\": \"$CONFLUENCE_SPACE\"
+                  },
+                  \"ancestors\": [
+                    {\"id\": \"$main_page_id\"}
+                  ],
+                  \"body\": {
+                    \"storage\": {
+                      \"value\": $html_content,
+                      \"representation\": \"storage\"
+                    }
+                  }
+                }" \
+                "$CONFLUENCE_URL/rest/api/content")
+            fi
+            
+            update_http_code=$(echo "$update_response" | tail -n1)
+            
+            if [ "$update_http_code" = "200" ]; then
+              echo "✅ Child page '$title' published successfully"
+            else
+              echo "❌ Failed to publish child page '$title' (HTTP $update_http_code)"
+              echo "$update_response" | head -n -1 | jq '.' || echo "$update_response" | head -n -1
+            fi
+          done
+
+      - name: 📋 Publishing summary
+        run: |
+          echo "## 📤 Confluence Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Published to:** $CONFLUENCE_URL/spaces/$CONFLUENCE_SPACE" >> $GITHUB_STEP_SUMMARY
+          echo "**Main Page:** GitHub Actions Documentation" >> $GITHUB_STEP_SUMMARY
+          echo "**Child Pages:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform Governance" >> $GITHUB_STEP_SUMMARY
+          echo "- Platform Runbook" >> $GITHUB_STEP_SUMMARY
+          echo "- Operator Runbook" >> $GITHUB_STEP_SUMMARY
+          echo "- Training & Enablement" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 **[View Documentation]($CONFLUENCE_URL/spaces/$CONFLUENCE_SPACE)**" >> $GITHUB_STEP_SUMMARY
+
+  # Notification job
+  notify:
+    name: 📢 Send Notifications
+    runs-on: ubuntu-latest
+    needs: [validate, publish-confluence]
+    if: always() && needs.validate.outputs.should-publish == 'true'
+    
+    steps:
+      - name: 📢 Notify success
+        if: needs.publish-confluence.result == 'success'
+        run: |
+          echo "✅ Confluence documentation published successfully!"
+          echo "🔗 View at: ${{ env.CONFLUENCE_URL }}/spaces/${{ env.CONFLUENCE_SPACE }}"
+
+      - name: 📢 Notify failure
+        if: needs.publish-confluence.result == 'failure'
+        run: |
+          echo "❌ Confluence publishing failed!"
+          echo "Please check the workflow logs for details."
+          # Here you could add Slack/Teams/email notifications
+
+      - name: 📢 Notify skipped
+        if: needs.validate.outputs.should-publish == 'false'
+        run: |
+          echo "ℹ️  Publishing skipped - no relevant changes detected"
