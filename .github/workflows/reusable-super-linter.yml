@@ -193,21 +193,23 @@ jobs:
           echo "| JSON | ${{ inputs.validate_json && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Secrets Detection | ${{ inputs.validate_secrets && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
 
-      - name: 📤 Upload Linting Reports
-        if: always()
-        uses: actions/upload-artifact@v3
+      - name: 📤 Upload Super-Linter log file
+        if: ${{ always() && steps.super-linter.outputs.has_generated_log_file == 'true' }}
+        uses: actions/upload-artifact@v4
         with:
-          name: super-linter-reports
+          name: super-linter-logs
           path: |
             super-linter.report/
             *.log
           retention-days: 30
 
-      - name: 📝 Upload SARIF Results
-        if: always() && inputs.output_format == 'sarif'
-        uses: github/codeql-action/upload-sarif@v2
+      - name: 📤 Upload SARIF file
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: super-linter.report/super-linter.sarif
+          name: sarif-logs
+          path: super-linter.report/super-linter.sarif
+          retention-days: 30
 
       - name: 💬 Comment on PR
         if: always() && github.event_name == 'pull_request'
