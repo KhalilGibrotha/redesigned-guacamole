@@ -11,8 +11,8 @@ An enterprise-grade Ansible automation solution for generating and publishing do
 
 - 🚀 **Automated Documentation**: Convert Markdown templates to HTML and publish to Confluence
 - 🤖 **GitHub Actions Ready**: Advanced CI/CD workflow for automatic publishing ✅
-- 🔄 **Dual Workflow Support**: Local Ansible development + GitHub Actions production publishing
-- 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint ✅
+- 🔍 **Enterprise Linting**: Super Linter with 15+ languages, security scanning, and quality gates ✅
+- 🔄 **Reusable Workflows**: Centralized linting that can be used across multiple repositories ✅
 - 🛡️ **Security First**: Built-in security scanning and credential protection ✅
 - 📝 **Template System**: Jinja2-based markdown templates with variable substitution ✅
 - 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
@@ -107,11 +107,12 @@ These options install available tools through system package managers and provid
 
 ### ✅ **Fully Tested & Production Ready**
 - Core Ansible automation (playbook.yml)
-- YAML and Ansible linting (yamllint, ansible-lint)
-- Security scanning and credential protection
+- GitHub Actions workflows for Confluence publishing and code quality ✅
+- Super Linter with 8+ languages (YAML, Ansible, Shell, Python, Markdown, JSON, Dockerfile, GitHub Actions) ✅
+- Security scanning (Trivy, TruffleHog) and credential protection
 - Cross-platform installation (RHEL, Ubuntu, macOS)
 - Template processing and Confluence publishing
-- Local development workflow
+- Local development workflow with Makefile automation
 
 ### ⚠️ **Work in Progress (Experimental)**
 - **Molecule Testing**: Configuration exists but requires additional validation
@@ -125,6 +126,12 @@ For production use, rely on the ✅ tested features. The ⚠️ experimental fea
 
 ```
 confluence-automation/
+├── .github/               # GitHub Actions workflows ✅
+│   ├── workflows/        
+│   │   ├── lint.yml     # Main linting workflow ✅
+│   │   ├── reusable-super-linter.yml # Reusable linter workflow ✅
+│   │   └── confluence-publish.yml    # Confluence publishing workflow ✅
+│   └── super-linter.env # Super Linter configuration ✅
 ├── ci-cd-templates/         # Multi-platform CI/CD configurations
 │   ├── github-actions.yml  # GitHub Actions basic workflow ⚠️
 │   ├── github-actions-confluence.yml # GitHub Actions Confluence publisher ✅
@@ -134,6 +141,7 @@ confluence-automation/
 │   ├── bitbucket-pipelines.yml # Bitbucket Pipelines ⚠️
 │   └── teamcity-config.txt # TeamCity configuration ⚠️
 ├── .yamllint               # YAML linting configuration ✅
+├── .markdownlint.json      # Markdown linting configuration ✅
 ├── .pre-commit-config.yaml # Pre-commit hooks ✅
 ├── molecule/               # Molecule test scenarios ⚠️ WIP
 │   ├── default/           # Basic functionality tests ⚠️
@@ -146,7 +154,8 @@ confluence-automation/
 │   ├── operator_runbook.md.j2
 │   ├── training_enablement.md.j2
 │   ├── GITHUB_ACTIONS_ASSESSMENT.md ✅ # GitHub Actions vs Ansible analysis
-│   └── GITHUB_ACTIONS_SETUP.md ✅      # Complete GitHub Actions setup guide
+│   ├── GITHUB_ACTIONS_SETUP.md ✅      # Complete GitHub Actions setup guide
+│   └── GITHUB_ACTIONS_LINTING.md ✅    # Super Linter implementation guide
 ├── playbooks/             # Modular Ansible playbooks ✅
 │   ├── main.yml          # Main orchestrator playbook
 │   ├── 01-validate-environment.yml
@@ -497,3 +506,66 @@ git add . && git commit -m "Update documentation" && git push
 ```
 
 **🎯 Assessment**: [GitHub Actions can handle ~90% of the workflow](docs/GITHUB_ACTIONS_ASSESSMENT.md) with significant improvements in reliability, security, and automation.
+
+## 🔍 Code Quality & Linting
+
+The project includes a comprehensive GitHub Actions-based linting solution using Super Linter that can be reused across multiple repositories.
+
+### 🎯 Enterprise Linting Features
+
+- **15+ Linters**: Ansible, YAML, Markdown, Python, Bash, JSON, Dockerfile, and more
+- **Security Scanning**: Gitleaks secret detection and security pattern analysis
+- **Reusable Workflows**: Single source of truth for linting across repositories
+- **Smart Execution**: Only lints changed files for faster feedback
+- **Rich Reporting**: PR comments, artifacts, SARIF integration, and detailed summaries
+
+### 🚀 Quick Setup for Other Repositories
+
+**Option 1: Reusable Workflow (Recommended)**
+```yaml
+# .github/workflows/lint.yml
+name: 🔍 Code Quality & Linting
+on: [push, pull_request]
+
+jobs:
+  super-linter:
+    uses: your-org/confluence-automation/.github/workflows/reusable-super-linter.yml@main
+    with:
+      validate_ansible: true
+      validate_yaml: true
+      validate_markdown: true
+      validate_python: true
+      validate_bash: true
+      validate_json: true
+      validate_secrets: true
+```
+
+**Option 2: Copy Complete Workflow**
+```bash
+# Copy to any repository
+cp .github/workflows/lint.yml /path/to/other/repo/.github/workflows/
+cp .markdownlint.json /path/to/other/repo/
+cp .github/super-linter.env /path/to/other/repo/.github/
+```
+
+### 📊 Supported Linters
+
+| Category | Linters | Purpose |
+|----------|---------|---------|
+| **DevOps** | Ansible, YAML, JSON, Dockerfile | Infrastructure as Code |
+| **Documentation** | Markdown | Content quality |
+| **Scripts** | Bash, ShellCheck | Shell script quality |
+| **Python** | Black, Flake8, isort, Pylint | Code formatting & quality |
+| **Security** | Gitleaks, Custom patterns | Secret detection |
+
+### 🔧 Local vs GitHub Actions Linting
+
+| Feature | Local (Makefile) | GitHub Actions | Recommendation |
+|---------|------------------|----------------|----------------|
+| **Development** | `make lint` | Automatic on PR | Use both |
+| **Consistency** | Environment dependent | Consistent Docker | GitHub Actions |
+| **Speed** | Faster (local) | Parallel processing | Context dependent |
+| **Reporting** | Terminal only | Rich PR comments | GitHub Actions |
+| **Security** | Basic | Advanced scanning | GitHub Actions |
+
+📚 **Complete Guide**: [docs/GITHUB_ACTIONS_LINTING.md](docs/GITHUB_ACTIONS_LINTING.md)

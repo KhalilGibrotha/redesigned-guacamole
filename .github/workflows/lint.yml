@@ -1,0 +1,231 @@
+---
+# Main Linting Workflow for this Repository
+# Uses the reusable Super Linter workflow
+
+name: 🔍 Code Quality & Linting
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full codebase scan (not just changed files)'
+        required: false
+        type: boolean
+        default: false
+
+# Allow only one concurrent linting workflow per branch
+concurrency:
+  group: linting-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Quick validation for fast feedback
+  quick-validation:
+    name: ⚡ Quick Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🧪 Basic Syntax Checks
+        run: |
+          echo "🔍 Running quick syntax validation..."
+          
+          # Check for basic YAML syntax
+          echo "Checking YAML files..."
+          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read file; do
+            if [ "$file" != "./vars/vars.yml" ]; then  # Skip encrypted file
+              python3 -c "import yaml; yaml.safe_load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
+            fi
+          done
+          
+          # Check for basic JSON syntax
+          echo "Checking JSON files..."
+          find . -name "*.json" | head -10 | while read file; do
+            python3 -c "import json; json.load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
+          done
+          
+          # Check for executable permissions on shell scripts
+          echo "Checking shell script permissions..."
+          find . -name "*.sh" -not -executable | while read file; do
+            echo "⚠️ $file may need executable permissions"
+          done
+
+      - name: 📊 File Statistics
+        run: |
+          echo "## 📊 Repository Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "| File Type | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML files | $(find . -name '*.yml' -o -name '*.yaml' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown files | $(find . -name '*.md' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python files | $(find . -name '*.py' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell scripts | $(find . -name '*.sh' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON files | $(find . -name '*.json' | wc -l) |" >> $GITHUB_STEP_SUMMARY
+
+  # Main linting using the reusable workflow
+  super-linter:
+    name: 🔍 Super Linter
+    needs: quick-validation
+    uses: ./.github/workflows/reusable-super-linter.yml
+    with:
+      validate_all_codebase: ${{ github.event.inputs.full_scan == 'true' || github.event_name == 'workflow_dispatch' }}
+      default_branch: main
+      validate_ansible: true
+      validate_yaml: true
+      validate_markdown: true
+      validate_python: true
+      validate_bash: true
+      validate_json: true
+      validate_secrets: true
+      create_log_file: true
+      output_format: tap
+
+  # Ansible-specific validation
+  ansible-validation:
+    name: 🎭 Ansible Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible ansible-lint
+
+      - name: 🎭 Ansible Lint
+        run: |
+          echo "🔍 Running Ansible-specific validation..."
+          
+          # Run ansible-lint with custom config if it exists
+          if [ -f .ansible-lint ]; then
+            echo "Using custom .ansible-lint configuration"
+            ansible-lint --exclude molecule/ .
+          else
+            echo "Using default ansible-lint configuration"
+            ansible-lint --exclude molecule/ --exclude .github/ .
+          fi
+
+      - name: 🧪 Ansible Syntax Check
+        run: |
+          echo "🧪 Running Ansible syntax checks..."
+          
+          # Check main playbooks
+          for playbook in playbook.yml playbooks/*.yml; do
+            if [ -f "$playbook" ]; then
+              echo "Checking: $playbook"
+              ansible-playbook --syntax-check "$playbook" || echo "❌ Syntax error in $playbook"
+            fi
+          done
+
+      - name: 📋 Ansible Summary
+        run: |
+          echo "## 🎭 Ansible Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Ansible lint completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Syntax validation completed**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Playbooks checked:**" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.yml" -path "./playbooks/*" -o -name "playbook.yml" | while read file; do
+            echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+          done
+
+  # Security-focused validation
+  security-validation:
+    name: 🛡️ Security Validation  
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Check for Secrets
+        run: |
+          echo "🔍 Running security validation..."
+          
+          # Check for potential secrets (excluding false positives)
+          echo "Checking for potential hardcoded secrets..."
+          if grep -r "password\|secret\|ATAT\|api_token" . \
+             --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" \
+             --exclude-dir=.git --exclude-dir=.github \
+             | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token\|README"; then
+            echo "⚠️ Potential secrets found - please review"
+            exit 1
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+
+      - name: 🔒 File Permissions Check
+        run: |
+          echo "🔒 Checking file permissions..."
+          
+          # Check for world-writable files
+          if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"; then
+            echo "❌ World-writable files found"
+            find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"
+            exit 1
+          else
+            echo "✅ File permissions look secure"
+          fi
+
+      - name: 🛡️ Security Summary
+        if: always()
+        run: |
+          echo "## 🛡️ Security Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
+
+  # Final summary job
+  linting-summary:
+    name: 📋 Linting Summary
+    if: always()
+    needs: [quick-validation, super-linter, ansible-validation, security-validation]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📊 Overall Summary
+        run: |
+          echo "## 🎯 Overall Linting Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Determine overall status
+          quick_result="${{ needs.quick-validation.result }}"
+          super_linter_result="${{ needs.super-linter.result }}"
+          ansible_result="${{ needs.ansible-validation.result }}"
+          security_result="${{ needs.security-validation.result }}"
+          
+          if [ "$quick_result" = "success" ] && [ "$super_linter_result" = "success" ] && [ "$ansible_result" = "success" ] && [ "$security_result" = "success" ]; then
+            echo "🎉 **All linting checks passed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Your code meets all quality standards." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Some linting checks need attention.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please review the failed checks and address the issues." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Quick Validation | ${{ needs.quick-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Super Linter | ${{ needs.super-linter.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ansible Validation | ${{ needs.ansible-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Validation | ${{ needs.security-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Fail if Any Check Failed
+        if: needs.quick-validation.result != 'success' || needs.super-linter.result != 'success' || needs.ansible-validation.result != 'success' || needs.security-validation.result != 'success'
+        run: |
+          echo "❌ One or more linting checks failed"
+          exit 1

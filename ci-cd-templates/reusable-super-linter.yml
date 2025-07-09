@@ -1,0 +1,301 @@
+---
+# Reusable Super Linter Workflow
+# This workflow can be called from other repositories to standardize linting across projects
+# 
+# Usage in other repositories:
+# 
+# name: Code Quality
+# on: [push, pull_request]
+# jobs:
+#   lint:
+#     uses: your-org/confluence-automation/.github/workflows/reusable-super-linter.yml@main
+#     with:
+#       validate-all-codebase: false
+#       enable-security-scan: true
+#     secrets: inherit
+
+name: 🔍 Reusable Super Linter
+
+on:
+  workflow_call:
+    inputs:
+      validate-all-codebase:
+        description: 'Validate entire codebase (true) or only changed files (false)'
+        required: false
+        type: boolean
+        default: false
+      
+      log-level:
+        description: 'Log level for Super Linter (VERBOSE, DEBUG, INFO, WARN, ERROR)'
+        required: false
+        type: string
+        default: 'INFO'
+      
+      enable-security-scan:
+        description: 'Enable additional security scanning (Trivy, TruffleHog)'
+        required: false
+        type: boolean
+        default: true
+      
+      enable-python-linting:
+        description: 'Enable Python-specific linting (black, pylint, flake8)'
+        required: false
+        type: boolean
+        default: true
+      
+      enable-shell-linting:
+        description: 'Enable shell script linting (shellcheck, shfmt)'
+        required: false
+        type: boolean
+        default: true
+      
+      custom-filter-regex:
+        description: 'Custom regex to exclude files from linting'
+        required: false
+        type: string
+        default: '.*/(node_modules|\.git|\.vscode|\.idea|__pycache__|\.pytest_cache|\.tox|\.coverage|build|dist|target)/.*'
+      
+      runner-os:
+        description: 'Runner OS (ubuntu-latest, ubuntu-22.04, ubuntu-20.04)'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+
+    outputs:
+      lint-status:
+        description: 'Overall linting status (success/failure)'
+        value: ${{ jobs.super-lint.outputs.status }}
+      
+      files-scanned:
+        description: 'Number of files scanned'
+        value: ${{ jobs.super-lint.outputs.files-scanned }}
+
+env:
+  LOG_LEVEL: ${{ inputs.log-level }}
+  VALIDATE_ALL_CODEBASE: ${{ inputs.validate-all-codebase }}
+
+jobs:
+  super-lint:
+    name: 🔍 Super Linter Analysis
+    runs-on: ${{ inputs.runner-os }}
+    
+    outputs:
+      status: ${{ steps.lint-result.outputs.status }}
+      files-scanned: ${{ steps.file-count.outputs.count }}
+    
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+      security-events: write
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Configure Environment
+        id: config
+        run: |
+          # Dynamic branch detection
+          if [ "${{ github.event.repository.default_branch }}" != "" ]; then
+            echo "default_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
+          else
+            echo "default_branch=main" >> $GITHUB_OUTPUT
+          fi
+          
+          # File counting for metrics
+          total_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" -o -name "*.md" -o -name "*.json" \) -not -path "./.git/*" | wc -l)
+          echo "total_files=$total_files" >> $GITHUB_OUTPUT
+
+      - name: 📊 Count Files to Scan
+        id: file-count
+        run: |
+          echo "count=${{ steps.config.outputs.total_files }}" >> $GITHUB_OUTPUT
+
+      - name: 📋 Pre-Lint Validation
+        run: |
+          echo "## 🔍 Pre-Lint Configuration" >> $GITHUB_STEP_SUMMARY
+          echo "**Repository:** ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Validate All Codebase:** ${{ env.VALIDATE_ALL_CODEBASE }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Log Level:** ${{ env.LOG_LEVEL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Files to Scan:** ${{ steps.config.outputs.total_files }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Security Scan Enabled:** ${{ inputs.enable-security-scan }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔍 Run Super Linter
+        id: super-linter
+        uses: super-linter/super-linter@v5
+        env:
+          # Core configuration
+          DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: ${{ env.VALIDATE_ALL_CODEBASE }}
+          LOG_LEVEL: ${{ env.LOG_LEVEL }}
+          CREATE_LOG_FILE: true
+          
+          # Universal linters (always enabled)
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_ENV: true
+          
+          # Conditional linters based on inputs
+          VALIDATE_ANSIBLE: true
+          VALIDATE_PYTHON_BLACK: ${{ inputs.enable-python-linting }}
+          VALIDATE_PYTHON_PYLINT: ${{ inputs.enable-python-linting }}
+          VALIDATE_PYTHON_FLAKE8: ${{ inputs.enable-python-linting }}
+          VALIDATE_BASH: ${{ inputs.enable-shell-linting }}
+          VALIDATE_SHELL_SHFMT: ${{ inputs.enable-shell-linting }}
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          
+          # Configuration files
+          YAML_CONFIG_FILE: .yamllint
+          ANSIBLE_CONFIG_FILE: .ansible-lint
+          MARKDOWN_CONFIG_FILE: .markdownlint.yml
+          
+          # Performance settings
+          SUPPRESS_POSSUM: true
+          MULTI_STATUS: true
+          FILTER_REGEX_EXCLUDE: ${{ inputs.custom-filter-regex }}
+          IGNORE_GITIGNORED_FILES: true
+          
+          # Behavior
+          DISABLE_ERRORS: false
+
+      - name: 📊 Determine Lint Result
+        id: lint-result
+        if: always()
+        run: |
+          if [ "${{ steps.super-linter.outcome }}" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ All linting checks passed!" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Linting issues detected" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📤 Upload Super Linter Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: super-linter-logs-${{ github.repository_owner }}-${{ github.event.repository.name }}-${{ github.run_id }}
+          path: super-linter.log
+          retention-days: 30
+
+      - name: 📋 Create Detailed Summary
+        if: always()
+        run: |
+          echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.lint-result.outputs.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Files Scanned:** ${{ steps.config.outputs.total_files }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Validation Scope:** ${{ env.VALIDATE_ALL_CODEBASE == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ YAML (yamllint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ansible (ansible-lint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ inputs.enable-shell-linting && '✅' || '⏸️' }} Shell/Bash (shellcheck, shfmt)" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ inputs.enable-python-linting && '✅' || '⏸️' }} Python (black, pylint, flake8)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Markdown (markdownlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ JSON (jsonlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Actions (actionlint)" >> $GITHUB_STEP_SUMMARY
+
+  security-scan:
+    name: 🛡️ Security Analysis
+    runs-on: ${{ inputs.runner-os }}
+    needs: super-lint
+    if: inputs.enable-security-scan
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔒 Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: 📤 Upload Trivy Results to Security Tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: 🔍 Run Secret Detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch || 'main' }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: 📋 Security Summary
+        if: always()
+        run: |
+          echo "## 🛡️ Security Analysis Results" >> $GITHUB_STEP_SUMMARY
+          echo "**Vulnerability Scan:** Trivy filesystem scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "**Secret Detection:** TruffleHog scan completed" >> $GITHUB_STEP_SUMMARY
+          echo "**Results:** Check Security tab for detailed findings" >> $GITHUB_STEP_SUMMARY
+
+  quality-metrics:
+    name: 📊 Quality Metrics
+    runs-on: ${{ inputs.runner-os }}
+    needs: [super-lint, security-scan]
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📊 Generate Quality Report
+        run: |
+          echo "## 📊 Repository Quality Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # File statistics
+          yaml_count=$(find . -name "*.yml" -o -name "*.yaml" | grep -v ".git" | wc -l)
+          python_count=$(find . -name "*.py" | grep -v ".git" | wc -l)
+          shell_count=$(find . -name "*.sh" | grep -v ".git" | wc -l)
+          md_count=$(find . -name "*.md" | grep -v ".git" | wc -l)
+          json_count=$(find . -name "*.json" | grep -v ".git" | wc -l)
+          
+          echo "**File Distribution:**" >> $GITHUB_STEP_SUMMARY
+          echo "| File Type | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML | $yaml_count |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python | $python_count |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell | $shell_count |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown | $md_count |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON | $json_count |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Quality status
+          lint_status="${{ needs.super-lint.outputs.status }}"
+          security_status="${{ needs.security-scan.result }}"
+          
+          echo "**Quality Gates:**" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Linting | ${{ needs.super-lint.outputs.status == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result == 'success' && '✅ Passed' || (needs.security-scan.result == 'skipped' && '⏸️ Skipped' || '❌ Failed') }} |" >> $GITHUB_STEP_SUMMARY
+          
+          # Overall score
+          if [ "$lint_status" = "success" ] && ([ "$security_status" = "success" ] || [ "$security_status" = "skipped" ]); then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "🎉 **Overall Quality Score: EXCELLENT** 🎉" >> $GITHUB_STEP_SUMMARY
+          elif [ "$lint_status" = "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Overall Quality Score: GOOD** - Some security findings" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Overall Quality Score: NEEDS IMPROVEMENT** - Linting issues found" >> $GITHUB_STEP_SUMMARY
+          fi

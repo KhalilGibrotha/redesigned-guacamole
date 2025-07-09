@@ -1,0 +1,282 @@
+---
+# Super Linter Workflow for Multi-Repository Code Quality
+# This is a comprehensive, reusable linting workflow that can be used across repositories
+# Supports: YAML, Ansible, Shell, Python, Markdown, JSON, Dockerfile, and more
+
+name: 🔍 Super Linter - Code Quality
+
+on:
+  # Run on all pushes and PRs
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+    
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      validate_all_codebase:
+        description: 'Validate entire codebase (true) or only changed files (false)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      log_level:
+        description: 'Log level for Super Linter'
+        required: false
+        default: 'INFO'
+        type: choice
+        options:
+          - 'VERBOSE'
+          - 'DEBUG'
+          - 'INFO'
+          - 'WARN'
+          - 'ERROR'
+
+env:
+  # Default log level
+  LOG_LEVEL: INFO
+  # Validate only changed files by default (faster)
+  DEFAULT_BRANCH: main
+  VALIDATE_ALL_CODEBASE: false
+
+jobs:
+  super-lint:
+    name: 🔍 Super Linter Analysis
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: read
+      # To report GitHub Actions status checks
+      statuses: write
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Full git history needed for diff analysis
+          fetch-depth: 0
+
+      - name: 🔧 Set Dynamic Environment Variables
+        run: |
+          # Set validation scope based on trigger
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VALIDATE_ALL_CODEBASE=${{ github.event.inputs.validate_all_codebase }}" >> $GITHUB_ENV
+            echo "LOG_LEVEL=${{ github.event.inputs.log_level }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            # Validate all on main branch pushes
+            echo "VALIDATE_ALL_CODEBASE=true" >> $GITHUB_ENV
+          else
+            # Validate only changes for PRs and feature branches
+            echo "VALIDATE_ALL_CODEBASE=false" >> $GITHUB_ENV
+          fi
+          
+          # Detect default branch dynamically
+          if [ "${{ github.event.repository.default_branch }}" != "" ]; then
+            echo "DEFAULT_BRANCH=${{ github.event.repository.default_branch }}" >> $GITHUB_ENV
+          fi
+
+      - name: 📊 Run Super Linter
+        uses: super-linter/super-linter@v5
+        env:
+          # GitHub configuration
+          DEFAULT_BRANCH: ${{ env.DEFAULT_BRANCH }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Validation scope
+          VALIDATE_ALL_CODEBASE: ${{ env.VALIDATE_ALL_CODEBASE }}
+          
+          # Logging configuration
+          LOG_LEVEL: ${{ env.LOG_LEVEL }}
+          CREATE_LOG_FILE: true
+          
+          # Language-specific validations
+          VALIDATE_YAML: true
+          VALIDATE_ANSIBLE: true
+          VALIDATE_BASH: true
+          VALIDATE_SHELL_SHFMT: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_PYTHON_FLAKE8: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_JSON: true
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          VALIDATE_ENV: true
+          VALIDATE_GITHUB_ACTIONS: true
+          
+          # File type configurations
+          YAML_CONFIG_FILE: .yamllint
+          ANSIBLE_CONFIG_FILE: .ansible-lint
+          MARKDOWN_CONFIG_FILE: .markdownlint.yml
+          
+          # Ansible-specific settings
+          ANSIBLE_DIRECTORY: ./
+          
+          # Performance and behavior settings
+          SUPPRESS_POSSUM: true
+          MULTI_STATUS: true
+          
+          # File filtering - customize per repository
+          FILTER_REGEX_EXCLUDE: .*/(node_modules|\.git|\.vscode|\.idea|__pycache__|\.pytest_cache|\.tox|\.coverage|build|dist|target)/.*
+          
+          # Ignore specific file patterns that commonly cause issues
+          IGNORE_GITIGNORED_FILES: true
+          
+          # Failure behavior - fail the job if linting fails
+          DISABLE_ERRORS: false
+
+      - name: 📋 Upload Super Linter Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: super-linter-logs-${{ github.run_id }}
+          path: super-linter.log
+          retention-days: 30
+
+      - name: 📊 Create Job Summary
+        if: always()
+        run: |
+          echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Validation Scope:** ${{ env.VALIDATE_ALL_CODEBASE == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Log Level:** ${{ env.LOG_LEVEL }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Show enabled linters
+          echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ YAML (yamllint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ansible (ansible-lint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Shell/Bash (shellcheck, shfmt)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Python (black, pylint, flake8)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Markdown (markdownlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ JSON (jsonlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Actions (actionlint)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Link to detailed logs
+          echo "📋 **Detailed logs available in artifacts:** super-linter-logs-${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Security scanning with additional tools
+  security-scan:
+    name: 🛡️ Security Scanning
+    runs-on: ubuntu-latest
+    needs: super-lint
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔒 Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: 📤 Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: 🔍 Run Secret Detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # Optional: Quality metrics and reporting
+  quality-report:
+    name: 📊 Quality Metrics
+    runs-on: ubuntu-latest
+    needs: super-lint
+    if: always()
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📊 Calculate repository metrics
+        run: |
+          echo "## 📊 Repository Quality Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # File counts by type
+          yaml_files=$(find . -name "*.yml" -o -name "*.yaml" | grep -v ".git" | wc -l)
+          python_files=$(find . -name "*.py" | grep -v ".git" | wc -l)
+          shell_files=$(find . -name "*.sh" | grep -v ".git" | wc -l)
+          md_files=$(find . -name "*.md" | grep -v ".git" | wc -l)
+          
+          echo "**File Type Distribution:**" >> $GITHUB_STEP_SUMMARY
+          echo "- YAML files: $yaml_files" >> $GITHUB_STEP_SUMMARY
+          echo "- Python files: $python_files" >> $GITHUB_STEP_SUMMARY
+          echo "- Shell scripts: $shell_files" >> $GITHUB_STEP_SUMMARY
+          echo "- Markdown files: $md_files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Lines of code
+          total_lines=$(find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" \) -not -path "./.git/*" -exec wc -l {} + | tail -1 | awk '{print $1}')
+          echo "**Total Lines of Code:** $total_lines" >> $GITHUB_STEP_SUMMARY
+          
+          # Super Linter status
+          if [ "${{ needs.super-lint.result }}" = "success" ]; then
+            echo "**Linting Status:** ✅ All checks passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Linting Status:** ❌ Issues found - check logs" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Notification job for important events
+  notify:
+    name: 📢 Notifications
+    runs-on: ubuntu-latest
+    needs: [super-lint, security-scan, quality-report]
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: 📢 Determine notification status
+        id: status
+        run: |
+          if [ "${{ needs.super-lint.result }}" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ All linting checks passed!" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Linting issues detected - please review" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📢 Notify on success
+        if: steps.status.outputs.status == 'success'
+        run: |
+          echo "🎉 Code quality validation successful!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          # Add integrations here (Slack, Teams, email, etc.)
+
+      - name: 📢 Notify on failure
+        if: steps.status.outputs.status == 'failure'
+        run: |
+          echo "⚠️ Code quality issues need attention!"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "View details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Add integrations here (Slack, Teams, email, etc.)
+          
+      # Example Slack integration (uncomment and configure)
+      # - name: 📱 Send Slack notification
+      #   if: steps.status.outputs.status == 'failure'
+      #   uses: 8398a7/action-slack@v3
+      #   with:
+      #     status: ${{ steps.status.outputs.status }}
+      #     text: ${{ steps.status.outputs.message }}
+      #     webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}

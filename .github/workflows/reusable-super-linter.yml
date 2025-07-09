@@ -1,0 +1,277 @@
+---
+# Reusable GitHub Actions Workflow for Super Linter
+# This workflow can be called by other repositories for consistent linting
+
+name: 🔍 Super Linter (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      # Configuration inputs
+      validate_all_codebase:
+        description: 'Validate entire codebase or just changed files'
+        required: false
+        type: boolean
+        default: false
+      
+      default_branch:
+        description: 'Default branch to compare changes against'
+        required: false
+        type: string
+        default: 'main'
+      
+      config_file:
+        description: 'Path to Super Linter configuration file'
+        required: false
+        type: string
+        default: '.github/super-linter.env'
+      
+      # Linter toggles
+      validate_ansible:
+        description: 'Enable Ansible linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_yaml:
+        description: 'Enable YAML linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_markdown:
+        description: 'Enable Markdown linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_python:
+        description: 'Enable Python linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_bash:
+        description: 'Enable Bash linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_json:
+        description: 'Enable JSON linting'
+        required: false
+        type: boolean
+        default: true
+      
+      validate_secrets:
+        description: 'Enable secrets detection'
+        required: false
+        type: boolean
+        default: true
+      
+      # Output options
+      create_log_file:
+        description: 'Create detailed log file'
+        required: false
+        type: boolean
+        default: true
+      
+      output_format:
+        description: 'Output format (tap, json, sarif)'
+        required: false
+        type: string
+        default: 'tap'
+
+    outputs:
+      super-linter-summary:
+        description: 'Summary of linting results'
+        value: ${{ jobs.super-linter.outputs.summary }}
+
+jobs:
+  super-linter:
+    name: 🔍 Super Linter
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      statuses: write
+      pull-requests: write
+      security-events: write
+    
+    outputs:
+      summary: ${{ steps.summary.outputs.summary }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history for better diff analysis
+          fetch-depth: 0
+
+      - name: 🔍 Run Super Linter
+        id: super-linter
+        uses: github/super-linter/slim@v5
+        env:
+          # Core configuration
+          DEFAULT_BRANCH: ${{ inputs.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: ${{ inputs.validate_all_codebase }}
+          
+          # Output configuration
+          CREATE_LOG_FILE: ${{ inputs.create_log_file }}
+          OUTPUT_FORMAT: ${{ inputs.output_format }}
+          OUTPUT_FOLDER: super-linter.report
+          OUTPUT_DETAILS: detailed
+          LOG_LEVEL: INFO
+          
+          # Linter toggles - Ansible & DevOps
+          VALIDATE_ANSIBLE: ${{ inputs.validate_ansible }}
+          VALIDATE_YAML: ${{ inputs.validate_yaml }}
+          YAML_CONFIG_FILE: .yamllint
+          
+          # Documentation
+          VALIDATE_MARKDOWN: ${{ inputs.validate_markdown }}
+          MARKDOWN_CONFIG_FILE: .markdownlint.json
+          
+          # Scripts and Code
+          VALIDATE_BASH: ${{ inputs.validate_bash }}
+          VALIDATE_BASH_EXEC: ${{ inputs.validate_bash }}
+          VALIDATE_PYTHON_BLACK: ${{ inputs.validate_python }}
+          VALIDATE_PYTHON_FLAKE8: ${{ inputs.validate_python }}
+          VALIDATE_PYTHON_ISORT: ${{ inputs.validate_python }}
+          VALIDATE_PYTHON_PYLINT: ${{ inputs.validate_python }}
+          
+          # Data formats
+          VALIDATE_JSON: ${{ inputs.validate_json }}
+          
+          # Security
+          VALIDATE_GITLEAKS: ${{ inputs.validate_secrets }}
+          
+          # Infrastructure
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          
+          # Performance
+          PARALLEL: true
+          FAIL_FAST: false
+          
+          # File filtering
+          FILTER_REGEX_EXCLUDE: |
+            .*\.git.*
+            .*node_modules.*
+            .*\.venv.*
+            .*__pycache__.*
+            .*\.pytest_cache.*
+            vars/vars\.yml$
+          
+          IGNORE_GITIGNORED_FILES: true
+
+      - name: 📊 Generate Summary
+        id: summary
+        if: always()
+        run: |
+          echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if linting passed or failed
+          if [ "${{ steps.super-linter.outcome }}" = "success" ]; then
+            echo "✅ **All linters passed successfully!**" >> $GITHUB_STEP_SUMMARY
+            echo "summary=✅ All linters passed" >> $GITHUB_OUTPUT
+          else
+            echo "❌ **Some linters found issues that need attention.**" >> $GITHUB_STEP_SUMMARY
+            echo "summary=❌ Linters found issues" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Linters Executed" >> $GITHUB_STEP_SUMMARY
+          echo "| Linter | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Ansible | ${{ inputs.validate_ansible && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML | ${{ inputs.validate_yaml && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown | ${{ inputs.validate_markdown && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python | ${{ inputs.validate_python && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bash | ${{ inputs.validate_bash && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON | ${{ inputs.validate_json && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets Detection | ${{ inputs.validate_secrets && '✅ Enabled' || '⏭️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📤 Upload Linting Reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: super-linter-reports
+          path: |
+            super-linter.report/
+            *.log
+          retention-days: 30
+
+      - name: 📝 Upload SARIF Results
+        if: always() && inputs.output_format == 'sarif'
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: super-linter.report/super-linter.sarif
+
+      - name: 💬 Comment on PR
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const outcome = '${{ steps.super-linter.outcome }}';
+            const summary = '${{ steps.summary.outputs.summary }}';
+            
+            let comment = `## 🔍 Super Linter Results\n\n${summary}\n\n`;
+            
+            if (outcome === 'success') {
+              comment += '🎉 Great job! All linting checks passed.\n\n';
+            } else {
+              comment += '⚠️ Some linting issues were found. Please review the workflow logs for details.\n\n';
+            }
+            
+            comment += `📊 **Workflow Run**: [View Details](${context.payload.repository.html_url}/actions/runs/${context.runId})\n`;
+            comment += `📁 **Download Reports**: Available in the workflow artifacts\n`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  # Security scan job (runs in parallel)
+  security-scan:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    if: inputs.validate_secrets
+    
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional: for Gitleaks Pro features
+
+      - name: 🛡️ Additional Security Scans
+        run: |
+          echo "🔍 Running additional security checks..."
+          
+          # Check for common security anti-patterns
+          echo "Checking for hardcoded secrets patterns..."
+          if grep -r "password\|secret\|api_key\|private_key" . --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" | grep -v "example\|template\|test\|README"; then
+            echo "⚠️ Potential hardcoded secrets found (review required)"
+          else
+            echo "✅ No obvious hardcoded secrets detected"
+          fi
+          
+          # Check for overly permissive file permissions
+          echo "Checking file permissions..."
+          find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" \) -perm /002 | head -10 | while read file; do
+            echo "⚠️ World-writable file found: $file"
+          done || echo "✅ No world-writable files found"
