@@ -17,6 +17,13 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  packages: read
+  pull-requests: write
+  statuses: write
+  security-events: write
+
 # Allow only one concurrent linting workflow per branch
 concurrency:
   group: linting-${{ github.ref }}
