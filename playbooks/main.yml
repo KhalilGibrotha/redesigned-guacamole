@@ -22,17 +22,35 @@
           Space: {{ confluence_space }}
           ================================================
 
-# Environment Validation
-- import_playbook: 01-validate-environment.yml
+# Repository Sync & Mixed Content Processing
+- name: "📦 Repository Sync & Template Processing"
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../vars/vars.yml
 
-# Template Conversion
-- import_playbook: 02-convert-templates.yml
+  tasks:
+    - name: "🔄 Sync documentation repositories"
+      ansible.builtin.command:
+        cmd: make sync-repos
+        chdir: ".."
+      register: sync_result
+      
+    - name: "📝 Convert mixed content (templates + markdown)"
+      ansible.builtin.command:
+        cmd: make convert-mixed-content
+        chdir: ".."
+      register: convert_result
+      
+    - name: "🔄 Convert markdown to HTML"
+      ansible.builtin.command:
+        cmd: make convert-markdown
+        chdir: ".."
+      register: html_result
 
-# HTML Conversion
-- import_playbook: 03-convert-html.yml
-
-# Confluence Publishing
-- import_playbook: 04-publish-confluence.yml
+# Enhanced Confluence Publishing
+- import_playbook: enhanced_confluence_publishing_clean.yml
 
 - name: "✅ Confluence Documentation Automation - Complete"
   hosts: localhost
@@ -58,6 +76,5 @@
           🔗 Access your documentation:
           {{ confluence_url }}/spaces/{{ confluence_space }}
 
-          📁 Temporary files available in: ~/tmp/
-          🧹 Clean up with: make clean-conversion
+          🧹 Temporary files automatically cleaned up
           ================================================

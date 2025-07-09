@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-templates-dynamic convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy sync-repos sync-repos-force convert-mixed-content
 
 # Default target
 help:
@@ -286,10 +286,12 @@ validate-templates:
 	@echo "Validating template structure..."
 	@echo "1. Checking template directory..."
 	@test -d docs/ || (echo "❌ docs/ directory missing" && exit 1)
-	@echo "2. Checking for main template..."
-	@test -f docs/main.md.j2 || (echo "❌ main.md.j2 template missing" && exit 1)
-	@echo "3. Checking template syntax..."
-	@for template in docs/*.j2; do \
+	@echo "2. Checking for main template folders..."
+	@test -d docs/automation_hub/ || (echo "❌ docs/automation_hub/ directory missing" && exit 1)
+	@echo "3. Checking for main template..."
+	@test -f docs/automation_hub/automation_hub.j2 || (echo "❌ automation_hub.j2 template missing" && exit 1)
+	@echo "4. Checking template syntax..."
+	@for template in docs/automation_hub/*.j2; do \
 		echo "   Checking $$template..."; \
 		echo "---\n- hosts: localhost\n  tasks:\n    - template: src=$$template dest=/tmp/test" | ansible-playbook --syntax-check /dev/stdin || exit 1; \
 	done
@@ -594,16 +596,101 @@ test-pandoc:
 # Confluence Documentation Conversion Targets
 # These targets are used by the Ansible playbook for markdown to HTML conversion
 
+convert-templates-nested:
+	@echo "🔄 Converting nested templates to markdown..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Rendering main automation_hub page..."; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md failed"; \
+		echo "   📝 Rendering direct children..."; \
+		for template in docs/automation_hub/*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
+					echo "      � Rendering $$basename..."; \
+					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename failed"; \
+				fi; \
+			fi; \
+		done; \
+		echo "   📝 Rendering nested sections..."; \
+		for nested_dir in docs/automation_hub/*/; do \
+			if [ -d "$$nested_dir" ]; then \
+				section_name=$$(basename $$nested_dir); \
+				echo "      📁 Processing $$section_name section..."; \
+				for nested_template in $$nested_dir*.j2; do \
+					if [ -f "$$nested_template" ]; then \
+						nested_basename=$$(basename $$nested_template .j2); \
+						echo "         📄 Rendering $$nested_basename..."; \
+						ansible localhost -m template -a "src=$$nested_template dest=~/tmp/$$nested_basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "         ❌ $$nested_basename failed"; \
+					fi; \
+				done; \
+			fi; \
+		done; \
+		echo "   ✅ Nested template rendering complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi
+
+convert-templates-dynamic:
+	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Rendering automation_hub main page..."; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		echo "   📝 Rendering automation_hub child pages..."; \
+		for template in docs/automation_hub/*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
+					echo "      📄 Rendering $$basename..."; \
+					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename template failed"; \
+				fi; \
+			fi; \
+		done; \
+		echo "   ✅ Dynamic template rendering complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi
+	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Rendering automation_hub main page..."; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		echo "   📝 Rendering automation_hub child pages..."; \
+		for template in docs/automation_hub/*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
+					echo "      📄 Rendering $$basename..."; \
+					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename template failed"; \
+				fi; \
+			fi; \
+		done; \
+		echo "   ✅ Dynamic template rendering complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi
+
 convert-templates:
 	@echo "🔄 Converting Jinja templates to markdown..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering templates with vars.yml..."; \
-		ansible localhost -m template -a "src=docs/main.md.j2 dest=~/tmp/main.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ main.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_governance.md.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
-		ansible localhost -m template -a "src=docs/platform_runbook.md.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/operator_runbook.md.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
-		ansible localhost -m template -a "src=docs/training_enablement.md.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		echo "   📝 Rendering templates with vars.yml and aap.yml..."; \
+		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/platform_governance.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/platform_runbook.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/operator_runbook.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
+		ansible localhost -m template -a "src=docs/automation_hub/training_enablement.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
+		for template in docs/aap_*.j2; do \
+			if [ -f "$$template" ]; then \
+				basename=$$(basename $$template .j2); \
+				echo "   📝 Rendering $$basename..."; \
+				ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ $$basename template failed"; \
+			fi; \
+		done; \
 		echo "   ✅ Template rendering complete"; \
 	else \
 		echo "   ❌ vars/vars.yml not found"; \
@@ -613,14 +700,16 @@ convert-templates:
 convert-markdown:
 	@echo "🔄 Converting markdown files to HTML..."
 	@if command -v pandoc >/dev/null 2>&1; then \
-		for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
-			if [ -f ~/tmp/$$file.md ]; then \
-				echo "   📄 Converting $$file.md to HTML..."; \
-				pandoc ~/tmp/$$file.md -f markdown -t html -o ~/tmp/$$file.md.html 2>&1 && \
-				echo "      ✅ $$file.md.html created ($$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0) bytes)" || \
-				echo "      ❌ Failed to convert $$file.md"; \
-			else \
-				echo "   ❌ ~/tmp/$$file.md not found"; \
+		for file in /home/gambia/tmp/*.md; do \
+			if [ -f "$$file" ]; then \
+				basename=$$(basename "$$file" .md); \
+				echo "   📄 Converting $$basename.md to HTML with Lua filters..."; \
+				pandoc "$$file" -f markdown -t html \
+					--lua-filter=lua/pagebreak.lua \
+					--lua-filter=lua/list_formatter.lua \
+					-o "/home/gambia/tmp/$$basename.md.html" 2>&1 && \
+				echo "      ✅ $$basename.md.html created ($$(stat -c%s /home/gambia/tmp/$$basename.md.html 2>/dev/null || echo 0) bytes)" || \
+				echo "      ❌ Failed to convert $$basename.md"; \
 			fi; \
 		done; \
 	else \
@@ -628,12 +717,12 @@ convert-markdown:
 		exit 1; \
 	fi
 
-convert-all: convert-templates convert-markdown
-	@echo "✅ All conversion steps completed"
+convert-all: sync-repos convert-mixed-content convert-markdown
+	@echo "✅ Complete documentation conversion finished (including direct markdown support)"
 
 verify-html:
 	@echo "🔍 Verifying HTML files..."
-	@for file in main platform_governance platform_runbook operator_runbook training_enablement; do \
+	@for file in automation_hub platform_governance platform_runbook operator_runbook training_enablement; do \
 		if [ -f ~/tmp/$$file.md.html ]; then \
 			size=$$(stat -c%s ~/tmp/$$file.md.html 2>/dev/null || echo 0); \
 			echo "   ✅ $$file.md.html exists ($$size bytes)"; \
@@ -675,3 +764,75 @@ run-cleanup:
 run-legacy:
 	@echo "🔄 Running legacy playbook..."
 	ansible-playbook playbook.yml
+
+# Repository synchronization targets
+sync-repos:
+	@echo "🔄 Synchronizing documentation repositories..."
+	python3 scripts/sync_documentation_repos.py
+
+# Force sync repositories
+sync-repos-force:
+	@echo "🔄 Force synchronizing documentation repositories..."
+	python3 scripts/sync_documentation_repos.py --force
+
+# Enhanced discovery using new script
+discover-enhanced:
+	@echo "🔍 Enhanced documentation discovery..."
+	python3 scripts/discover_docs_enhanced.py
+
+# Auto-document conversion (static + auto repos)
+convert-auto-document: sync-repos
+	@echo "🔄 Converting auto-document templates..."
+	python3 scripts/discover_docs_enhanced.py | jq -r 'to_entries[] | select(.value.type == "auto_document") | .key' | while read repo; do \
+		echo "   📄 Processing auto-document repo: $$repo"; \
+		python3 scripts/discover_docs_enhanced.py --section $$repo; \
+	done
+
+# Mixed content conversion (templates + direct markdown)
+convert-mixed-content:
+	@echo "🔄 Converting mixed content (templates + markdown)..."
+	@mkdir -p ~/tmp
+	@if [ -f vars/vars.yml ]; then \
+		echo "   📝 Processing documentation_automation content..."; \
+		echo "   📝 Rendering documentation_automation main page..."; \
+		ansible localhost -m template -a "src=docs/documentation_automation/documentation_automation.j2 dest=~/tmp/documentation_automation.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ documentation_automation.md template failed"; \
+		echo "   📝 Processing documentation_automation child content..."; \
+		for file in docs/documentation_automation/*; do \
+			if [ -f "$$file" ]; then \
+				basename=$$(basename $$file); \
+				name=$$(basename $$file | sed 's/\.[^.]*$$//'); \
+				ext=$$(echo $$basename | sed 's/.*\.//'); \
+				if [ "$$name" != "documentation_automation" ] && [ "$$name" != "macros" ]; then \
+					if [ "$$ext" = "j2" ]; then \
+						echo "      🔧 Templating $$name ($$ext)..."; \
+						ansible localhost -m template -a "src=$$file dest=~/tmp/$$name.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$name template failed"; \
+					elif [ "$$ext" = "md" ]; then \
+						echo "      📄 Copying $$name ($$ext)..."; \
+						cp "$$file" "/home/gambia/tmp/$$name.md" || echo "      ❌ $$name copy failed"; \
+					fi; \
+				fi; \
+			fi; \
+		done; \
+		echo "   📝 Processing nested sections..."; \
+		python3 scripts/discover_docs_enhanced.py | jq -r '.documentation_automation.nested_sections | to_entries[] | .key' | while read section; do \
+			echo "      📁 Processing $$section section..."; \
+			for file in docs/documentation_automation/$$section/*; do \
+				if [ -f "$$file" ]; then \
+					basename=$$(basename $$file); \
+					name=$$(basename $$file | sed 's/\.[^.]*$$//'); \
+					ext=$$(echo $$basename | sed 's/.*\.//'); \
+					if [ "$$ext" = "j2" ]; then \
+						echo "         🔧 Templating $$name ($$ext)..."; \
+						ansible localhost -m template -a "src=$$file dest=~/tmp/$$name.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "         ❌ $$name template failed"; \
+					elif [ "$$ext" = "md" ]; then \
+						echo "         📄 Copying $$name ($$ext)..."; \
+						cp "$$file" "/home/gambia/tmp/$$name.md" || echo "         ❌ $$name copy failed"; \
+					fi; \
+				fi; \
+			done; \
+		done; \
+		echo "   ✅ Mixed content processing complete"; \
+	else \
+		echo "   ❌ vars/vars.yml not found"; \
+		exit 1; \
+	fi

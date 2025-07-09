@@ -7,6 +7,8 @@
 
 An enterprise-grade Ansible automation solution for generating and publishing documentation to Atlassian Confluence. This project includes comprehensive testing, linting, and quality assurance tools designed for Ansible Automation Platform (AAP) environments.
 
+Because writing docs by hand is almost as fun as debugging YAML at 2 a.m., this project does the heavy lifting for you.
+
 ## Features
 
 - 🚀 **Automated Documentation**: Convert Markdown templates to HTML and publish to Confluence
@@ -15,8 +17,13 @@ An enterprise-grade Ansible automation solution for generating and publishing do
 - 🔄 **Reusable Workflows**: Centralized linting that can be used across multiple repositories ✅
 - 🛡️ **Security First**: Built-in security scanning and credential protection ✅
 - 📝 **Template System**: Jinja2-based markdown templates with variable substitution ✅
-- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
+- 🔧 **Multi-Platform CI/CD**: Config templates for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️
 - 📊 **Quality Gates**: Production-ready linting standards and validation ✅
+- 🖥️ **Cross-Platform Support**: Runs on RHEL, Ubuntu, macOS, and even that lonely Arch box ✅
+- 📚 **Modular Playbooks**: Reusable playbooks for easier maintenance and debugging ✅
+- 🔒 **Secure Setup**: Interactive scripts for safe credential management ✅
+- 🌊 **Git Flow Workflow**: Integrated Git Flow with automated validation and merging ✅
+- 🤖 **Automated Scripts**: Comprehensive validation and merge scripts for CI/CD ✅
 
 > **Note**: Features marked with ⚠️ are work-in-progress and may require additional testing and customization.
 
@@ -102,6 +109,63 @@ These options install available tools through system package managers and provid
    # Publish to Confluence
    ansible-playbook playbook.yml
    ```
+
+## Git Flow Workflow
+
+This project uses Git Flow for branch management and includes automated validation and merge scripts.
+
+### Branches
+- **`main`**: Production-ready code, tagged releases
+- **`develop`**: Integration branch for features  
+- **`feature/*`**: Feature development branches
+- **`release/*`**: Release preparation branches
+- **`hotfix/*`**: Emergency production fixes
+
+### Quick Start with Git Flow
+
+```bash
+# Initialize Git Flow (if not already done)
+./git-flow.sh init
+
+# Start a new feature
+./git-flow.sh feature start user-authentication
+
+# Work on your feature, then finish it (validates and merges to develop)
+./git-flow.sh feature finish user-authentication
+
+# Create a release
+./git-flow.sh release start v1.0
+./git-flow.sh release finish v1.0  # Merges to main, creates tag
+
+# Emergency hotfix
+./git-flow.sh hotfix start critical-bug
+./git-flow.sh hotfix finish critical-bug  # Merges to main and develop
+```
+
+### Manual Branch Management
+
+```bash
+# Quick validation during development
+./quick-validate.sh
+
+# Comprehensive validation before merge
+./validate-all.sh
+
+# Safe merge with validation (auto-detects target branch)
+./merge-branch.sh feature/my-feature        # → merges to develop
+./merge-branch.sh release/v1.0             # → merges to main
+
+# Override automatic detection
+./merge-branch.sh --to-main feature/special # → force merge to main
+```
+
+### Available Scripts
+- **`validate-all.sh`**: Comprehensive validation (security, linting, syntax)
+- **`quick-validate.sh`**: Essential checks for rapid feedback
+- **`merge-branch.sh`**: Safe branch merging with validation
+- **`git-flow.sh`**: Git Flow workflow automation
+
+See [`VALIDATION_SCRIPTS.md`](./VALIDATION_SCRIPTS.md) for complete documentation.
 
 ## 📊 Project Status
 

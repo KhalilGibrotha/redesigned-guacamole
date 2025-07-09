@@ -1,0 +1,85 @@
+{%- from 'docs/macros.j2' import oxford_comma_list -%}
+
+# Documentation Automation - {{ project_name | default(ORGANIZATION_NAME) }}
+
+**📚 SYSTEM OVERVIEW: {{ ansible_date_time.date }} at {{ ansible_date_time.time }} - Enterprise Documentation Automation Platform**
+
+Environment: **{{ env }}**
+
+## 🎯 Documentation Automation Overview
+
+This comprehensive documentation system provides automated generation, publishing, and maintenance of enterprise documentation for {{ ORGANIZATION_NAME }}'s automation platforms.
+
+### 🚀 Key Features
+- **Automated Content Generation**: Jinja2 templates with dynamic data injection
+- **Real-time Confluence Publishing**: Live updates to documentation pages
+- **Mixed Content Support**: Templates (.j2) and static markdown (.md) files
+- **Version Tracking**: Automated timestamping and change detection
+- **Multi-format Output**: Markdown, HTML, and Word document generation
+- **Enterprise Integration**: Seamless integration with Ansible Automation Platform
+
+### 📊 System Status
+- **Organization**: {{ ORGANIZATION_NAME }}
+- **Sub-Organization**: {{ SUB_ORGANIZATION_NAME }}
+- **Environment Type**: {{ ENVIRONMENT_TYPE }}
+- **AAP Version**: {{ AAP_VERSION }}
+- **Satellite Version**: {{ SATELLITE_VERSION }}
+- **Documentation Engine**: **Fully Automated (July 2025)**
+- **Last Updated**: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+
+## 📖 Documentation Sections
+
+This documentation portal contains the following automated documentation sections:
+
+### 🤖 Automation Hub Documentation
+Comprehensive guides for automation platform operations, governance, and management.
+
+### 👥 Operator Resources  
+Daily operational procedures, troubleshooting guides, and escalation processes.
+
+### 🏗️ Infrastructure Management
+Server provisioning, network configuration, and infrastructure automation guides.
+
+### 📋 Platform Governance
+Policies, procedures, compliance standards, and approval workflows.
+
+### 🎓 Training & Enablement
+Learning resources, best practices, and skill development materials.
+
+## 🔄 Automation Workflow
+
+This documentation is automatically generated and maintained through:
+
+1. **Template Processing**: Jinja2 templates are rendered with live data
+2. **Content Conversion**: Markdown files are processed and converted to HTML
+3. **Quality Assurance**: Automated validation and linting processes
+4. **Publishing Pipeline**: Seamless publishing to Confluence with version control
+5. **Update Tracking**: Real-time change detection and update notifications
+
+## 🛠️ Technical Details
+
+### Supported Platforms
+- **RHEL Versions**: {{ oxford_comma_list(RHEL_VERSIONS) }}
+- **Windows Versions**: {{ oxford_comma_list(WINDOWS_VERSIONS) }}
+
+### Integration Points
+- **Confluence URL**: {{ confluence_url | default('Not configured') }}
+- **Documentation Space**: {{ confluence_space | default('Not configured') }}
+- **Database Integration**: {{ database_url | default('Not configured') }}
+
+## 📞 Support & Contacts
+
+For documentation system support, automation requests, or content updates:
+
+- **Platform Team**: automation-team@{{ ORGANIZATION_NAME | lower }}.com
+- **Documentation Updates**: docs-automation@{{ ORGANIZATION_NAME | lower }}.com
+- **Technical Support**: platform-support@{{ ORGANIZATION_NAME | lower }}.com
+
+## 🔗 Quick Navigation
+
+All documentation sections are automatically organized and cross-referenced for easy navigation. Use the navigation menu to access specific operational guides, governance documents, and technical resources.
+
+---
+
+*This page is automatically generated and updated by the {{ project_name }} Documentation Automation System.*  
+*Last Generated: {{ ansible_date_time.date }} {{ ansible_date_time.time }}*

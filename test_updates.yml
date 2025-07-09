@@ -1,0 +1,34 @@
+---
+- name: Test template with timestamps - Updated Structure
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - vars/vars.yml
+    - vars/aap.yml
+  
+  tasks:
+    - name: Generate updated documentation_automation main page
+      template:
+        src: docs/documentation_automation/documentation_automation.j2
+        dest: ~/tmp/documentation_automation.md
+        
+    - name: Generate updated automation hub page
+      template:
+        src: docs/documentation_automation/automation_hub.j2
+        dest: ~/tmp/automation_hub.md
+        
+    - name: Generate updated platform governance page
+      template:
+        src: docs/documentation_automation/platform_governance.j2
+        dest: ~/tmp/platform_governance.md
+        
+    - name: Generate updated daily tasks page
+      template:
+        src: docs/documentation_automation/operator_runbook/daily_tasks.j2
+        dest: ~/tmp/daily_tasks.md
+        
+    - name: Copy updated direct markdown
+      copy:
+        src: docs/documentation_automation/direct_markdown_example.md
+        dest: ~/tmp/direct_markdown_example.md
