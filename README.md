@@ -1,6 +1,7 @@
 # Confluence Documentation Automation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Molecule Test](https://github.com/Gambia/confluence_test/actions/workflows/molecule-test.yml/badge.svg)](https://github.com/Gambia/confluence_test/actions/workflows/molecule-test.yml)
 [![Super Linter](https://img.shields.io/badge/Super--Linter-15%2B%20Languages-brightgreen)](https://github.com/super-linter/super-linter)
 [![Code Quality](https://img.shields.io/badge/Code%20Quality-Enterprise%20Grade-blue)](./docs/GITHUB_ACTIONS_LINTING.md)
 [![Multi-Platform CI/CD](https://img.shields.io/badge/CI%2FCD-Multi--Platform-blue)](./ci-cd-templates/)
@@ -454,6 +455,17 @@ This document covers {{ item.title | lower }} procedures.
 # Local development (quick checks)
 make fix  # Auto-fix common issues
 make lint  # Run local linting suite
+```
+
+**Molecule Testing**
+```bash
+# Run the full test suite locally
+molecule test
+
+# For faster iteration, run specific steps
+molecule converge
+molecule verify
+molecule destroy
 ```
 
 **Template Rendering**
