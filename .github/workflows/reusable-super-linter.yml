@@ -153,6 +153,7 @@ jobs:
           IGNORE_GITIGNORED_FILES: true
 
       - name: 📋 Generate Summary
+        id: summary
         if: always()
         run: |
           echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
@@ -219,43 +220,3 @@ jobs:
               repo: context.repo.repo,
               body: comment
             });
-
-  # Security scan job (runs in parallel)
-  security-scan:
-    name: 🛡️ Security Scan
-    runs-on: ubuntu-latest
-    if: inputs.validate_secrets
-    
-    permissions:
-      contents: read
-      security-events: write
-    
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 🔍 Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} # Optional: for Gitleaks Pro features
-
-      - name: 🛡️ Additional Security Scans
-        run: |
-          echo "🔍 Running additional security checks..."
-          
-          # Check for common security anti-patterns
-          echo "Checking for hardcoded secrets patterns..."
-          if grep -r "password\|secret\|api_key\|private_key" . --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" | grep -v "example\|template\|test\|README"; then
-            echo "⚠️ Potential hardcoded secrets found (review required)"
-          else
-            echo "✅ No obvious hardcoded secrets detected"
-          fi
-          
-          # Check for overly permissive file permissions
-          echo "Checking file permissions..."
-          find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" \) -perm /002 | head -10 | while read file; do
-            echo "⚠️ World-writable file found: $file"
-          done || echo "✅ No world-writable files found"

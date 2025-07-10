@@ -35,12 +35,33 @@ jobs:
       validate_json: true
       validate_secrets: true
       create_log_file: true
-      output_format: tap
+      output_format: sarif # Changed to SARIF for better integration
     secrets: inherit
+
+  security:
+    name: 🛡️ Security Scan
+    runs-on: ubuntu-latest
+    needs: [lint]
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔍 Run DevSkim Scanner
+        uses: microsoft/DevSkim-Action@v1
+
+      - name: 📤 Upload DevSkim SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: devskim-results.sarif
 
   ansible-syntax-check:
     name: 🎭 Ansible Syntax Check
     runs-on: ubuntu-latest
+    needs: [lint]
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -61,16 +82,25 @@ jobs:
 
   molecule:
     name: 🧪 Molecule Testing
-    needs: [lint, ansible-syntax-check]
+    needs: [security, ansible-syntax-check]
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🚀 Run Molecule tests
-        uses: gofrolist/molecule-action@v2
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v5
         with:
-          args: test
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🧪 Run Molecule tests
+        run: molecule test
         env:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
@@ -112,7 +142,7 @@ jobs:
   summary:
     name: 📋 Pipeline Summary
     if: always()
-    needs: [lint, ansible-syntax-check, molecule, publish]
+    needs: [lint, security, ansible-syntax-check, molecule, publish]
     runs-on: ubuntu-latest
     steps:
       - name: 📊 Report overall status
@@ -121,6 +151,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           
           if [[ "${{ needs.lint.result }}" == "success" && \
+                "${{ needs.security.result }}" == "success" && \
                 "${{ needs.ansible-syntax-check.result }}" == "success" && \
                 "${{ needs.molecule.result }}" == "success" ]]; then
             echo "🎉 **All checks passed successfully!**" >> $GITHUB_STEP_SUMMARY
@@ -132,6 +163,7 @@ jobs:
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| 🔍 Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🛡️ Security Scan | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🎭 Ansible Syntax | ${{ needs.ansible-syntax-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🧪 Molecule Tests | ${{ needs.molecule.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| 🚀 Publish | ${{ needs.publish.result }} |" >> $GITHUB_STEP_SUMMARY
