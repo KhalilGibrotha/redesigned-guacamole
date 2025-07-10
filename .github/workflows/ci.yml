@@ -1,0 +1,137 @@
+---
+name: 🚀 CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Define permissions for the entire workflow
+permissions:
+  contents: read
+  packages: read
+  pull-requests: write
+  statuses: write
+  security-events: write
+
+jobs:
+  lint:
+    name: 🔍 Code Quality & Linting
+    uses: ./.github/workflows/reusable-super-linter.yml
+    with:
+      validate_all_codebase: ${{ github.event_name == 'workflow_dispatch' }}
+      default_branch: main
+      validate_ansible: true
+      validate_yaml: true
+      validate_markdown: true
+      validate_python: true
+      validate_bash: true
+      validate_json: true
+      validate_secrets: true
+      create_log_file: true
+      output_format: tap
+    secrets: inherit
+
+  ansible-syntax-check:
+    name: 🎭 Ansible Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🧪 Run ansible-playbook --syntax-check
+        run: ansible-playbook playbook.yml --syntax-check
+
+  molecule:
+    name: 🧪 Molecule Testing
+    needs: [lint, ansible-syntax-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🚀 Run Molecule tests
+        uses: gofrolist/molecule-action@v2
+        with:
+          args: test
+        env:
+          PY_COLORS: '1'
+          ANSIBLE_FORCE_COLOR: '1'
+
+      - name: 📤 Upload Molecule logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: molecule-logs
+          path: ~/.cache/molecule/
+
+  publish:
+    name: 🚀 Publish to Confluence
+    needs: molecule
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🚀 Publish to Confluence
+        run: ansible-playbook playbook.yml
+        env:
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE }}
+          CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH }}
+
+  summary:
+    name: 📋 Pipeline Summary
+    if: always()
+    needs: [lint, ansible-syntax-check, molecule, publish]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📊 Report overall status
+        run: |
+          echo "## 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.lint.result }}" == "success" && \
+                "${{ needs.ansible-syntax-check.result }}" == "success" && \
+                "${{ needs.molecule.result }}" == "success" ]]; then
+            echo "🎉 **All checks passed successfully!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Some checks failed.** Please review the logs." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎭 Ansible Syntax | ${{ needs.ansible-syntax-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Molecule Tests | ${{ needs.molecule.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🚀 Publish | ${{ needs.publish.result }} |" >> $GITHUB_STEP_SUMMARY
