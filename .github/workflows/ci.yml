@@ -145,9 +145,9 @@ jobs:
       - name: 🚀 Publish to Confluence
         run: ansible-playbook playbook.yml
         env:
-          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-          CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE }}
-          CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH }}
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL || '' }}
+          CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE || '' }}
+          CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH || '' }}
 
   summary:
     name: 📋 Pipeline Summary
