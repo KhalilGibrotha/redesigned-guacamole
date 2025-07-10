@@ -3,9 +3,18 @@ name: 🚀 CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+      - 'feature/*'
+      - 'release/*'
+      - 'hotfix/*'
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+      - 'release/*'
+      - 'hotfix/*'
   workflow_dispatch:
 
 concurrency:
@@ -114,8 +123,8 @@ jobs:
     name: 🚀 Publish to Confluence
     needs: [molecule]
     if: >
-      github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
       needs.molecule.result == 'success'
     runs-on: ubuntu-latest
     steps:
