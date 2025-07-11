@@ -144,7 +144,7 @@ jobs:
 
           # --- Configuration Files ---
           YAML_CONFIG_FILE: ".yamllint"
-          MARKDOWN_CONFIG_FILE: ".github/workflows/.markdownlint.json"
+          MARKDOWN_CONFIG_FILE: ".github/.markdownlint.json"
           ANSIBLE_LINT_CONFIG_FILE: ".ansible-lint"
 
           # --- Performance ---
