@@ -16,6 +16,9 @@ vault.yml
 .vault_pass
 .vault_pass_*
 
+# Allow example files for sensitive configurations
+!vars/vars.yml.example
+
 # Ansible specific
 *.retry
 .ansible/
@@ -92,3 +95,6 @@ docs/_build/
 # Backup files
 *.bak
 *.backup
+
+# Allow CI/CD workflow files and configurations
+!.github/**
