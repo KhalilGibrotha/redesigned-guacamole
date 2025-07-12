@@ -561,21 +561,21 @@ jobs:
       - name: 🔍 Run DevSkim Scanner
         uses: microsoft/DevSkim-Action@v1
 
-      - name: 📤 Upload DevSkim SARIF
-        uses: github/codeql-action/upload-sarif@v3
+      - name: 📥 Upload DevSkim SARIF as Artifact
+        uses: actions/upload-artifact@v4
         with:
-          sarif_file: devskim-results.sarif
+          name: devskim-results
+          path: devskim-results.sarif
 
       - name: 🔐 Advanced Secret Detection
         run: |
           echo "🔍 Running security validation..."
           
-          # Check for potential secrets (excluding false positives)
-          echo "Checking for potential hardcoded secrets..."
+          # Improved filter to ignore echo lines and reminders
           if grep -r "password\|secret\|ATAT\|api_token" . \
              --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" \
              --exclude-dir=.git --exclude-dir=.github \
-             | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token\|README"; then
+             | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token\|echo.*password\|echo.*secret\|README"; then
             echo "⚠️ Potential secrets found - please review"
             exit 1
           else
@@ -602,6 +602,21 @@ jobs:
           echo "✅ **DevSkim scan completed**" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
           echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 DevSkim Summary Report
+        if: always()
+        run: |
+          echo "## 🛡️ DevSkim Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          ISSUES_COUNT=$(jq '.runs[].results | length' devskim-results.sarif)
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Issues Found | $ISSUES_COUNT |" >> $GITHUB_STEP_SUMMARY
+
+          if [ "$ISSUES_COUNT" -gt 0 ]; then
+            echo "⚠️ DevSkim found $ISSUES_COUNT potential issues." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No issues detected by DevSkim." >> $GITHUB_STEP_SUMMARY
+          fi
 
   # Enhanced Ansible validation
   ansible-syntax-check:
@@ -803,9 +818,9 @@ jobs:
       - name: 🚀 Publish to Confluence
         run: ansible-playbook playbook.yml
         env:
-          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL || '' }}
-          CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE || '' }}
-          CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH || '' }}
+          CONFLUENCE_URL: ${{ vars.CONFLUENCE_URL }}
+          CONFLUENCE_SPACE: ${{ vars.CONFLUENCE_SPACE }}
+          CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH }}
         # Don't echo these env vars in debug mode
         shell: bash
 
