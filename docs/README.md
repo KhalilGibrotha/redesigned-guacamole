@@ -4,10 +4,14 @@ This directory contains comprehensive documentation for the CI/CD workflow and r
 
 ## 📁 Directory Structure
 
+### 🌿 Branch Management
+- [`BRANCH_NAMING_GUIDE.md`](BRANCH_NAMING_GUIDE.md) - Complete guide to supported branch naming patterns for triggering CI/CD
+
 ### 🚀 CI/CD Documentation (`ci-cd/`)
 Core documentation for the continuous integration and deployment pipeline:
 
 - [`CI_CD_INTEGRATION_GUIDE.md`](ci-cd/CI_CD_INTEGRATION_GUIDE.md) - Complete CI/CD setup guide
+- [`AUTOFIX_FEATURE_GUIDE.md`](ci-cd/AUTOFIX_FEATURE_GUIDE.md) - Comprehensive auto-fix feature documentation
 - [`WORKFLOW_CONSOLIDATION_SUMMARY.md`](ci-cd/WORKFLOW_CONSOLIDATION_SUMMARY.md) - Summary of workflow improvements
 - [`GITHUB_ACTIONS_SETUP.md`](ci-cd/GITHUB_ACTIONS_SETUP.md) - GitHub Actions configuration guide
 - [`GITHUB_ACTIONS_SUMMARY.md`](ci-cd/GITHUB_ACTIONS_SUMMARY.md) - GitHub Actions implementation summary
@@ -41,10 +45,15 @@ Jinja2 templates and template-related files:
 
 ## 🎯 Quick Start
 
+### For Branch Naming:
+1. **First read**: [`BRANCH_NAMING_GUIDE.md`](BRANCH_NAMING_GUIDE.md) - Understand supported branch patterns
+2. **Key patterns**: `feature/*`, `ft/*`, `release/*`, `hotfix/*` (and multi-level variants)
+
 ### For CI/CD Setup:
 1. Read [`CI_CD_INTEGRATION_GUIDE.md`](ci-cd/CI_CD_INTEGRATION_GUIDE.md)
 2. Follow [`GITHUB_ACTIONS_SETUP.md`](ci-cd/GITHUB_ACTIONS_SETUP.md)
 3. Configure security with [`SECURITY_TOKEN_MASKING_GUIDE.md`](security/SECURITY_TOKEN_MASKING_GUIDE.md)
+4. Set up auto-fixes with [`AUTOFIX_FEATURE_GUIDE.md`](ci-cd/AUTOFIX_FEATURE_GUIDE.md)
 
 ### For Testing:
 1. Start with [`MOLECULE_TESTING_GUIDE.md`](testing/MOLECULE_TESTING_GUIDE.md)

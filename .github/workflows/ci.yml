@@ -6,15 +6,40 @@ on:
     branches:
       - main
       - develop
-      - 'feature/*'
-      - 'release/*'
-      - 'hotfix/*'
+      # Feature branches - multiple prefixes supported
+      - 'feature/**'     # feature/user-management, feature/auth/login, etc.
+      - 'feature/*'      # feature/login, feature/user-auth, etc.
+      - 'ft/**'          # ft/user-management, ft/auth/login, etc.
+      - 'ft/*'           # ft/login, ft/user-auth, etc.
+      # Release branches
+      - 'release/**'     # release/v1.2.0, release/hotfix/v1.1.1, etc.
+      - 'release/*'      # release/v1.2.0, release/sprint-1, etc.
+      - 'rel/**'         # rel/v1.2.0 (alternative prefix)
+      - 'rel/*'          # rel/v1.2.0 (alternative prefix)
+      # Hotfix branches
+      - 'hotfix/**'      # hotfix/critical-bug, hotfix/security/auth-fix, etc.
+      - 'hotfix/*'       # hotfix/critical-bug, hotfix/auth-fix, etc.
+      - 'hf/**'          # hf/critical-bug (alternative prefix)
+      - 'hf/*'           # hf/critical-bug (alternative prefix)
   pull_request:
     branches:
       - main
       - develop
-      - 'release/*'
-      - 'hotfix/*'
+      # Feature branches - multiple prefixes supported
+      - 'feature/**'     # Allow PRs from/to feature branches
+      - 'feature/*'      # Allow PRs from/to feature branches
+      - 'ft/**'          # Allow PRs from/to ft branches
+      - 'ft/*'           # Allow PRs from/to ft branches
+      # Release branches
+      - 'release/**'     # Allow PRs from/to release branches
+      - 'release/*'      # Allow PRs from/to release branches
+      - 'rel/**'         # Allow PRs from/to rel branches
+      - 'rel/*'          # Allow PRs from/to rel branches
+      # Hotfix branches
+      - 'hotfix/**'      # Allow PRs from/to hotfix branches
+      - 'hotfix/*'       # Allow PRs from/to hotfix branches
+      - 'hf/**'          # Allow PRs from/to hf branches
+      - 'hf/*'           # Allow PRs from/to hf branches
   workflow_dispatch:
     inputs:
       full_scan:
@@ -102,7 +127,62 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 📊 Count Files by Type
+      - name: � Debug Trigger Information
+        run: |
+          echo "🔍 Workflow Trigger Debug Information:"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Full ref: ${{ github.ref }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Commit SHA: ${{ github.sha }}"
+          echo "Base ref: ${{ github.base_ref }}"
+          echo "Head ref: ${{ github.head_ref }}"
+          echo ""
+          echo "📋 This confirms your branch trigger is working!"
+          echo "✅ Supported patterns:"
+          echo "   - feature/* and feature/** (standard feature branches)"
+          echo "   - ft/* and ft/** (alternative feature prefix)"
+          echo "   - release/* and release/** (release branches)"
+          echo "   - rel/* and rel/** (alternative release prefix)"
+          echo "   - hotfix/* and hotfix/** (hotfix branches)"
+          echo "   - hf/* and hf/** (alternative hotfix prefix)"
+          echo ""
+          
+          # Show branch pattern matching validation for all supported prefixes
+          BRANCH_NAME="${{ github.ref_name }}"
+          if [[ "$BRANCH_NAME" == feature/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches feature/* pattern"
+          elif [[ "$BRANCH_NAME" == ft/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches ft/* pattern (alternative feature prefix)"
+          elif [[ "$BRANCH_NAME" == release/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches release/* pattern"
+          elif [[ "$BRANCH_NAME" == rel/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches rel/* pattern (alternative release prefix)"
+          elif [[ "$BRANCH_NAME" == hotfix/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches hotfix/* pattern"
+          elif [[ "$BRANCH_NAME" == hf/* ]]; then
+            echo "✅ Branch '$BRANCH_NAME' matches hf/* pattern (alternative hotfix prefix)"
+          elif [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "develop" ]]; then
+            echo "✅ Branch '$BRANCH_NAME' is a main development branch"
+          else
+            echo "ℹ️ Branch '$BRANCH_NAME' uses a custom pattern or is not in supported categories"
+          fi
+          
+          # Show examples of supported branch names
+          echo ""
+          echo "📝 Examples of supported branch names:"
+          echo "   ✅ feature/user-management"
+          echo "   ✅ feature/auth/login-system"
+          echo "   ✅ ft/user-auth"
+          echo "   ✅ ft/api/user-endpoints"
+          echo "   ✅ release/v1.2.0"
+          echo "   ✅ release/sprint-3"
+          echo "   ✅ rel/v1.1.0"
+          echo "   ✅ hotfix/critical-security-fix"
+          echo "   ✅ hf/auth-bug"
+
+      - name: �📊 Count Files by Type
         id: file-count
         run: |
           echo "yaml=$(find . -name '*.yml' -o -name '*.yaml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
