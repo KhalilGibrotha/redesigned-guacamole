@@ -180,26 +180,35 @@ jobs:
           
           # Check for .ansible-lint
           if [ -f ".ansible-lint" ]; then
-            echo "✅ .ansible-lint found"
+            echo "✅ .ansible-lint found ($(wc -l < .ansible-lint) lines)"
             echo "📄 .ansible-lint preview:"
-            head -10 .ansible-lint
+            head -5 .ansible-lint
           else
             echo "❌ .ansible-lint not found"
           fi
           
           # Check for .yamllint
           if [ -f ".yamllint" ]; then
-            echo "✅ .yamllint found"
+            echo "✅ .yamllint found ($(wc -l < .yamllint) lines)"
           else
             echo "❌ .yamllint not found"
           fi
           
-          # Check for .markdownlint.json
+          # Check for markdownlint config (prefer .json)
           if [ -f ".markdownlint.json" ]; then
-            echo "✅ .markdownlint.json found"
+            echo "✅ .markdownlint.json found ($(wc -l < .markdownlint.json) lines)"
+          elif [ -f ".markdownlint.yml" ]; then
+            echo "✅ .markdownlint.yml found ($(wc -l < .markdownlint.yml) lines)"
           else
-            echo "❌ .markdownlint.json not found"
+            echo "❌ No markdownlint config found"
           fi
+          
+          # Check for any conflicting config files
+          if [ -f ".markdownlint.json" ] && [ -f ".markdownlint.yml" ]; then
+            echo "⚠️  Both .markdownlint.json and .markdownlint.yml found - Super Linter will prefer .json"
+          fi
+          
+          echo "🎯 Super Linter will auto-detect all configuration files at repo root"
 
       - name: 🔍 Run Super Linter
         id: super-linter
@@ -228,9 +237,10 @@ jobs:
           VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
           VALIDATE_DOCKERFILE_HADOLINT: true
           
-          # Configuration files (.ansible-lint automatically detected at repo root)
-          YAML_CONFIG_FILE: .yamllint
-          MARKDOWN_CONFIG_FILE: .markdownlint.json
+          # Configuration files (all auto-detected at repo root)
+          # .ansible-lint - automatically detected
+          # .yamllint - automatically detected  
+          # .markdownlint.json - automatically detected
           
           # Performance settings
           SUPPRESS_POSSUM: true
