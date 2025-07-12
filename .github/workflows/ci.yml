@@ -221,6 +221,14 @@ jobs:
           LOG_LEVEL: 'WARN'  # Reduced from INFO to minimize token exposure
           CREATE_LOG_FILE: true
           
+          # Auto-fix configuration
+          FIX_ANSIBLE: true
+          FIX_YAML: true
+          FIX_MARKDOWN: true
+          FIX_PYTHON_BLACK: true
+          FIX_SHELL_SHFMT: true
+          FIX_JSON: true
+          
           # Universal linters (always enabled)
           VALIDATE_YAML: true
           VALIDATE_JSON: true
@@ -253,6 +261,116 @@ jobs:
           
           # Behavior
           DISABLE_ERRORS: false
+
+      - name: 📊 Analyze Auto-fixes Applied
+        if: always()
+        id: autofix-analysis
+        run: |
+          echo "🔍 Analyzing auto-fixes applied by Super Linter..."
+          
+          # Initialize counters
+          total_fixes=0
+          yaml_fixes=0
+          ansible_fixes=0
+          python_fixes=0
+          shell_fixes=0
+          markdown_fixes=0
+          json_fixes=0
+          
+          # Function to count fixes in git diff
+          count_file_changes() {
+            local file_pattern="$1"
+            local category="$2"
+            
+            if git diff --name-only | grep -E "$file_pattern" > /dev/null 2>&1; then
+              local changed_files=$(git diff --name-only | grep -E "$file_pattern" | wc -l)
+              local total_changes=$(git diff --numstat | grep -E "$file_pattern" | awk '{sum += $1 + $2} END {print sum+0}')
+              
+              echo "📝 $category fixes: $changed_files files, $total_changes changes"
+              return $total_changes
+            else
+              echo "📝 $category fixes: 0 files, 0 changes"
+              return 0
+            fi
+          }
+          
+          # Check if there are any changes from auto-fix
+          if git diff --quiet; then
+            echo "✅ No auto-fixes were needed - code already compliant!"
+            echo "autofix_needed=false" >> $GITHUB_OUTPUT
+            echo "total_fixes=0" >> $GITHUB_OUTPUT
+          else
+            echo "🔧 Auto-fixes were applied!"
+            echo "autofix_needed=true" >> $GITHUB_OUTPUT
+            
+            # Count fixes by category
+            count_file_changes "\\.ya?ml$" "YAML"; yaml_fixes=$?
+            count_file_changes "\\.py$" "Python"; python_fixes=$?
+            count_file_changes "\\.sh$" "Shell/Bash"; shell_fixes=$?
+            count_file_changes "\\.md$" "Markdown"; markdown_fixes=$?
+            count_file_changes "\\.json$" "JSON"; json_fixes=$?
+            
+            # Special handling for Ansible (subset of YAML)
+            if git diff --name-only | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" > /dev/null 2>&1; then
+              ansible_fixes=$(git diff --numstat | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" | awk '{sum += $1 + $2} END {print sum+0}')
+              echo "📝 Ansible fixes: $ansible_fixes changes"
+            fi
+            
+            total_fixes=$((yaml_fixes + python_fixes + shell_fixes + markdown_fixes + json_fixes))
+            
+            # Output for next steps
+            echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
+            echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
+            echo "ansible_fixes=$ansible_fixes" >> $GITHUB_OUTPUT
+            echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
+            echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
+            echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
+            echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
+            
+            # Show detailed diff summary
+            echo ""
+            echo "📋 Detailed changes by file:"
+            git diff --name-status | while read status file; do
+              if [ "$status" = "M" ]; then
+                changes=$(git diff --numstat "$file" | awk '{print $1 + $2}')
+                echo "  📄 $file: $changes changes"
+              fi
+            done
+          fi
+
+      - name: 💾 Commit Auto-fixes
+        if: steps.autofix-analysis.outputs.autofix_needed == 'true'
+        run: |
+          echo "💾 Committing auto-fixes..."
+          
+          # Configure git (use GitHub Actions bot)
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Add all changes
+          git add .
+          
+          # Create detailed commit message
+          commit_msg="🤖 Auto-fix: Applied ${{ steps.autofix-analysis.outputs.total_fixes }} linting fixes
+          
+          Auto-fixes applied by Super Linter:
+          - YAML fixes: ${{ steps.autofix-analysis.outputs.yaml_fixes }}
+          - Ansible fixes: ${{ steps.autofix-analysis.outputs.ansible_fixes }}
+          - Python fixes: ${{ steps.autofix-analysis.outputs.python_fixes }}
+          - Shell fixes: ${{ steps.autofix-analysis.outputs.shell_fixes }}
+          - Markdown fixes: ${{ steps.autofix-analysis.outputs.markdown_fixes }}
+          - JSON fixes: ${{ steps.autofix-analysis.outputs.json_fixes }}
+          
+          Automated by: ${{ github.workflow }} #${{ github.run_number }}
+          Triggered by: ${{ github.event_name }} on ${{ github.ref_name }}"
+          
+          # Commit changes
+          git commit -m "$commit_msg"
+          
+          # Push changes back to the branch
+          git push origin ${{ github.ref_name }}
+          
+          echo "✅ Auto-fixes committed and pushed!"
 
       - name: 🧹 Sanitize Super Linter Logs
         if: always()
@@ -316,13 +434,34 @@ jobs:
           echo "**Validation Scope:** ${{ github.event.inputs.full_scan == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
+          # Auto-fix summary
+          if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
+            echo "## 🤖 Auto-fixes Applied" >> $GITHUB_STEP_SUMMARY
+            echo "**Total Fixes:** ${{ steps.autofix-analysis.outputs.total_fixes }} changes" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Category | Fixes Applied |" >> $GITHUB_STEP_SUMMARY
+            echo "|----------|---------------|" >> $GITHUB_STEP_SUMMARY
+            echo "| 📄 YAML | ${{ steps.autofix-analysis.outputs.yaml_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🎭 Ansible | ${{ steps.autofix-analysis.outputs.ansible_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🐍 Python | ${{ steps.autofix-analysis.outputs.python_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 🐚 Shell/Bash | ${{ steps.autofix-analysis.outputs.shell_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 📝 Markdown | ${{ steps.autofix-analysis.outputs.markdown_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "| 📋 JSON | ${{ steps.autofix-analysis.outputs.json_fixes }} |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **Auto-fixes have been committed to the branch**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## ✨ Code Quality Status" >> $GITHUB_STEP_SUMMARY
+            echo "✅ **No auto-fixes needed - code already compliant!**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
           echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ YAML (yamllint)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Ansible (ansible-lint)" >> $GITHUB_STEP_SUMMARY
-          echo "- ${{ needs.quick-validation.outputs.files-shell != '0' && '✅' || '⏸️' }} Shell/Bash (shellcheck, shfmt)" >> $GITHUB_STEP_SUMMARY
-          echo "- ${{ needs.quick-validation.outputs.files-python != '0' && '✅' || '⏸️' }} Python (black, pylint, flake8)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Markdown (markdownlint)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ JSON (jsonlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ YAML (yamllint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ansible (ansible-lint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.quick-validation.outputs.files-shell != '0' && '✅' || '⏸️' }} Shell/Bash (shellcheck, shfmt) ${{ needs.quick-validation.outputs.files-shell != '0' && steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.quick-validation.outputs.files-python != '0' && '✅' || '⏸️' }} Python (black, pylint, flake8) ${{ needs.quick-validation.outputs.files-python != '0' && steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Markdown (markdownlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ JSON (jsonlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ GitHub Actions (actionlint)" >> $GITHUB_STEP_SUMMARY
 
@@ -645,7 +784,7 @@ jobs:
           echo "| Stage | Status | Details |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
           echo "| ⚡ Quick Validation | ${{ needs.quick-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} | Basic syntax and file checks |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔍 Super Linter | ${{ needs.super-linter.result == 'success' && '✅ Passed' || '❌ Failed' }} | Code quality and standards |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Super Linter | ${{ needs.super-linter.result == 'success' && '✅ Passed' || '❌ Failed' }} | Code quality and standards 🤖 auto-fix enabled |" >> $GITHUB_STEP_SUMMARY
           echo "| 🛡️ Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} | Security vulnerabilities |" >> $GITHUB_STEP_SUMMARY
           echo "| 🎭 Ansible Validation | ${{ needs.ansible-syntax-check.result == 'success' && '✅ Passed' || '❌ Failed' }} | Ansible syntax and lint |" >> $GITHUB_STEP_SUMMARY
           echo "| 🧪 Molecule Tests | ${{ needs.molecule.result == 'success' && '✅ Passed' || (needs.molecule.result == 'skipped' && '⏸️ Skipped' || '❌ Failed') }} | Infrastructure testing |" >> $GITHUB_STEP_SUMMARY
