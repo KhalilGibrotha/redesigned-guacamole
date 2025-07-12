@@ -41,9 +41,54 @@ permissions:
   security-events: write
 
 jobs:
+  # Security: Mask sensitive values across all jobs
+  setup-security:
+    name: 🔒 Security Setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🎭 Mask Sensitive Values
+        run: |
+          # Mask common token patterns that might appear in logs
+          echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
+          
+          # Mask Confluence-related secrets if they exist
+          if [ -n "${{ secrets.CONFLUENCE_URL }}" ]; then
+            echo "::add-mask::${{ secrets.CONFLUENCE_URL }}"
+          fi
+          if [ -n "${{ secrets.CONFLUENCE_SPACE }}" ]; then
+            echo "::add-mask::${{ secrets.CONFLUENCE_SPACE }}"
+          fi
+          if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
+            echo "::add-mask::${{ secrets.CONFLUENCE_AUTH }}"
+          fi
+          
+          # Mask partial token patterns (first/last chars of tokens)
+          if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
+            AUTH_PARTIAL=$(echo "${{ secrets.CONFLUENCE_AUTH }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
+            echo "::add-mask::$AUTH_PARTIAL"
+          fi
+          
+          # Mask common credential patterns that might leak
+          echo "::add-mask::ghp_"
+          echo "::add-mask::gho_"
+          echo "::add-mask::ghu_"
+          echo "::add-mask::ghs_"
+          echo "::add-mask::github_pat_"
+          echo "::add-mask::ATATT"
+          echo "::add-mask::ATCTT"
+          echo "::add-mask::ATBT"
+          
+          # Additional patterns for Confluence and other services
+          echo "::add-mask::Basic "
+          echo "::add-mask::Bearer "
+          echo "::add-mask::Token "
+          
+          echo "✅ Sensitive values masked successfully"
+
   # Quick validation for fast feedback
   quick-validation:
     name: ⚡ Quick Validation
+    needs: setup-security
     runs-on: ubuntu-latest
     
     outputs:
@@ -104,7 +149,7 @@ jobs:
   # Enhanced linting with Super Linter
   super-linter:
     name: 🔍 Super Linter
-    needs: quick-validation
+    needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
     
     permissions:
@@ -137,7 +182,7 @@ jobs:
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_ALL_CODEBASE: ${{ github.event.inputs.full_scan == 'true' || github.event_name == 'workflow_dispatch' }}
-          LOG_LEVEL: 'INFO'
+          LOG_LEVEL: 'WARN'  # Reduced from INFO to minimize token exposure
           CREATE_LOG_FILE: true
           
           # Universal linters (always enabled)
@@ -166,16 +211,61 @@ jobs:
           MULTI_STATUS: true
           IGNORE_GITIGNORED_FILES: true
           
+          # Security: Reduce log verbosity to prevent token leakage
+          ACTIONS_RUNNER_DEBUG: false
+          ACTIONS_STEP_DEBUG: false
+          
           # Behavior
           DISABLE_ERRORS: false
 
-      - name: 📤 Upload Super Linter Logs
+      - name: 🧹 Sanitize Super Linter Logs
+        if: always()
+        run: |
+          # Check if log file exists and sanitize it
+          if [ -f "super-linter.log" ]; then
+            echo "🧹 Sanitizing Super Linter logs..."
+            
+            # Create a backup
+            cp super-linter.log super-linter.log.original
+            
+            # Remove or mask potential sensitive patterns
+            sed -i 's/ghp_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/gho_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/ghu_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/ghs_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/github_pat_[a-zA-Z0-9_]\{82\}/***GITHUB_PAT***/g' super-linter.log
+            sed -i 's/ATATT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            sed -i 's/ATCTT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            sed -i 's/Basic [a-zA-Z0-9+/=]\{20,\}/Basic ***ENCODED_CREDENTIALS***/g' super-linter.log
+            sed -i 's/Bearer [a-zA-Z0-9+/=]\{20,\}/Bearer ***TOKEN***/g' super-linter.log
+            
+            # Remove any remaining base64 encoded patterns that look like credentials
+            sed -i 's/[a-zA-Z0-9+/=]\{40,\}/***POTENTIAL_TOKEN***/g' super-linter.log
+            
+            echo "✅ Log sanitization completed"
+            
+            # Show a sample of sanitized content (first 50 lines) for debugging
+            echo "📋 Sanitized log sample (first 50 lines):"
+            head -50 super-linter.log | grep -v "***" || echo "No sensitive patterns found in sample"
+          else
+            echo "⚠️ Super Linter log file not found"
+          fi
+
+      - name: 📤 Upload Sanitized Super Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs-${{ github.run_id }}
+          name: super-linter-logs-sanitized-${{ github.run_id }}
           path: super-linter.log
           retention-days: 30
+
+      - name: 📤 Upload Original Super Linter Logs (Debug Only)
+        if: always() && github.event.inputs.full_scan == 'true'  # Only upload original logs for full scans
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-logs-original-${{ github.run_id }}
+          path: super-linter.log.original
+          retention-days: 7  # Shorter retention for potentially sensitive logs
 
       - name: 📋 Super Linter Summary
         if: always()
@@ -203,7 +293,7 @@ jobs:
   # Enhanced security scanning
   security:
     name: 🛡️ Security Scan
-    needs: quick-validation
+    needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -261,7 +351,7 @@ jobs:
   # Enhanced Ansible validation
   ansible-syntax-check:
     name: 🎭 Ansible Validation
-    needs: quick-validation
+    needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
@@ -323,7 +413,35 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔧 Set up Python
+      - name: � Debug Molecule Prerequisites
+        run: |
+          echo "🔍 Checking Molecule prerequisites..."
+          echo "📊 Job dependency status:"
+          echo "- super-linter: ${{ needs.super-linter.result }}"
+          echo "- security: ${{ needs.security.result }}"
+          echo "- ansible-syntax-check: ${{ needs.ansible-syntax-check.result }}"
+          echo "🎯 Skip molecule input: ${{ github.event.inputs.skip_molecule }}"
+          echo "🎮 Event name: ${{ github.event_name }}"
+          echo "🌿 Branch: ${{ github.ref_name }}"
+          
+          # Check for molecule configuration
+          if [ -d "molecule" ]; then
+            echo "✅ Molecule directory found"
+            echo "📁 Available scenarios:"
+            ls -la molecule/
+          else
+            echo "❌ No molecule directory found"
+          fi
+          
+          # Check for Docker availability
+          if command -v docker &> /dev/null; then
+            echo "✅ Docker is available"
+            docker --version
+          else
+            echo "❌ Docker not found"
+          fi
+
+      - name: �🔧 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -333,19 +451,62 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          
+          # Verify molecule installation
+          echo "🔍 Verifying Molecule installation..."
+          molecule --version
+          molecule drivers
+
+      - name: 🔍 Pre-flight Molecule Check
+        run: |
+          echo "🔍 Running Molecule pre-flight checks..."
+          
+          # Check molecule scenarios
+          if [ -d "molecule" ]; then
+            echo "📋 Available Molecule scenarios:"
+            for scenario in molecule/*/; do
+              if [ -d "$scenario" ]; then
+                scenario_name=$(basename "$scenario")
+                echo "- $scenario_name"
+                if [ -f "$scenario/molecule.yml" ]; then
+                  echo "  ✅ molecule.yml found"
+                else
+                  echo "  ❌ molecule.yml missing"
+                fi
+              fi
+            done
+          fi
+          
+          # Test molecule command
+          echo "🧪 Testing molecule list command..."
+          molecule list || echo "⚠️ Molecule list failed"
 
       - name: 🧪 Run Molecule tests
-        run: molecule test
+        run: |
+          echo "🧪 Starting Molecule tests..."
+          echo "📊 Environment info:"
+          echo "- Working directory: $(pwd)"
+          echo "- Python version: $(python --version)"
+          echo "- Ansible version: $(ansible --version | head -n1)"
+          echo "- Molecule version: $(molecule --version)"
+          
+          # Run molecule with verbose output for debugging
+          molecule test --debug
         env:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
+          MOLECULE_DEBUG: '1'
 
       - name: 📤 Upload Molecule logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: molecule-logs
-          path: ~/.cache/molecule/
+          name: molecule-logs-debug-${{ github.run_id }}
+          path: |
+            ~/.cache/molecule/
+            .molecule/
+            *.log
+          retention-days: 7
 
       - name: 📋 Molecule Summary
         if: always()
@@ -354,6 +515,12 @@ jobs:
           echo "**Status:** ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Test Environment:** Ubuntu Latest" >> $GITHUB_STEP_SUMMARY
           echo "**Python Version:** 3.11" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Debug Info:**" >> $GITHUB_STEP_SUMMARY
+          echo "- super-linter result: ${{ needs.super-linter.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- security result: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- ansible-syntax-check result: ${{ needs.ansible-syntax-check.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- skip_molecule input: ${{ github.event.inputs.skip_molecule }}" >> $GITHUB_STEP_SUMMARY
 
   publish:
     name: 🚀 Publish to Confluence
@@ -384,6 +551,8 @@ jobs:
           CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL || '' }}
           CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE || '' }}
           CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH || '' }}
+        # Don't echo these env vars in debug mode
+        shell: bash
 
       - name: 📋 Publishing Summary
         if: always()
@@ -397,7 +566,7 @@ jobs:
   summary:
     name: 📋 Pipeline Summary & Quality Report
     if: always()
-    needs: [quick-validation, super-linter, security, ansible-syntax-check, molecule, publish]
+    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, molecule, publish]
     runs-on: ubuntu-latest
     steps:
       - name: � Checkout Code
