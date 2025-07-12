@@ -174,6 +174,33 @@ jobs:
             echo "default_branch=main" >> $GITHUB_OUTPUT
           fi
 
+      - name: 🔍 Verify Linter Configuration Files
+        run: |
+          echo "🔍 Checking for linter configuration files..."
+          
+          # Check for .ansible-lint
+          if [ -f ".ansible-lint" ]; then
+            echo "✅ .ansible-lint found"
+            echo "📄 .ansible-lint preview:"
+            head -10 .ansible-lint
+          else
+            echo "❌ .ansible-lint not found"
+          fi
+          
+          # Check for .yamllint
+          if [ -f ".yamllint" ]; then
+            echo "✅ .yamllint found"
+          else
+            echo "❌ .yamllint not found"
+          fi
+          
+          # Check for .markdownlint.json
+          if [ -f ".markdownlint.json" ]; then
+            echo "✅ .markdownlint.json found"
+          else
+            echo "❌ .markdownlint.json not found"
+          fi
+
       - name: 🔍 Run Super Linter
         id: super-linter
         uses: super-linter/super-linter@v5
@@ -201,10 +228,9 @@ jobs:
           VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
           VALIDATE_DOCKERFILE_HADOLINT: true
           
-          # Configuration files
+          # Configuration files (.ansible-lint automatically detected at repo root)
           YAML_CONFIG_FILE: .yamllint
-          ANSIBLE_CONFIG_FILE: .ansible-lint
-          MARKDOWN_CONFIG_FILE: .markdownlint.yml
+          MARKDOWN_CONFIG_FILE: .markdownlint.json
           
           # Performance settings
           SUPPRESS_POSSUM: true
