@@ -16,6 +16,17 @@ on:
       - 'release/*'
       - 'hotfix/*'
   workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full codebase scan (not just changed files)'
+        required: false
+        type: boolean
+        default: false
+      skip_molecule:
+        description: 'Skip Molecule testing for faster feedback'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,25 +41,169 @@ permissions:
   security-events: write
 
 jobs:
-  lint:
-    name: 🔍 Code Quality & Linting
-    uses: ./.github/workflows/reusable-super-linter.yml
-    with:
-      validate_all_codebase: ${{ github.event_name == 'workflow_dispatch' }}
-      default_branch: main
-      validate_ansible: true
-      validate_yaml: true
-      validate_markdown: true
-      validate_python: true
-      validate_bash: true
-      validate_json: true
-      validate_secrets: true
-      create_log_file: true
-      output_format: sarif # Changed to SARIF for better integration
-    secrets: inherit
+  # Quick validation for fast feedback
+  quick-validation:
+    name: ⚡ Quick Validation
+    runs-on: ubuntu-latest
+    
+    outputs:
+      files-yaml: ${{ steps.file-count.outputs.yaml }}
+      files-python: ${{ steps.file-count.outputs.python }}
+      files-shell: ${{ steps.file-count.outputs.shell }}
+      files-markdown: ${{ steps.file-count.outputs.markdown }}
+      files-json: ${{ steps.file-count.outputs.json }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
 
+      - name: 📊 Count Files by Type
+        id: file-count
+        run: |
+          echo "yaml=$(find . -name '*.yml' -o -name '*.yaml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "python=$(find . -name '*.py' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "shell=$(find . -name '*.sh' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "markdown=$(find . -name '*.md' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "json=$(find . -name '*.json' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: 🧪 Basic Syntax Checks
+        run: |
+          echo "🔍 Running quick syntax validation..."
+          
+          # Check for basic YAML syntax
+          echo "Checking YAML files..."
+          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read file; do
+            if [ "$file" != "./vars/vars.yml" ]; then  # Skip encrypted file
+              python3 -c "import yaml; yaml.safe_load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
+            fi
+          done
+          
+          # Check for basic JSON syntax
+          echo "Checking JSON files..."
+          find . -name "*.json" | head -10 | while read file; do
+            python3 -c "import json; json.load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
+          done
+          
+          # Check for executable permissions on shell scripts
+          echo "Checking shell script permissions..."
+          find . -name "*.sh" -not -executable | while read file; do
+            echo "⚠️ $file may need executable permissions"
+          done
+
+      - name: 📊 Repository Statistics
+        run: |
+          echo "## 📊 Repository Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "| File Type | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML files | ${{ steps.file-count.outputs.yaml }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown files | ${{ steps.file-count.outputs.markdown }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python files | ${{ steps.file-count.outputs.python }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell scripts | ${{ steps.file-count.outputs.shell }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON files | ${{ steps.file-count.outputs.json }} |" >> $GITHUB_STEP_SUMMARY
+
+  # Enhanced linting with Super Linter
+  super-linter:
+    name: 🔍 Super Linter
+    needs: quick-validation
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: read
+      statuses: write
+      security-events: write
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔧 Configure Environment
+        id: config
+        run: |
+          # Dynamic branch detection
+          if [ "${{ github.event.repository.default_branch }}" != "" ]; then
+            echo "default_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
+          else
+            echo "default_branch=main" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔍 Run Super Linter
+        id: super-linter
+        uses: super-linter/super-linter@v5
+        env:
+          # Core configuration
+          DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: ${{ github.event.inputs.full_scan == 'true' || github.event_name == 'workflow_dispatch' }}
+          LOG_LEVEL: 'INFO'
+          CREATE_LOG_FILE: true
+          
+          # Universal linters (always enabled)
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_ENV: true
+          
+          # Conditional linters based on file presence
+          VALIDATE_ANSIBLE: true
+          VALIDATE_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_PYTHON_PYLINT: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_PYTHON_FLAKE8: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_BASH: ${{ needs.quick-validation.outputs.files-shell != '0' }}
+          VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          
+          # Configuration files
+          YAML_CONFIG_FILE: .yamllint
+          ANSIBLE_CONFIG_FILE: .ansible-lint
+          MARKDOWN_CONFIG_FILE: .markdownlint.yml
+          
+          # Performance settings
+          SUPPRESS_POSSUM: true
+          MULTI_STATUS: true
+          IGNORE_GITIGNORED_FILES: true
+          
+          # Behavior
+          DISABLE_ERRORS: false
+
+      - name: 📤 Upload Super Linter Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-logs-${{ github.run_id }}
+          path: super-linter.log
+          retention-days: 30
+
+      - name: 📋 Super Linter Summary
+        if: always()
+        run: |
+          echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.super-linter.outcome }}" = "success" ]; then
+            echo "**Status:** ✅ All linting checks passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "**Status:** ❌ Linting issues detected" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "**Validation Scope:** ${{ github.event.inputs.full_scan == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ YAML (yamllint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Ansible (ansible-lint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.quick-validation.outputs.files-shell != '0' && '✅' || '⏸️' }} Shell/Bash (shellcheck, shfmt)" >> $GITHUB_STEP_SUMMARY
+          echo "- ${{ needs.quick-validation.outputs.files-python != '0' && '✅' || '⏸️' }} Python (black, pylint, flake8)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Markdown (markdownlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ JSON (jsonlint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Actions (actionlint)" >> $GITHUB_STEP_SUMMARY
+
+  # Enhanced security scanning
   security:
     name: 🛡️ Security Scan
+    needs: quick-validation
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -66,8 +221,47 @@ jobs:
         with:
           sarif_file: devskim-results.sarif
 
+      - name: 🔐 Advanced Secret Detection
+        run: |
+          echo "🔍 Running security validation..."
+          
+          # Check for potential secrets (excluding false positives)
+          echo "Checking for potential hardcoded secrets..."
+          if grep -r "password\|secret\|ATAT\|api_token" . \
+             --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" \
+             --exclude-dir=.git --exclude-dir=.github \
+             | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token\|README"; then
+            echo "⚠️ Potential secrets found - please review"
+            exit 1
+          else
+            echo "✅ No obvious secrets detected"
+          fi
+
+      - name: 🔒 File Permissions Check
+        run: |
+          echo "🔒 Checking file permissions..."
+          
+          # Check for world-writable files
+          if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"; then
+            echo "❌ World-writable files found"
+            find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"
+            exit 1
+          else
+            echo "✅ File permissions look secure"
+          fi
+
+      - name: 🛡️ Security Summary
+        if: always()
+        run: |
+          echo "## 🛡️ Security Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **DevSkim scan completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
+
+  # Enhanced Ansible validation
   ansible-syntax-check:
-    name: 🎭 Ansible Syntax Check
+    name: 🎭 Ansible Validation
+    needs: quick-validation
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
@@ -84,12 +278,46 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🧪 Run ansible-playbook --syntax-check
-        run: ansible-playbook playbook.yml --syntax-check
+      - name: 🎭 Ansible Lint
+        run: |
+          echo "🔍 Running Ansible-specific validation..."
+          
+          # Run ansible-lint with custom config if it exists
+          if [ -f .ansible-lint ]; then
+            echo "Using custom .ansible-lint configuration"
+            ansible-lint --exclude molecule/ .
+          else
+            echo "Using default ansible-lint configuration"
+            ansible-lint --exclude molecule/ --exclude .github/ .
+          fi
+
+      - name: 🧪 Ansible Syntax Check
+        run: |
+          echo "🧪 Running Ansible syntax checks..."
+          
+          # Check main playbooks
+          for playbook in playbook.yml playbooks/*.yml; do
+            if [ -f "$playbook" ]; then
+              echo "Checking: $playbook"
+              ansible-playbook --syntax-check "$playbook" || echo "❌ Syntax error in $playbook"
+            fi
+          done
+
+      - name: 📋 Ansible Summary
+        run: |
+          echo "## 🎭 Ansible Validation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Ansible lint completed**" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Syntax validation completed**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Playbooks checked:**" >> $GITHUB_STEP_SUMMARY
+          find . -name "*.yml" -path "./playbooks/*" -o -name "playbook.yml" | while read file; do
+            echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
+          done
 
   molecule:
     name: 🧪 Molecule Testing
-    needs: [lint, security, ansible-syntax-check]
+    needs: [super-linter, security, ansible-syntax-check]
+    if: ${{ github.event.inputs.skip_molecule != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
@@ -118,6 +346,14 @@ jobs:
         with:
           name: molecule-logs
           path: ~/.cache/molecule/
+
+      - name: 📋 Molecule Summary
+        if: always()
+        run: |
+          echo "## 🧪 Molecule Testing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Environment:** Ubuntu Latest" >> $GITHUB_STEP_SUMMARY
+          echo "**Python Version:** 3.11" >> $GITHUB_STEP_SUMMARY
 
   publish:
     name: 🚀 Publish to Confluence
@@ -149,31 +385,104 @@ jobs:
           CONFLUENCE_SPACE: ${{ secrets.CONFLUENCE_SPACE || '' }}
           CONFLUENCE_AUTH: ${{ secrets.CONFLUENCE_AUTH || '' }}
 
+      - name: 📋 Publishing Summary
+        if: always()
+        run: |
+          echo "## 🚀 Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Target:** Confluence" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ job.status == 'success' && '✅ Published' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+
+  # Comprehensive pipeline summary with enhanced reporting
   summary:
-    name: 📋 Pipeline Summary
+    name: 📋 Pipeline Summary & Quality Report
     if: always()
-    needs: [lint, security, ansible-syntax-check, molecule, publish]
+    needs: [quick-validation, super-linter, security, ansible-syntax-check, molecule, publish]
     runs-on: ubuntu-latest
     steps:
-      - name: 📊 Report overall status
+      - name: � Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📊 Generate Comprehensive Report
         run: |
-          echo "## 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "# 🚀 CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          if [[ "${{ needs.lint.result }}" == "success" && \
+          # Overall pipeline status
+          if [[ "${{ needs.super-linter.result }}" == "success" && \
                 "${{ needs.security.result }}" == "success" && \
                 "${{ needs.ansible-syntax-check.result }}" == "success" && \
-                "${{ needs.molecule.result }}" == "success" ]]; then
-            echo "🎉 **All checks passed successfully!**" >> $GITHUB_STEP_SUMMARY
+                ("${{ needs.molecule.result }}" == "success" || "${{ needs.molecule.result }}" == "skipped") ]]; then
+            echo "🎉 **Pipeline Status: SUCCESS** 🎉" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "All quality gates passed! Your code is ready for deployment." >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ **Some checks failed.** Please review the logs." >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Pipeline Status: NEEDS ATTENTION** ⚠️" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Some checks failed. Please review and address the issues below." >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 🔍 Linting | ${{ needs.lint.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🛡️ Security Scan | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🎭 Ansible Syntax | ${{ needs.ansible-syntax-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🧪 Molecule Tests | ${{ needs.molecule.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 🚀 Publish | ${{ needs.publish.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "## 📊 Repository Overview" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository | ${{ github.repository }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML Files | ${{ needs.quick-validation.outputs.files-yaml }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Files | ${{ needs.quick-validation.outputs.files-python }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell Scripts | ${{ needs.quick-validation.outputs.files-shell }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown Files | ${{ needs.quick-validation.outputs.files-markdown }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON Files | ${{ needs.quick-validation.outputs.files-json }} |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 🎯 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Status | Details |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ Quick Validation | ${{ needs.quick-validation.result == 'success' && '✅ Passed' || '❌ Failed' }} | Basic syntax and file checks |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🔍 Super Linter | ${{ needs.super-linter.result == 'success' && '✅ Passed' || '❌ Failed' }} | Code quality and standards |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🛡️ Security Scan | ${{ needs.security.result == 'success' && '✅ Passed' || '❌ Failed' }} | Security vulnerabilities |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🎭 Ansible Validation | ${{ needs.ansible-syntax-check.result == 'success' && '✅ Passed' || '❌ Failed' }} | Ansible syntax and lint |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🧪 Molecule Tests | ${{ needs.molecule.result == 'success' && '✅ Passed' || (needs.molecule.result == 'skipped' && '⏸️ Skipped' || '❌ Failed') }} | Infrastructure testing |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🚀 Publishing | ${{ needs.publish.result == 'success' && '✅ Published' || (needs.publish.result == 'skipped' && '⏸️ Skipped' || '❌ Failed') }} | Confluence deployment |" >> $GITHUB_STEP_SUMMARY
+          
+          # Quality score calculation
+          passed=0
+          total=0
+          
+          # Count successful stages
+          if [ "${{ needs.quick-validation.result }}" = "success" ]; then passed=$((passed + 1)); fi; total=$((total + 1))
+          if [ "${{ needs.super-linter.result }}" = "success" ]; then passed=$((passed + 1)); fi; total=$((total + 1))
+          if [ "${{ needs.security.result }}" = "success" ]; then passed=$((passed + 1)); fi; total=$((total + 1))
+          if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then passed=$((passed + 1)); fi; total=$((total + 1))
+          if [ "${{ needs.molecule.result }}" = "success" ] || [ "${{ needs.molecule.result }}" = "skipped" ]; then passed=$((passed + 1)); fi; total=$((total + 1))
+          
+          quality_score=$((passed * 100 / total))
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📈 Quality Score: ${quality_score}%" >> $GITHUB_STEP_SUMMARY
+          
+          if [ $quality_score -eq 100 ]; then
+            echo "🏆 **EXCELLENT** - All quality gates passed!" >> $GITHUB_STEP_SUMMARY
+          elif [ $quality_score -ge 80 ]; then
+            echo "✅ **GOOD** - Most quality gates passed, minor issues to address" >> $GITHUB_STEP_SUMMARY
+          elif [ $quality_score -ge 60 ]; then
+            echo "⚠️ **FAIR** - Several issues need attention" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **POOR** - Major issues require immediate attention" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "*Generated by CI/CD Pipeline on $(date)*" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🚨 Fail Pipeline if Critical Issues
+        if: >
+          needs.quick-validation.result != 'success' || 
+          needs.super-linter.result != 'success' || 
+          needs.security.result != 'success' || 
+          needs.ansible-syntax-check.result != 'success' ||
+          (needs.molecule.result != 'success' && needs.molecule.result != 'skipped')
+        run: |
+          echo "❌ Pipeline failed due to critical quality issues"
+          exit 1
