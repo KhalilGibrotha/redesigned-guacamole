@@ -1,5 +1,8 @@
 # Confluence Documentation Automation - Git Ignore
 
+# Testing script
+scripts/test_confluence_auth.py
+
 # Temporary files
 *.tmp
 *.temp
@@ -98,3 +101,4 @@ docs/_build/
 
 # Allow CI/CD workflow files and configurations
 !.github/**
+confluence_test.code-workspace

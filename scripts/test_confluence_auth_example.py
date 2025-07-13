@@ -8,9 +8,9 @@ import requests
 import sys
 
 # Your credentials from vars.yml
-confluence_url = "https://alexgambino22.atlassian.net/wiki"
-confluence_space = "AH"
-confluence_auth = "YWxleGdhbWJpbm8yMkBnbWFpbC5jb206QVRBVFQzeEZmR0YwMnFNcWt4V2tmRF9Mem01X3V6QUN0eVg5dW4xalMzLUJTY2NXT1laQlJHZU5kdzE2QUVxMGx3cUJQamdPRmpueFVidklBWEMybHZ4WUNIdmRiUU01dTgyeTBOUUY4RlctUzRoRU8zMjM0cWRyeEgyZkx2NmhLM0VtdEZ5bm9BNlBNS0pJdkxIS3ZORF9ITzFXNHNJMG9vQjVVRmZodkxfVjNfSDNNY2V1UVdJPUM3QUM3QkZF"
+confluence_url = ""
+confluence_space = ""
+confluence_auth = ""
 
 def test_confluence_auth():
     """Test basic Confluence API access"""
