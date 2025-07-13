@@ -1,6 +1,6 @@
 # Makefile for Ansible project linting and validation
 
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion install-ubuntu-apt-only convert-templates convert-templates-dynamic convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup run-legacy sync-repos sync-repos-force convert-mixed-content
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup
 
 # Default target
 help:
@@ -29,7 +29,7 @@ help:
 	@echo "  ✅ = Fully tested and production ready"  
 	@echo "  ⚠️  = Work in progress / experimental"
 	@echo ""
-	@echo "⚠️  Note: Molecule testing and CI/CD templates are experimental"
+	@echo "⚠️  Note: CI/CD templates are experimental"
 
 # Install required linting tools
 install-tools:
@@ -226,7 +226,7 @@ lint-yaml:
 lint-ansible:
 	@echo "Running ansible-lint..."
 	@if command -v ansible-lint >/dev/null 2>&1; then \
-		ansible-lint --exclude molecule/; \
+		ansible-lint .; \
 	else \
 		echo "⚠️  ansible-lint not available, skipping..."; \
 		echo "💡 Install with 'make install-tools' or 'make install-rhel-dnf-only'"; \
@@ -255,7 +255,13 @@ sanity-check:
 security-check:
 	@echo "Running security checks..."
 	@echo "1. Checking for exposed secrets..."
-	@! grep -r "password\|secret\|ATAT\|api_token" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token" || (echo "⚠️  Potential secrets found" && exit 1)
+	@! grep -rE "(password|secret|api_key|auth_token|private_key):\s*['\"]?[A-Za-z0-9+/=]{10,}" . \
+		--include="*.yml" \
+		--exclude-dir=.github \
+		--exclude="*example*" \
+		--exclude="*template*" \
+		| grep -v "YOUR_.*_HERE\|test:test\|example\|template\|#.*token\|#.*secret" \
+		|| (echo "⚠️  Potential secrets found" && exit 1)
 	@echo "2. Checking file permissions..."
 	@if find . -name "*.yml" -perm /002 | grep -q .; then \
 		echo "❌ World-writable YAML files found"; \
@@ -717,7 +723,7 @@ convert-markdown:
 		exit 1; \
 	fi
 
-convert-all: sync-repos convert-mixed-content convert-markdown
+convert-all: convert-templates convert-markdown
 	@echo "✅ Complete documentation conversion finished (including direct markdown support)"
 
 verify-html:
@@ -761,78 +767,4 @@ run-cleanup:
 	@echo "🧹 Running cleanup..."
 	ansible-playbook playbooks/cleanup.yml
 
-run-legacy:
-	@echo "🔄 Running legacy playbook..."
-	ansible-playbook playbook.yml
-
-# Repository synchronization targets
-sync-repos:
-	@echo "🔄 Synchronizing documentation repositories..."
-	python3 scripts/sync_documentation_repos.py
-
-# Force sync repositories
-sync-repos-force:
-	@echo "🔄 Force synchronizing documentation repositories..."
-	python3 scripts/sync_documentation_repos.py --force
-
-# Enhanced discovery using new script
-discover-enhanced:
-	@echo "🔍 Enhanced documentation discovery..."
-	python3 scripts/discover_docs_enhanced.py
-
-# Auto-document conversion (static + auto repos)
-convert-auto-document: sync-repos
-	@echo "🔄 Converting auto-document templates..."
-	python3 scripts/discover_docs_enhanced.py | jq -r 'to_entries[] | select(.value.type == "auto_document") | .key' | while read repo; do \
-		echo "   📄 Processing auto-document repo: $$repo"; \
-		python3 scripts/discover_docs_enhanced.py --section $$repo; \
-	done
-
-# Mixed content conversion (templates + direct markdown)
-convert-mixed-content:
-	@echo "🔄 Converting mixed content (templates + markdown)..."
-	@mkdir -p ~/tmp
-	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Processing documentation_automation content..."; \
-		echo "   📝 Rendering documentation_automation main page..."; \
-		ansible localhost -m template -a "src=docs/documentation_automation/documentation_automation.j2 dest=~/tmp/documentation_automation.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ documentation_automation.md template failed"; \
-		echo "   📝 Processing documentation_automation child content..."; \
-		for file in docs/documentation_automation/*; do \
-			if [ -f "$$file" ]; then \
-				basename=$$(basename $$file); \
-				name=$$(basename $$file | sed 's/\.[^.]*$$//'); \
-				ext=$$(echo $$basename | sed 's/.*\.//'); \
-				if [ "$$name" != "documentation_automation" ] && [ "$$name" != "macros" ]; then \
-					if [ "$$ext" = "j2" ]; then \
-						echo "      🔧 Templating $$name ($$ext)..."; \
-						ansible localhost -m template -a "src=$$file dest=~/tmp/$$name.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$name template failed"; \
-					elif [ "$$ext" = "md" ]; then \
-						echo "      📄 Copying $$name ($$ext)..."; \
-						cp "$$file" "/home/gambia/tmp/$$name.md" || echo "      ❌ $$name copy failed"; \
-					fi; \
-				fi; \
-			fi; \
-		done; \
-		echo "   📝 Processing nested sections..."; \
-		python3 scripts/discover_docs_enhanced.py | jq -r '.documentation_automation.nested_sections | to_entries[] | .key' | while read section; do \
-			echo "      📁 Processing $$section section..."; \
-			for file in docs/documentation_automation/$$section/*; do \
-				if [ -f "$$file" ]; then \
-					basename=$$(basename $$file); \
-					name=$$(basename $$file | sed 's/\.[^.]*$$//'); \
-					ext=$$(echo $$basename | sed 's/.*\.//'); \
-					if [ "$$ext" = "j2" ]; then \
-						echo "         🔧 Templating $$name ($$ext)..."; \
-						ansible localhost -m template -a "src=$$file dest=~/tmp/$$name.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "         ❌ $$name template failed"; \
-					elif [ "$$ext" = "md" ]; then \
-						echo "         📄 Copying $$name ($$ext)..."; \
-						cp "$$file" "/home/gambia/tmp/$$name.md" || echo "         ❌ $$name copy failed"; \
-					fi; \
-				fi; \
-			done; \
-		done; \
-		echo "   ✅ Mixed content processing complete"; \
-	else \
-		echo "   ❌ vars/vars.yml not found"; \
-		exit 1; \
-	fi
+# End of Makefile

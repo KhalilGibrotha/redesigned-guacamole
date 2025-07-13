@@ -4,6 +4,6 @@
 |-------------------------|--------|
 | Linting                 | ${linting_status} |
 | Security Scan           | ${security_status} |
-| Molecule Tests          | ${molecule_status} |
+| Ansible Syntax Check    | ${ansible_status} |
 
 **Overall Status:** ${overall_status}

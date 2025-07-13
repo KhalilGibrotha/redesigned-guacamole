@@ -1,5 +1,5 @@
 ---
-# Enhanced Confluence Publishing Playbook  
+# Enhanced Confluence Publishing Playbook
 # Handles page creation and updates for both static and auto-document content
 
 - name: Enhanced Documentation Publishing
@@ -7,7 +7,7 @@
   gather_facts: false
   vars_files:
     - ../vars/vars.yml
-    
+
   tasks:
     - name: "📊 Discovery and Publishing Overview"
       ansible.builtin.debug:
@@ -19,17 +19,17 @@
           Space: {{ confluence_space }}
           Project: {{ project_name }}
           ================================================
-          
+
     - name: Discover all documentation sections
       ansible.builtin.command:
         cmd: python3 scripts/discover_docs_enhanced.py
         chdir: ".."
       register: discovery_result
-      
+
     - name: Parse discovery results
       ansible.builtin.set_fact:
         doc_sections: "{{ discovery_result.stdout | from_json }}"
-        
+
     - name: "📋 Show discovered sections"
       ansible.builtin.debug:
         msg: |
@@ -37,7 +37,7 @@
           {% for section_name, section_info in doc_sections.items() %}
           - {{ section_name }}: {{ section_info.children | length }} children, {{ section_info.nested_sections | length }} nested
           {% endfor %}
-        
+
     - name: Publish main page (Documentation Automation) to Confluence
       include_tasks: tasks/publish_confluence_page.yml
       vars:
@@ -46,7 +46,7 @@
         parent_page: ""
         is_auto_document: false
       when: "'documentation_automation' in doc_sections"
-        
+
     - name: Publish child pages to Confluence
       include_tasks: tasks/publish_confluence_page.yml
       vars:
@@ -65,19 +65,19 @@
           ================================================
           🧹 Cleaning up temporary files
           ================================================
-          
+
     - name: Remove temporary markdown files from /tmp
       ansible.builtin.file:
         path: "/home/gambia/tmp"
         state: absent
       ignore_errors: true
-      
-    - name: Recreate empty /tmp directory 
+
+    - name: Recreate empty /tmp directory
       ansible.builtin.file:
         path: "/home/gambia/tmp"
         state: directory
         mode: '0755'
-        
+
     - name: "✅ Publishing and cleanup complete"
       ansible.builtin.debug:
         msg: |

@@ -11,5 +11,4 @@ profile: min
 exclude_paths:
   - .git/
   - .github/
-  - molecule/
   - ci-cd-templates/

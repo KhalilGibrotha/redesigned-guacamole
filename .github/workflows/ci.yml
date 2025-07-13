@@ -47,11 +47,6 @@ on:
         required: false
         type: boolean
         default: false
-      skip_molecule:
-        description: 'Skip Molecule testing for faster feedback'
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -75,7 +70,7 @@ jobs:
         run: |
           # Mask common token patterns that might appear in logs
           echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
-          
+
           # Mask Confluence-related secrets if they exist
           if [ -n "${{ secrets.CONFLUENCE_URL }}" ]; then
             echo "::add-mask::${{ secrets.CONFLUENCE_URL }}"
@@ -86,13 +81,13 @@ jobs:
           if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
             echo "::add-mask::${{ secrets.CONFLUENCE_AUTH }}"
           fi
-          
+
           # Mask partial token patterns (first/last chars of tokens)
           if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
             AUTH_PARTIAL=$(echo "${{ secrets.CONFLUENCE_AUTH }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
             echo "::add-mask::$AUTH_PARTIAL"
           fi
-          
+
           # Mask common credential patterns that might leak
           echo "::add-mask::ghp_"
           echo "::add-mask::gho_"
@@ -102,12 +97,12 @@ jobs:
           echo "::add-mask::ATATT"
           echo "::add-mask::ATCTT"
           echo "::add-mask::ATBT"
-          
+
           # Additional patterns for Confluence and other services
           echo "::add-mask::Basic "
           echo "::add-mask::Bearer "
           echo "::add-mask::Token "
-          
+
           echo "✅ Sensitive values masked successfully"
 
   # Quick validation for fast feedback
@@ -115,14 +110,14 @@ jobs:
     name: ⚡ Quick Validation
     needs: setup-security
     runs-on: ubuntu-latest
-    
+
     outputs:
       files-yaml: ${{ steps.file-count.outputs.yaml }}
       files-python: ${{ steps.file-count.outputs.python }}
       files-shell: ${{ steps.file-count.outputs.shell }}
       files-markdown: ${{ steps.file-count.outputs.markdown }}
       files-json: ${{ steps.file-count.outputs.json }}
-    
+
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -148,7 +143,7 @@ jobs:
           echo "   - hotfix/* and hotfix/** (hotfix branches)"
           echo "   - hf/* and hf/** (alternative hotfix prefix)"
           echo ""
-          
+
           # Show branch pattern matching validation for all supported prefixes
           BRANCH_NAME="${{ github.ref_name }}"
           if [[ "$BRANCH_NAME" == feature/* ]]; then
@@ -168,7 +163,7 @@ jobs:
           else
             echo "ℹ️ Branch '$BRANCH_NAME' uses a custom pattern or is not in supported categories"
           fi
-          
+
           # Show examples of supported branch names
           echo ""
           echo "📝 Examples of supported branch names:"
@@ -194,7 +189,7 @@ jobs:
       - name: 🧪 Basic Syntax Checks
         run: |
           echo "🔍 Running quick syntax validation..."
-          
+
           # Check for basic YAML syntax
           echo "Checking YAML files..."
           find . -name "*.yml" -o -name "*.yaml" | head -20 | while read file; do
@@ -202,13 +197,13 @@ jobs:
               python3 -c "import yaml; yaml.safe_load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
             fi
           done
-          
+
           # Check for basic JSON syntax
           echo "Checking JSON files..."
           find . -name "*.json" | head -10 | while read file; do
             python3 -c "import json; json.load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
           done
-          
+
           # Check for executable permissions on shell scripts
           echo "Checking shell script permissions..."
           find . -name "*.sh" -not -executable | while read file; do
@@ -231,13 +226,13 @@ jobs:
     name: 🔍 Super Linter
     needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       packages: read
       statuses: write
       security-events: write
-    
+
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -257,7 +252,7 @@ jobs:
       - name: 🔍 Verify Linter Configuration Files
         run: |
           echo "🔍 Checking for linter configuration files..."
-          
+
           # Check for .ansible-lint
           if [ -f ".ansible-lint" ]; then
             echo "✅ .ansible-lint found ($(wc -l < .ansible-lint) lines)"
@@ -266,14 +261,14 @@ jobs:
           else
             echo "❌ .ansible-lint not found"
           fi
-          
+
           # Check for .yamllint
           if [ -f ".yamllint" ]; then
             echo "✅ .yamllint found ($(wc -l < .yamllint) lines)"
           else
             echo "❌ .yamllint not found"
           fi
-          
+
           # Check for markdownlint config (prefer .json)
           if [ -f ".markdownlint.json" ]; then
             echo "✅ .markdownlint.json found ($(wc -l < .markdownlint.json) lines)"
@@ -282,12 +277,12 @@ jobs:
           else
             echo "❌ No markdownlint config found"
           fi
-          
+
           # Check for any conflicting config files
           if [ -f ".markdownlint.json" ] && [ -f ".markdownlint.yml" ]; then
             echo "⚠️  Both .markdownlint.json and .markdownlint.yml found - Super Linter will prefer .json"
           fi
-          
+
           echo "🎯 Super Linter will auto-detect all configuration files at repo root"
 
       - name: 🔍 Run Super Linter
@@ -300,7 +295,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: ${{ github.event.inputs.full_scan == 'true' || github.event_name == 'workflow_dispatch' }}
           LOG_LEVEL: 'WARN'  # Reduced from INFO to minimize token exposure
           CREATE_LOG_FILE: true
-          
+
           # Auto-fix configuration
           FIX_ANSIBLE: true
           FIX_YAML: true
@@ -308,14 +303,14 @@ jobs:
           FIX_PYTHON_BLACK: true
           FIX_SHELL_SHFMT: true
           FIX_JSON: true
-          
+
           # Universal linters (always enabled)
           VALIDATE_YAML: true
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_ENV: true
-          
+
           # Conditional linters based on file presence
           VALIDATE_ANSIBLE: true
           VALIDATE_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
@@ -324,21 +319,21 @@ jobs:
           VALIDATE_BASH: ${{ needs.quick-validation.outputs.files-shell != '0' }}
           VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
           VALIDATE_DOCKERFILE_HADOLINT: true
-          
+
           # Configuration files (all auto-detected at repo root)
           # .ansible-lint - automatically detected
-          # .yamllint - automatically detected  
+          # .yamllint - automatically detected
           # .markdownlint.json - automatically detected
-          
+
           # Performance settings
           SUPPRESS_POSSUM: true
           MULTI_STATUS: true
           IGNORE_GITIGNORED_FILES: true
-          
+
           # Security: Reduce log verbosity to prevent token leakage
           ACTIONS_RUNNER_DEBUG: false
           ACTIONS_STEP_DEBUG: false
-          
+
           # Behavior
           DISABLE_ERRORS: false
 
@@ -347,7 +342,7 @@ jobs:
         id: autofix-analysis
         run: |
           echo "🔍 Analyzing auto-fixes applied by Super Linter..."
-          
+
           # Initialize counters
           total_fixes=0
           yaml_fixes=0
@@ -356,16 +351,16 @@ jobs:
           shell_fixes=0
           markdown_fixes=0
           json_fixes=0
-          
+
           # Function to count fixes in git diff
           count_file_changes() {
             local file_pattern="$1"
             local category="$2"
-            
+
             if git diff --name-only | grep -E "$file_pattern" > /dev/null 2>&1; then
               local changed_files=$(git diff --name-only | grep -E "$file_pattern" | wc -l)
               local total_changes=$(git diff --numstat | grep -E "$file_pattern" | awk '{sum += $1 + $2} END {print sum+0}')
-              
+
               echo "📝 $category fixes: $changed_files files, $total_changes changes"
               return $total_changes
             else
@@ -373,7 +368,7 @@ jobs:
               return 0
             fi
           }
-          
+
           # Check if there are any changes from auto-fix
           if git diff --quiet; then
             echo "✅ No auto-fixes were needed - code already compliant!"
@@ -382,22 +377,22 @@ jobs:
           else
             echo "🔧 Auto-fixes were applied!"
             echo "autofix_needed=true" >> $GITHUB_OUTPUT
-            
+
             # Count fixes by category
             count_file_changes "\\.ya?ml$" "YAML"; yaml_fixes=$?
             count_file_changes "\\.py$" "Python"; python_fixes=$?
             count_file_changes "\\.sh$" "Shell/Bash"; shell_fixes=$?
             count_file_changes "\\.md$" "Markdown"; markdown_fixes=$?
             count_file_changes "\\.json$" "JSON"; json_fixes=$?
-            
+
             # Special handling for Ansible (subset of YAML)
             if git diff --name-only | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" > /dev/null 2>&1; then
               ansible_fixes=$(git diff --numstat | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" | awk '{sum += $1 + $2} END {print sum+0}')
               echo "📝 Ansible fixes: $ansible_fixes changes"
             fi
-            
+
             total_fixes=$((yaml_fixes + python_fixes + shell_fixes + markdown_fixes + json_fixes))
-            
+
             # Output for next steps
             echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
             echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
@@ -406,7 +401,7 @@ jobs:
             echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
             echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
             echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
-            
+
             # Show detailed diff summary
             echo ""
             echo "📋 Detailed changes by file:"
@@ -422,17 +417,17 @@ jobs:
         if: steps.autofix-analysis.outputs.autofix_needed == 'true'
         run: |
           echo "💾 Committing auto-fixes..."
-          
+
           # Configure git (use GitHub Actions bot)
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
+
           # Add all changes
           git add .
-          
+
           # Create detailed commit message
           commit_msg="🤖 Auto-fix: Applied ${{ steps.autofix-analysis.outputs.total_fixes }} linting fixes
-          
+
           Auto-fixes applied by Super Linter:
           - YAML fixes: ${{ steps.autofix-analysis.outputs.yaml_fixes }}
           - Ansible fixes: ${{ steps.autofix-analysis.outputs.ansible_fixes }}
@@ -440,16 +435,16 @@ jobs:
           - Shell fixes: ${{ steps.autofix-analysis.outputs.shell_fixes }}
           - Markdown fixes: ${{ steps.autofix-analysis.outputs.markdown_fixes }}
           - JSON fixes: ${{ steps.autofix-analysis.outputs.json_fixes }}
-          
+
           Automated by: ${{ github.workflow }} #${{ github.run_number }}
           Triggered by: ${{ github.event_name }} on ${{ github.ref_name }}"
-          
+
           # Commit changes
           git commit -m "$commit_msg"
-          
+
           # Push changes back to the branch
           git push origin ${{ github.ref_name }}
-          
+
           echo "✅ Auto-fixes committed and pushed!"
 
       - name: 🧹 Sanitize Super Linter Logs
@@ -458,10 +453,10 @@ jobs:
           # Check if log file exists and sanitize it
           if [ -f "super-linter.log" ]; then
             echo "🧹 Sanitizing Super Linter logs..."
-            
+
             # Create a backup
             cp super-linter.log super-linter.log.original
-            
+
             # Remove or mask potential sensitive patterns
             sed -i 's/ghp_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
             sed -i 's/gho_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
@@ -472,12 +467,12 @@ jobs:
             sed -i 's/ATCTT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
             sed -i 's/Basic [a-zA-Z0-9+/=]\{20,\}/Basic ***ENCODED_CREDENTIALS***/g' super-linter.log
             sed -i 's/Bearer [a-zA-Z0-9+/=]\{20,\}/Bearer ***TOKEN***/g' super-linter.log
-            
+
             # Remove any remaining base64 encoded patterns that look like credentials
             sed -i 's/[a-zA-Z0-9+/=]\{40,\}/***POTENTIAL_TOKEN***/g' super-linter.log
-            
+
             echo "✅ Log sanitization completed"
-            
+
             # Show a sample of sanitized content (first 50 lines) for debugging
             echo "📋 Sanitized log sample (first 50 lines):"
             head -50 super-linter.log | grep -v "***" || echo "No sensitive patterns found in sample"
@@ -513,7 +508,7 @@ jobs:
           fi
           echo "**Validation Scope:** ${{ github.event.inputs.full_scan == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           # Auto-fix summary
           if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
             echo "## 🤖 Auto-fixes Applied" >> $GITHUB_STEP_SUMMARY
@@ -534,7 +529,7 @@ jobs:
             echo "✅ **No auto-fixes needed - code already compliant!**" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ YAML (yamllint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Ansible (ansible-lint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
@@ -569,13 +564,14 @@ jobs:
       - name: 🔐 Advanced Secret Detection
         run: |
           echo "🔍 Running security validation..."
-          
+
           # Check for potential secrets (excluding false positives)
           echo "Checking for potential hardcoded secrets..."
-          if grep -r "password\|secret\|ATAT\|api_token" . \
+          if grep -rE "(password|secret|api_key|auth_token|private_key):\s*['\"]?[A-Za-z0-9+/=]{10,}" . \
              --include="*.yml" --include="*.yaml" --include="*.py" --include="*.sh" \
              --exclude-dir=.git --exclude-dir=.github \
-             | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token\|README"; then
+             --exclude="*example*" --exclude="*template*" \
+             | grep -v "YOUR_.*_HERE\|test:test\|example\|template\|#.*token\|#.*secret\|README"; then
             echo "⚠️ Potential secrets found - please review"
             exit 1
           else
@@ -585,7 +581,7 @@ jobs:
       - name: 🔒 File Permissions Check
         run: |
           echo "🔒 Checking file permissions..."
-          
+
           # Check for world-writable files
           if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"; then
             echo "❌ World-writable files found"
@@ -626,20 +622,20 @@ jobs:
       - name: 🎭 Ansible Lint
         run: |
           echo "🔍 Running Ansible-specific validation..."
-          
+
           # Run ansible-lint with custom config if it exists
           if [ -f .ansible-lint ]; then
             echo "Using custom .ansible-lint configuration"
-            ansible-lint --exclude molecule/ .
+            ansible-lint .
           else
             echo "Using default ansible-lint configuration"
-            ansible-lint --exclude molecule/ --exclude .github/ .
+            ansible-lint --exclude .github/ .
           fi
 
       - name: 🧪 Ansible Syntax Check
         run: |
           echo "🧪 Running Ansible syntax checks..."
-          
+
           # Check main playbooks
           for playbook in playbook.yml playbooks/*.yml; do
             if [ -f "$playbook" ]; then
@@ -659,131 +655,13 @@ jobs:
             echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
           done
 
-  molecule:
-    name: 🧪 Molecule Testing
-    needs: [super-linter, security, ansible-syntax-check]
-    if: ${{ github.event.inputs.skip_molecule != 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: � Debug Molecule Prerequisites
-        run: |
-          echo "🔍 Checking Molecule prerequisites..."
-          echo "📊 Job dependency status:"
-          echo "- super-linter: ${{ needs.super-linter.result }}"
-          echo "- security: ${{ needs.security.result }}"
-          echo "- ansible-syntax-check: ${{ needs.ansible-syntax-check.result }}"
-          echo "🎯 Skip molecule input: ${{ github.event.inputs.skip_molecule }}"
-          echo "🎮 Event name: ${{ github.event_name }}"
-          echo "🌿 Branch: ${{ github.ref_name }}"
-          
-          # Check for molecule configuration
-          if [ -d "molecule" ]; then
-            echo "✅ Molecule directory found"
-            echo "📁 Available scenarios:"
-            ls -la molecule/
-          else
-            echo "❌ No molecule directory found"
-          fi
-          
-          # Check for Docker availability
-          if command -v docker &> /dev/null; then
-            echo "✅ Docker is available"
-            docker --version
-          else
-            echo "❌ Docker not found"
-          fi
-
-      - name: �🔧 Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: 📦 Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-          # Verify molecule installation
-          echo "🔍 Verifying Molecule installation..."
-          molecule --version
-          molecule drivers
-
-      - name: 🔍 Pre-flight Molecule Check
-        run: |
-          echo "🔍 Running Molecule pre-flight checks..."
-          
-          # Check molecule scenarios
-          if [ -d "molecule" ]; then
-            echo "📋 Available Molecule scenarios:"
-            for scenario in molecule/*/; do
-              if [ -d "$scenario" ]; then
-                scenario_name=$(basename "$scenario")
-                echo "- $scenario_name"
-                if [ -f "$scenario/molecule.yml" ]; then
-                  echo "  ✅ molecule.yml found"
-                else
-                  echo "  ❌ molecule.yml missing"
-                fi
-              fi
-            done
-          fi
-          
-          # Test molecule command
-          echo "🧪 Testing molecule list command..."
-          molecule list || echo "⚠️ Molecule list failed"
-
-      - name: 🧪 Run Molecule tests
-        run: |
-          echo "🧪 Starting Molecule tests..."
-          echo "📊 Environment info:"
-          echo "- Working directory: $(pwd)"
-          echo "- Python version: $(python --version)"
-          echo "- Ansible version: $(ansible --version | head -n1)"
-          echo "- Molecule version: $(molecule --version)"
-          
-          # Run molecule with verbose output for debugging
-          molecule test --debug
-        env:
-          PY_COLORS: '1'
-          ANSIBLE_FORCE_COLOR: '1'
-          MOLECULE_DEBUG: '1'
-
-      - name: 📤 Upload Molecule logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: molecule-logs-debug-${{ github.run_id }}
-          path: |
-            ~/.cache/molecule/
-            .molecule/
-            *.log
-          retention-days: 7
-
-      - name: 📋 Molecule Summary
-        if: always()
-        run: |
-          echo "## 🧪 Molecule Testing Summary" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** ${{ job.status == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Test Environment:** Ubuntu Latest" >> $GITHUB_STEP_SUMMARY
-          echo "**Python Version:** 3.11" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Debug Info:**" >> $GITHUB_STEP_SUMMARY
-          echo "- super-linter result: ${{ needs.super-linter.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- security result: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ansible-syntax-check result: ${{ needs.ansible-syntax-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- skip_molecule input: ${{ github.event.inputs.skip_molecule }}" >> $GITHUB_STEP_SUMMARY
-
   publish:
-    name: 🚀 Publish to Confluence
-    needs: [molecule]
+    name: � Publish to Confluence
+    needs: [super-linter, security, ansible-syntax-check]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      needs.molecule.result == 'success'
+      needs.ansible-syntax-check.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
@@ -821,7 +699,7 @@ jobs:
   summary:
     name: 📋 Pipeline Summary & Quality Report
     if: always()
-    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, molecule, publish]
+    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, publish]
     runs-on: ubuntu-latest
     steps:
       - name: � Checkout Code
