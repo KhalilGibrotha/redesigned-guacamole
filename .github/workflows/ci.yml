@@ -21,32 +21,14 @@ on:
       - 'hotfix/*'       # hotfix/critical-bug, hotfix/auth-fix, etc.
       - 'hf/**'          # hf/critical-bug (alternative prefix)
       - 'hf/*'           # hf/critical-bug (alternative prefix)
-  pull_request:
-    branches:
-      - main
-      - develop
-      # Feature branches - multiple prefixes supported
-      - 'feature/**'     # Allow PRs from/to feature branches
-      - 'feature/*'      # Allow PRs from/to feature branches
-      - 'ft/**'          # Allow PRs from/to ft branches
-      - 'ft/*'           # Allow PRs from/to ft branches
-      # Release branches
-      - 'release/**'     # Allow PRs from/to release branches
-      - 'release/*'      # Allow PRs from/to release branches
-      - 'rel/**'         # Allow PRs from/to rel branches
-      - 'rel/*'          # Allow PRs from/to rel branches
-      # Hotfix branches
-      - 'hotfix/**'      # Allow PRs from/to hotfix branches
-      - 'hotfix/*'       # Allow PRs from/to hotfix branches
-      - 'hf/**'          # Allow PRs from/to hf branches
-      - 'hf/*'           # Allow PRs from/to hf branches
+
   workflow_dispatch:
     inputs:
       full_scan:
         description: 'Run full codebase scan (not just changed files)'
         required: false
         type: boolean
-        default: false
+        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -707,9 +689,42 @@ jobs:
 
       - name: 📊 Generate Comprehensive Report
         run: |
-          export linting_status="✅ Passed"
-          export security_status="⚠️ Issues Found"
-          export molecule_status="✅ Passed"
-          export overall_status="⚠️ Review Required"
+          # Determine status based on job results
+          if [ "${{ needs.super-linter.result }}" = "success" ]; then
+            export linting_status="✅ Passed"
+          else
+            export linting_status="❌ Failed"
+          fi
 
-          envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
+          if [ "${{ needs.security.result }}" = "success" ]; then
+            export security_status="✅ Passed"
+          else
+            export security_status="❌ Failed"
+          fi
+
+          if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
+            export ansible_status="✅ Passed"
+          else
+            export ansible_status="❌ Failed"
+          fi
+
+          # Determine overall status
+          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
+            export overall_status="✅ All Checks Passed"
+          else
+            export overall_status="❌ Some Checks Failed"
+          fi
+
+          # Generate the report
+          if [ -f "templates/autofix_summary.md" ]; then
+            envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "## 📋 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+            echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Linting | $linting_status |" >> $GITHUB_STEP_SUMMARY
+            echo "| Security | $security_status |" >> $GITHUB_STEP_SUMMARY
+            echo "| Ansible | $ansible_status |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Overall Status:** $overall_status" >> $GITHUB_STEP_SUMMARY
+          fi
