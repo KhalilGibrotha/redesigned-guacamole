@@ -4,54 +4,10 @@ name: 🚀 CI/CD Pipeline
 on:
   push:
     branches:
-      - main
       - develop
-      # Feature branches - multiple prefixes supported
-      - 'feature/**'     # feature/user-management, feature/auth/login, etc.
-      - 'feature/*'      # feature/login, feature/user-auth, etc.
-      - 'ft/**'          # ft/user-management, ft/auth/login, etc.
-      - 'ft/*'           # ft/login, ft/user-auth, etc.
-      # Release branches
-      - 'release/**'     # release/v1.2.0, release/hotfix/v1.1.1, etc.
-      - 'release/*'      # release/v1.2.0, release/sprint-1, etc.
-      - 'rel/**'         # rel/v1.2.0 (alternative prefix)
-      - 'rel/*'          # rel/v1.2.0 (alternative prefix)
-      # Hotfix branches
-      - 'hotfix/**'      # hotfix/critical-bug, hotfix/security/auth-fix, etc.
-      - 'hotfix/*'       # hotfix/critical-bug, hotfix/auth-fix, etc.
-      - 'hf/**'          # hf/critical-bug (alternative prefix)
-      - 'hf/*'           # hf/critical-bug (alternative prefix)
-  pull_request:
-    branches:
       - main
-      - develop
-      # Feature branches - multiple prefixes supported
-      - 'feature/**'     # Allow PRs from/to feature branches
-      - 'feature/*'      # Allow PRs from/to feature branches
-      - 'ft/**'          # Allow PRs from/to ft branches
-      - 'ft/*'           # Allow PRs from/to ft branches
-      # Release branches
-      - 'release/**'     # Allow PRs from/to release branches
-      - 'release/*'      # Allow PRs from/to release branches
-      - 'rel/**'         # Allow PRs from/to rel branches
-      - 'rel/*'          # Allow PRs from/to rel branches
-      # Hotfix branches
-      - 'hotfix/**'      # Allow PRs from/to hotfix branches
-      - 'hotfix/*'       # Allow PRs from/to hotfix branches
-      - 'hf/**'          # Allow PRs from/to hf branches
-      - 'hf/*'           # Allow PRs from/to hf branches
-  workflow_dispatch:
-    inputs:
-      full_scan:
-        description: 'Run full codebase scan (not just changed files)'
-        required: false
-        type: boolean
-        default: false
-      skip_molecule:
-        description: 'Skip Molecule testing for faster feedback'
-        required: false
-        type: boolean
-        default: false
+      - 'feat/**'
+      - 'ft/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
