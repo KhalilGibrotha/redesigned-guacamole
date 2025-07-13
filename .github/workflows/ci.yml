@@ -80,7 +80,7 @@ jobs:
       files-json: ${{ steps.file-count.outputs.json }}
     
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
       - name: � Debug Trigger Information
@@ -138,7 +138,7 @@ jobs:
           echo "   ✅ hotfix/critical-security-fix"
           echo "   ✅ hf/auth-bug"
 
-      - name: �📊 Count Files by Type
+      - name: "📊 Count Files by Type"
         id: file-count
         run: |
           echo "yaml=$(find . -name '*.yml' -o -name '*.yaml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
@@ -195,7 +195,7 @@ jobs:
       security-events: write
     
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -511,7 +511,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
       - name: 🔍 Run DevSkim Scanner
@@ -580,7 +580,7 @@ jobs:
     needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Python
@@ -636,7 +636,7 @@ jobs:
     if: ${{ github.event.inputs.skip_molecule != 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
       - name: � Debug Molecule Prerequisites
@@ -757,7 +757,7 @@ jobs:
       needs.molecule.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Checkout Code
+      - name: "📥 Checkout Code"
         uses: actions/checkout@v4
 
       - name: 🔧 Set up Python

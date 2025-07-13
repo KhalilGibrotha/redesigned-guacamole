@@ -1,11 +1,13 @@
 ---
 # .ansible-lint configuration
-skip_list:
-  - name[play]  # import_playbook doesn't need names
-  - name[casing]  # Allow emoji and special characters in names
+profile: production
 
-# Use lenient rules for import_playbook
-profile: min
+enable_list:
+  - fqcn-builtins
+  - risky-file-permissions
+  - yaml
+  - no-log-password
+  - var-naming
 
 # Exclude specific patterns
 exclude_paths:
@@ -13,3 +15,10 @@ exclude_paths:
   - .github/
   - molecule/
   - ci-cd-templates/
+
+collections:
+  - redhat.*
+  - ansible.*
+  - community.general
+  - community.crypto
+  - community.network
