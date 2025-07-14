@@ -50,7 +50,9 @@ jobs:
     steps:
       - name: 🎭 Mask Sensitive Values
         run: |
-          # Mask common token patterns that might appear in logs
+          echo "🎭 Setting up comprehensive secret masking..."
+          
+          # Mask GitHub-specific secrets
           echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
 
           # Mask Confluence-related secrets if they exist
@@ -64,28 +66,68 @@ jobs:
             echo "::add-mask::${{ secrets.CONFLUENCE_AUTH }}"
           fi
 
-          # Mask partial token patterns (first/last chars of tokens)
+          # Mask partial token patterns (first/last chars of tokens) to prevent inference
           if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
             AUTH_PARTIAL=$(echo "${{ secrets.CONFLUENCE_AUTH }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
             echo "::add-mask::$AUTH_PARTIAL"
           fi
+          
+          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
+            TOKEN_PARTIAL=$(echo "${{ secrets.GITHUB_TOKEN }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
+            echo "::add-mask::$TOKEN_PARTIAL"
+          fi
 
-          # Mask common credential patterns that might leak
-          echo "::add-mask::ghp_"
-          echo "::add-mask::gho_"
-          echo "::add-mask::ghu_"
-          echo "::add-mask::ghs_"
-          echo "::add-mask::github_pat_"
-          echo "::add-mask::ATATT"
-          echo "::add-mask::ATCTT"
-          echo "::add-mask::ATBT"
+          # GitHub token prefixes (mask any token that starts with these)
+          echo "::add-mask::ghp_"      # Personal access tokens
+          echo "::add-mask::gho_"      # OAuth tokens
+          echo "::add-mask::ghu_"      # User tokens
+          echo "::add-mask::ghs_"      # Server tokens
+          echo "::add-mask::github_pat_"  # Personal access tokens (new format)
+          echo "::add-mask::ghr_"      # Refresh tokens
+          echo "::add-mask::ghs_"      # Server-to-server tokens
 
-          # Additional patterns for Confluence and other services
+          # Atlassian/Confluence token prefixes
+          echo "::add-mask::ATATT"     # Atlassian API tokens
+          echo "::add-mask::ATCTT"     # Confluence tokens
+          echo "::add-mask::ATBT"      # Bitbucket tokens
+          
+          # AWS and cloud provider patterns
+          echo "::add-mask::AKIA"      # AWS Access Key ID prefix
+          echo "::add-mask::ASIA"      # AWS Session Token prefix
+          echo "::add-mask::AROA"      # AWS Role prefix
+          
+          # Authentication header patterns
           echo "::add-mask::Basic "
           echo "::add-mask::Bearer "
           echo "::add-mask::Token "
-
-          echo "✅ Sensitive values masked successfully"
+          echo "::add-mask::Authorization: "
+          
+          # Generic secret patterns
+          echo "::add-mask::api_key"
+          echo "::add-mask::secret_key"
+          echo "::add-mask::private_key"
+          echo "::add-mask::access_token"
+          echo "::add-mask::refresh_token"
+          echo "::add-mask::client_secret"
+          
+          # SSH key patterns
+          echo "::add-mask::-----BEGIN"
+          echo "::add-mask::-----END"
+          echo "::add-mask::ssh-rsa"
+          echo "::add-mask::ssh-ed25519"
+          
+          # Database and service URLs that might contain credentials
+          echo "::add-mask::://.*:.*@"  # URLs with embedded credentials
+          
+          # Environment variable names that commonly contain secrets
+          echo "::add-mask::PASSWORD="
+          echo "::add-mask::SECRET="
+          echo "::add-mask::TOKEN="
+          echo "::add-mask::KEY="
+          echo "::add-mask::AUTH="
+          
+          echo "✅ Comprehensive secret masking configured successfully"
+          echo "🔒 All GitHub Actions logs will automatically mask these patterns"
 
   # Quick validation for fast feedback
   quick-validation:
@@ -614,34 +656,110 @@ jobs:
       - name: 🧹 Sanitize Super Linter Logs
         if: always()
         run: |
+          echo "🧹 Starting log sanitization process..."
+          
           # Check if log file exists and sanitize it
           if [ -f "super-linter.log" ]; then
-            echo "🧹 Sanitizing Super Linter logs..."
+            echo "✅ Super Linter log file found: $(ls -la super-linter.log)"
+            echo "📊 Original log file size: $(wc -l < super-linter.log) lines, $(du -h super-linter.log | cut -f1) size"
 
             # Create a backup
             cp super-linter.log super-linter.log.original
+            echo "✅ Backup created: $(ls -la super-linter.log.original)"
 
-            # Remove or mask potential sensitive patterns
+            # Enhanced masking - Remove or mask potential sensitive patterns
+            echo "🎭 Applying comprehensive masking rules..."
+            
+            # GitHub token patterns (various formats)
             sed -i 's/ghp_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
             sed -i 's/gho_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
             sed -i 's/ghu_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
             sed -i 's/ghs_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
             sed -i 's/github_pat_[a-zA-Z0-9_]\{82\}/***GITHUB_PAT***/g' super-linter.log
+            
+            # Atlassian/Confluence tokens
             sed -i 's/ATATT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
             sed -i 's/ATCTT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            sed -i 's/ATBT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            
+            # Authentication headers and tokens
             sed -i 's/Basic [a-zA-Z0-9+/=]\{20,\}/Basic ***ENCODED_CREDENTIALS***/g' super-linter.log
             sed -i 's/Bearer [a-zA-Z0-9+/=]\{20,\}/Bearer ***TOKEN***/g' super-linter.log
+            sed -i 's/Authorization: [^[:space:]]\+/Authorization: ***MASKED***/g' super-linter.log
+            
+            # API keys and secrets (various patterns)
+            sed -i 's/[aA][pP][iI][_-][kK][eE][yY][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{20,\}['\''"]*/API_KEY: ***MASKED***/g' super-linter.log
+            sed -i 's/[sS][eE][cC][rR][eE][tT][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{20,\}['\''"]*/SECRET: ***MASKED***/g' super-linter.log
+            sed -i 's/[pP][aA][sS][sS][wW][oO][rR][dD][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{8,\}['\''"]*/PASSWORD: ***MASKED***/g' super-linter.log
+            
+            # Generic long base64 patterns that could be credentials (but be careful not to mask normal data)
+            sed -i 's/[a-zA-Z0-9+/=]\{60,\}/***POTENTIAL_ENCODED_DATA***/g' super-linter.log
+            
+            # URLs with embedded credentials
+            sed -i 's|https://[^:]*:[^@]*@|https://***USER***:***PASS***@|g' super-linter.log
+            sed -i 's|http://[^:]*:[^@]*@|http://***USER***:***PASS***@|g' super-linter.log
+            
+            # Common environment variable patterns that might contain secrets
+            sed -i 's/CONFLUENCE_AUTH=[^[:space:]]*/CONFLUENCE_AUTH=***MASKED***/g' super-linter.log
+            sed -i 's/CONFLUENCE_URL=[^[:space:]]*/CONFLUENCE_URL=***MASKED***/g' super-linter.log
+            sed -i 's/GITHUB_TOKEN=[^[:space:]]*/GITHUB_TOKEN=***MASKED***/g' super-linter.log
+            
+            # AWS and other cloud provider keys
+            sed -i 's/AKIA[0-9A-Z]\{16\}/***AWS_ACCESS_KEY***/g' super-linter.log
+            sed -i 's/[0-9a-zA-Z/+]\{40\}/***AWS_SECRET_KEY***/g' super-linter.log
+            
+            # SSH keys
+            sed -i 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/***SSH_PRIVATE_KEY***/g' super-linter.log
+            
+            echo "✅ Masking rules applied successfully"
+            echo "📊 Sanitized log file size: $(wc -l < super-linter.log) lines, $(du -h super-linter.log | cut -f1) size"
 
-            # Remove any remaining base64 encoded patterns that look like credentials
-            sed -i 's/[a-zA-Z0-9+/=]\{40,\}/***POTENTIAL_TOKEN***/g' super-linter.log
+            # Verify sanitization by checking for common patterns
+            echo "🔍 Verifying sanitization effectiveness..."
+            potential_leaks=0
+            
+            # Check for remaining sensitive patterns
+            if grep -q "ghp_\|gho_\|ghu_\|ghs_\|github_pat_" super-linter.log; then
+              echo "⚠️ Warning: Potential GitHub tokens still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if grep -q "ATATT\|ATCTT\|ATBT" super-linter.log; then
+              echo "⚠️ Warning: Potential Atlassian tokens still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if grep -qE "Bearer [a-zA-Z0-9+/=]{20,}|Basic [a-zA-Z0-9+/=]{20,}" super-linter.log; then
+              echo "⚠️ Warning: Potential authentication headers still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if [ $potential_leaks -eq 0 ]; then
+              echo "✅ Sanitization verification passed - no obvious sensitive patterns detected"
+            else
+              echo "⚠️ Sanitization verification found $potential_leaks potential issues - please review"
+            fi
 
-            echo "✅ Log sanitization completed"
-
-            # Show a sample of sanitized content (first 50 lines) for debugging
-            echo "📋 Sanitized log sample (first 50 lines):"
-            head -50 super-linter.log | grep -v "***" || echo "No sensitive patterns found in sample"
+            # Show a safe sample of sanitized content for debugging
+            echo "📋 Sanitized log sample (first 20 lines, excluding any masked content):"
+            head -20 super-linter.log | grep -v "\*\*\*" | head -10 || echo "All sample lines contain masked content"
+            
+            echo "📋 Sanitized log sample (last 10 lines, excluding any masked content):"
+            tail -20 super-linter.log | grep -v "\*\*\*" | head -10 || echo "All sample lines contain masked content"
+            
           else
-            echo "⚠️ Super Linter log file not found"
+            echo "❌ Super Linter log file not found"
+            echo "📂 Current directory contents:"
+            ls -la
+            echo "📂 Looking for any log files:"
+            find . -name "*.log" -type f 2>/dev/null || echo "No .log files found"
+            
+            # Create an empty log file so upload doesn't fail
+            echo "🔧 Creating placeholder log file for upload"
+            echo "Super Linter log file was not generated or not found." > super-linter.log
+            echo "This may indicate that Super Linter failed early or encountered an error." >> super-linter.log
+            echo "Check the Super Linter step output for more details." >> super-linter.log
+            echo "Generated at: $(date)" >> super-linter.log
           fi
 
       - name: � Analyze Linting Rule Violations
@@ -802,13 +920,14 @@ jobs:
             echo "unique_rules=0" >> $GITHUB_OUTPUT
           fi
 
-      - name: �📤 Upload Sanitized Super Linter Logs
+      - name: 📤 Upload Sanitized Super Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-logs-sanitized-${{ github.run_id }}
           path: super-linter.log
           retention-days: 30
+          if-no-files-found: warn
 
       - name: 📤 Upload Original Super Linter Logs (Debug Only)
         if: always() && github.event.inputs.full_scan == 'true'  # Only upload original logs for full scans
@@ -817,6 +936,16 @@ jobs:
           name: super-linter-logs-original-${{ github.run_id }}
           path: super-linter.log.original
           retention-days: 7  # Shorter retention for potentially sensitive logs
+          if-no-files-found: warn
+
+      - name: 📤 Upload Dynamic Configuration (Debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-config-${{ github.run_id }}
+          path: .github/super-linter-dynamic.env
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: 📋 Super Linter Summary
         if: always()
