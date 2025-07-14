@@ -1,6 +1,7 @@
 # Confluence Automation Playbooks
 
 This directory contains modular Ansible playbooks for automated Confluence documentation publishing.
+Because a single monolithic playbook is so last season, everything here is broken into bite-sized chunks.
 
 ## 📁 Structure
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project now includes comprehensive testing and quality assurance tools for enterprise Ansible development. The setup provides multiple layers of validation to ensure code quality, security, and reliability.
+This project now includes comprehensive testing and quality assurance tools for enterprise Ansible development. Because broken playbooks make us cry, the setup provides multiple layers of validation to ensure code quality, security, and reliability.
 
 ## Testing Stack
 

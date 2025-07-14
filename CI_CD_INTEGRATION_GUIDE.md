@@ -5,7 +5,7 @@
 
 ## Overview
 
-This project provides **flexible CI/CD integration** that works with any major industry tool. Choose the configuration that matches your organization's CI/CD platform.
+This project provides **flexible CI/CD integration** that works with any major industry tool. Pick your favorite platform—or whichever one the exec team bought last quarter—and drop in the matching template.
 
 ## 📁 Available Configurations
 

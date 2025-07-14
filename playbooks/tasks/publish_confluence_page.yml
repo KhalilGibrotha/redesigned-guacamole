@@ -1,0 +1,132 @@
+---
+# Task file for publishing individual pages to Confluence with update support
+
+- name: Check if page exists in Confluence
+  uri:
+    url: "{{ confluence_url }}/rest/api/content?spaceKey={{ confluence_space | urlencode }}&title={{ page_title | urlencode }}&expand=version"
+    method: GET
+    headers:
+      Authorization: "Basic {{ confluence_auth }}"
+      Accept: "application/json"
+    status_code: [200, 404]
+  register: search_result
+  when: not ansible_check_mode
+
+- name: Set page operation facts
+  set_fact:
+    existing_page_id: "{{ search_result.json.results[0].id if search_result.json.results | length > 0 else '' }}"
+    existing_page_version: "{{ search_result.json.results[0].version.number if search_result.json.results | length > 0 else 0 }}"
+    is_update: "{{ search_result.json.results | length > 0 }}"
+
+- name: Debug page operation
+  debug:
+    msg: |
+      Page: {{ page_title }}
+      Operation: {{ 'UPDATE' if is_update else 'CREATE' }}
+      {% if is_update %}
+      Existing ID: {{ existing_page_id }}
+      Current Version: {{ existing_page_version }}
+      {% endif %}
+      Auto-document: {{ is_auto_document | default(false) }}
+
+- name: Create page in Confluence (no parent)
+  uri:
+    url: "{{ confluence_url }}/rest/api/content"
+    method: POST
+    headers:
+      Authorization: "Basic {{ confluence_auth }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "page"
+      title: "{{ page_title }}"
+      space:
+        key: "{{ confluence_space }}"
+      body:
+        storage:
+          value: "{{ page_content | regex_replace('\n', '\\n') | regex_replace('\"', '\\\"') }}"
+          representation: "storage"
+    status_code: [200, 201]
+  register: page_result
+  when:
+    - not ansible_check_mode
+    - not is_update
+    - parent_page is not defined or parent_page == ""
+
+- name: Create page in Confluence (with parent)
+  uri:
+    url: "{{ confluence_url }}/rest/api/content"
+    method: POST
+    headers:
+      Authorization: "Basic {{ confluence_auth }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "page"
+      title: "{{ page_title }}"
+      space:
+        key: "{{ confluence_space }}"
+      body:
+        storage:
+          value: "{{ page_content | regex_replace('\n', '\\n') | regex_replace('\"', '\\\"') }}"
+          representation: "storage"
+      ancestors:
+        - title: "{{ parent_page }}"
+    status_code: [200, 201]
+  register: page_result
+  when:
+    - not ansible_check_mode
+    - not is_update
+    - parent_page is defined and parent_page != ""
+
+- name: Update page in Confluence
+  uri:
+    url: "{{ confluence_url }}/rest/api/content/{{ existing_page_id }}"
+    method: PUT
+    headers:
+      Authorization: "Basic {{ confluence_auth }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "page"
+      title: "{{ page_title }}"
+      space:
+        key: "{{ confluence_space }}"
+      body:
+        storage:
+          value: "{{ page_content | regex_replace('\n', '\\n') | regex_replace('\"', '\\\"') }}"
+          representation: "storage"
+      version:
+        number: "{{ existing_page_version | int + 1 }}"
+    status_code: [200, 201]
+  register: page_result
+  when:
+    - not ansible_check_mode
+    - is_update
+
+- name: Add auto-document label if applicable
+  uri:
+    url: "{{ confluence_url }}/rest/api/content/{{ page_result.json.id }}/label"
+    method: POST
+    headers:
+      Authorization: "Basic {{ confluence_auth }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      - prefix: "global"
+        name: "auto-document"
+      - prefix: "global"
+        name: "documentation-as-code"
+    status_code: [200]
+  when:
+    - not ansible_check_mode
+    - is_auto_document | default(false)
+    - page_result is defined
+
+- name: Report page operation result
+  debug:
+    msg: |
+      ✅ {{ 'Updated' if is_update else 'Created' }} page: {{ page_title }}
+      📄 Page ID: {{ page_result.json.id if page_result is defined and page_result.json is defined else 'N/A (check mode)' }}
+      🔗 URL: {{ confluence_url }}/pages/viewpage.action?pageId={{ page_result.json.id if page_result is defined and page_result.json is defined else 'N/A' }}
+  when: page_result is defined and not page_result.skipped | default(false)
