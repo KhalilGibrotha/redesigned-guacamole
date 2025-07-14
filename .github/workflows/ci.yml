@@ -462,7 +462,77 @@ jobs:
             echo "⚠️ Super Linter log file not found"
           fi
 
-      - name: 📤 Upload Sanitized Super Linter Logs
+      - name: � Analyze Linting Rule Violations
+        if: always()
+        id: rule-analysis
+        run: |
+          echo "🔍 Analyzing linting rule violations..."
+
+          if [ -f "super-linter.log" ]; then
+            # Extract rule violations and count them
+            echo "Extracting rule violations from logs..."
+
+            # Create temporary files for processing
+            temp_violations="/tmp/violations.txt"
+            temp_counts="/tmp/rule_counts.txt"
+
+            # Extract lines with rule violations (those ending with [rulename])
+            grep -E '\[[a-zA-Z0-9_-]+\]$' super-linter.log > "$temp_violations" || echo "No rule violations found in specific format"
+
+            if [ -s "$temp_violations" ]; then
+              # Extract just the rule names and count occurrences
+              sed -E 's/.*\[([a-zA-Z0-9_-]+)\]$/\1/' "$temp_violations" | sort | uniq -c | sort -nr > "$temp_counts"
+
+              # Count total violations
+              total_violations=$(wc -l < "$temp_violations")
+              unique_rules=$(wc -l < "$temp_counts")
+
+              echo "Found $total_violations total violations across $unique_rules unique rules"
+
+              # Generate summary for outputs
+              echo "total_violations=$total_violations" >> $GITHUB_OUTPUT
+              echo "unique_rules=$unique_rules" >> $GITHUB_OUTPUT
+
+              # Create detailed rule breakdown
+              echo "violations_found=true" >> $GITHUB_OUTPUT
+
+              # Generate markdown table data
+              rules_table=""
+              while read -r count rule; do
+                # Determine severity icon based on rule patterns
+                severity_icon="⚠️"
+                if [[ "$rule" == *"error"* ]] || [[ "$rule" == *"security"* ]]; then
+                  severity_icon="🔴"
+                elif [[ "$rule" == *"warning"* ]] || [[ "$rule" == *"style"* ]]; then
+                  severity_icon="🟡"
+                elif [[ "$rule" == *"info"* ]]; then
+                  severity_icon="🔵"
+                fi
+
+                rules_table="$rules_table| $severity_icon \`$rule\` | $count |\n"
+              done < "$temp_counts"
+
+              # Save for use in summary step
+              echo "$rules_table" > /tmp/rules_table.md
+
+              echo "✅ Rule analysis completed"
+            else
+              echo "No rule violations found or different log format"
+              echo "violations_found=false" >> $GITHUB_OUTPUT
+              echo "total_violations=0" >> $GITHUB_OUTPUT
+              echo "unique_rules=0" >> $GITHUB_OUTPUT
+            fi
+
+            # Clean up temp files
+            rm -f "$temp_violations" "$temp_counts"
+          else
+            echo "⚠️ Super Linter log file not found for analysis"
+            echo "violations_found=false" >> $GITHUB_OUTPUT
+            echo "total_violations=0" >> $GITHUB_OUTPUT
+            echo "unique_rules=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: �📤 Upload Sanitized Super Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -490,6 +560,24 @@ jobs:
           fi
           echo "**Validation Scope:** ${{ github.event.inputs.full_scan == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Rule violations summary
+          if [ "${{ steps.rule-analysis.outputs.violations_found }}" = "true" ]; then
+            echo "## 📊 Rule Violations Summary" >> $GITHUB_STEP_SUMMARY
+            echo "**Total Violations:** ${{ steps.rule-analysis.outputs.total_violations }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Unique Rules:** ${{ steps.rule-analysis.outputs.unique_rules }}" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Rule | Occurrences |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
+            
+            # Add the rules table if it exists
+            if [ -f "/tmp/rules_table.md" ]; then
+              cat /tmp/rules_table.md >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Legend:** 🔴 Error/Security | 🟡 Warning/Style | 🔵 Info | ⚠️ General" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+          fi
 
           # Auto-fix summary
           if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
