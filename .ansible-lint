@@ -13,7 +13,6 @@ enable_list:
 exclude_paths:
   - .git/
   - .github/
-  - molecule/
   - ci-cd-templates/
 
 collections:

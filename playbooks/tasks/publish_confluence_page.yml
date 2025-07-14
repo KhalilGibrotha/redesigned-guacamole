@@ -48,7 +48,7 @@
           representation: "storage"
     status_code: [200, 201]
   register: page_result
-  when: 
+  when:
     - not ansible_check_mode
     - not is_update
     - parent_page is not defined or parent_page == ""
@@ -74,7 +74,7 @@
         - title: "{{ parent_page }}"
     status_code: [200, 201]
   register: page_result
-  when: 
+  when:
     - not ansible_check_mode
     - not is_update
     - parent_page is defined and parent_page != ""
@@ -100,7 +100,7 @@
         number: "{{ existing_page_version | int + 1 }}"
     status_code: [200, 201]
   register: page_result
-  when: 
+  when:
     - not ansible_check_mode
     - is_update
 
@@ -118,7 +118,7 @@
       - prefix: "global"
         name: "documentation-as-code"
     status_code: [200]
-  when: 
+  when:
     - not ansible_check_mode
     - is_auto_document | default(false)
     - page_result is defined
