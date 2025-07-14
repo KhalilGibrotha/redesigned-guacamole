@@ -277,8 +277,8 @@ jobs:
           # Core configuration
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: ${{ github.event.inputs.full_scan == 'true' || github.event_name == 'workflow_dispatch' }}
-          LOG_LEVEL: 'WARN'  # Reduced from INFO to minimize token exposure
+          VALIDATE_ALL_CODEBASE: true  # Always validate all files to ensure comprehensive YAML coverage
+          LOG_LEVEL: 'INFO'  # Increased to INFO to capture more violation details
           CREATE_LOG_FILE: true
 
           # Auto-fix configuration
@@ -295,6 +295,11 @@ jobs:
           VALIDATE_MARKDOWN: true
           VALIDATE_GITHUB_ACTIONS: true
           VALIDATE_ENV: true
+
+          # Force comprehensive validation
+          FILTER_REGEX_EXCLUDE: ''  # Don't exclude any files for validation
+          VALIDATE_ALL_CODEBASE_YAML: true  # Always validate all YAML files
+          VALIDATE_ALL_CODEBASE_GITHUB_ACTIONS: true  # Always validate all GitHub Actions
 
           # Conditional linters based on file presence
           VALIDATE_ANSIBLE: true
@@ -472,6 +477,17 @@ jobs:
           echo "🔍 Analyzing linting rule violations..."
 
           if [ -f "super-linter.log" ]; then
+            echo "✅ Super Linter log file found"
+            echo "📊 Log file size: $(wc -l < super-linter.log) lines"
+            
+            # Show sample of log to debug format
+            echo "🔍 First 10 lines of super-linter.log:"
+            head -10 super-linter.log
+            echo ""
+            echo "🔍 Last 10 lines of super-linter.log:"
+            tail -10 super-linter.log
+            echo ""
+            
             # Extract rule violations and count them
             echo "Extracting rule violations from logs..."
 
@@ -481,7 +497,25 @@ jobs:
             temp_counts="/tmp/rule_counts.txt"
 
             # Extract lines with rule violations (those ending with [rulename])
+            echo "🔍 Looking for lines ending with [rulename]..."
             grep -E '\[[a-zA-Z0-9_-]+\]$' super-linter.log > "$temp_violations" || echo "No rule violations found in specific format"
+            
+            if [ -s "$temp_violations" ]; then
+              echo "✅ Found $(wc -l < "$temp_violations") violation lines"
+              echo "🔍 Sample violations found:"
+              head -3 "$temp_violations"
+              echo ""
+            else
+              echo "❌ No violations found in expected format"
+              echo "🔍 Searching for alternative patterns..."
+              echo "Lines containing 'shellcheck':"
+              grep -i "shellcheck" super-linter.log | head -3 || echo "None found"
+              echo "Lines containing 'actionlint':"
+              grep -i "actionlint" super-linter.log | head -3 || echo "None found"
+              echo "Lines containing any brackets:"
+              grep '\[.*\]' super-linter.log | head -3 || echo "None found"
+              echo ""
+            fi
 
             if [ -s "$temp_violations" ]; then
               echo "Processing violation details..."
