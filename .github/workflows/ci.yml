@@ -300,8 +300,6 @@ jobs:
           # CI-specific settings
           CREATE_LOG_FILE: true
           LOG_LEVEL: 'INFO'
-          SUPPRESS_POSSUM: true
-          MULTI_STATUS: true
           IGNORE_GITIGNORED_FILES: true
           ACTIONS_RUNNER_DEBUG: false
           ACTIONS_STEP_DEBUG: false
@@ -361,11 +359,8 @@ jobs:
           # Performance settings
           SUPPRESS_POSSUM: true
           MULTI_STATUS: true
-          IGNORE_GITIGNORED_FILES: true
 
           # Security: Reduce log verbosity to prevent token leakage
-          ACTIONS_RUNNER_DEBUG: false
-          ACTIONS_STEP_DEBUG: false
 
           # Behavior
           DISABLE_ERRORS: false
