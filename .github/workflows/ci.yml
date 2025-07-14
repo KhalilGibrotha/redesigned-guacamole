@@ -515,8 +515,30 @@ jobs:
           echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ YAML (yamllint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Ansible (ansible-lint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ${{ needs.quick-validation.outputs.files-shell != '0' && '✅' || '⏸️' }} Shell/Bash (shellcheck, shfmt) ${{ needs.quick-validation.outputs.files-shell != '0' && steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ${{ needs.quick-validation.outputs.files-python != '0' && '✅' || '⏸️' }} Python (black, pylint, flake8) ${{ needs.quick-validation.outputs.files-python != '0' && steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
+          # Compute status icons for Shell/Bash and Python linters
+          if [ "${{ needs.quick-validation.outputs.files-shell }}" != "0" ]; then
+            shell_status="✅"
+            shell_autofix="[🤖 auto-fix enabled]"
+          else
+            shell_status="⏸️"
+            shell_autofix=""
+          fi
+          if [ "${{ needs.quick-validation.outputs.files-python }}" != "0" ]; then
+            python_status="✅"
+            python_autofix="[🤖 auto-fix enabled]"
+          else
+            python_status="⏸️"
+            python_autofix=""
+          fi
+          if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
+            [ "${{ needs.quick-validation.outputs.files-shell }}" != "0" ] && shell_autofix="🤖 auto-fix enabled" || shell_autofix=""
+            [ "${{ needs.quick-validation.outputs.files-python }}" != "0" ] && python_autofix="🤖 auto-fix enabled" || python_autofix=""
+          else
+            shell_autofix=""
+            python_autofix=""
+          fi
+          echo "- $shell_status Shell/Bash (shellcheck, shfmt) $shell_autofix" >> $GITHUB_STEP_SUMMARY
+          echo "- $python_status Python (black, pylint, flake8) $python_autofix" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Markdown (markdownlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ JSON (jsonlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
@@ -709,8 +731,9 @@ jobs:
           fi
 
           # Determine overall status
-          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-            export overall_status="✅ All Checks Passed"
+          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] \
+          && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
+          export overall_status="✅ All Checks Passed"
           else
             export overall_status="❌ Some Checks Failed"
           fi
