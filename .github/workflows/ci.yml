@@ -162,7 +162,7 @@ jobs:
           echo "   ✅ hotfix/critical-security-fix"
           echo "   ✅ hf/auth-bug"
 
-      - name: �📊 Count Files by Type
+      - name: �📊 Count Files by Type for Conditional Validation
         id: file-count
         run: |
           echo "yaml=$(find . -name '*.yml' -o -name '*.yaml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
@@ -170,6 +170,15 @@ jobs:
           echo "shell=$(find . -name '*.sh' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "markdown=$(find . -name '*.md' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "json=$(find . -name '*.json' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "dockerfile=$(find . -name 'Dockerfile*' -o -name '*.dockerfile' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "javascript=$(find . -name '*.js' -o -name '*.ts' | grep -v ".git" -grep -v node_modules | wc -l)" >> $GITHUB_OUTPUT
+          echo "css=$(find . -name '*.css' -o -name '*.scss' -o -name '*.sass' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "xml=$(find . -name '*.xml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "sql=$(find . -name '*.sql' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "terraform=$(find . -name '*.tf' -o -name '*.tfvars' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "kubernetes=$(find . -name '*k8s*.yml' -o -name '*k8s*.yaml' -o -path '*/k8s/*' -name '*.yml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "powershell=$(find . -name '*.ps1' -o -name '*.psm1' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
+          echo "env_files=$(find . -name '.env*' -o -name '*.env' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT  
 
       - name: 🧪 Basic Syntax Checks
         run: |
@@ -198,13 +207,19 @@ jobs:
       - name: 📊 Repository Statistics
         run: |
           echo "## 📊 Repository Statistics" >> $GITHUB_STEP_SUMMARY
-          echo "| File Type | Count |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| YAML files | ${{ steps.file-count.outputs.yaml }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Markdown files | ${{ steps.file-count.outputs.markdown }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python files | ${{ steps.file-count.outputs.python }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Shell scripts | ${{ steps.file-count.outputs.shell }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| JSON files | ${{ steps.file-count.outputs.json }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| File Type | Count | Linter Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------|---------------|" >> $GITHUB_STEP_SUMMARY
+          echo "| YAML files | ${{ steps.file-count.outputs.yaml }} | ${{ steps.file-count.outputs.yaml != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown files | ${{ steps.file-count.outputs.markdown }} | ${{ steps.file-count.outputs.markdown != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Python files | ${{ steps.file-count.outputs.python }} | ${{ steps.file-count.outputs.python != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shell scripts | ${{ steps.file-count.outputs.shell }} | ${{ steps.file-count.outputs.shell != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JSON files | ${{ steps.file-count.outputs.json }} | ${{ steps.file-count.outputs.json != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dockerfiles | ${{ steps.file-count.outputs.dockerfile }} | ${{ steps.file-count.outputs.dockerfile != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Terraform files | ${{ steps.file-count.outputs.terraform }} | ${{ steps.file-count.outputs.terraform != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| JavaScript/TypeScript | ${{ steps.file-count.outputs.javascript }} | ${{ steps.file-count.outputs.javascript != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| PowerShell | ${{ steps.file-count.outputs.powershell }} | ${{ steps.file-count.outputs.powershell != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🎯 **Smart Linting**: Only relevant linters will run based on file presence" >> $GITHUB_STEP_SUMMARY
 
   # Enhanced linting with Super Linter
   super-linter:
@@ -274,46 +289,74 @@ jobs:
         id: super-linter
         uses: super-linter/super-linter@v5
         env:
-          # Core configuration
+          # Load static configuration from .env file
+          ENV_FILE: .github/super-linter.env
+          
+          # Dynamic settings
+          VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: true  # Always validate all files to ensure comprehensive YAML coverage
-          LOG_LEVEL: 'INFO'  # Increased to INFO to capture more violation details
+          
+          # CI-specific settings
           CREATE_LOG_FILE: true
+          LOG_LEVEL: 'INFO'
+          SUPPRESS_POSSUM: true
+          MULTI_STATUS: true
+          IGNORE_GITIGNORED_FILES: true
+          ACTIONS_RUNNER_DEBUG: false
+          ACTIONS_STEP_DEBUG: false
 
-          # Auto-fix configuration
-          FIX_ANSIBLE: true
-          FIX_YAML: true
-          FIX_MARKDOWN: true
-          FIX_PYTHON_BLACK: true
-          FIX_SHELL_SHFMT: true
-          FIX_JSON: true
-
-          # Universal linters (always enabled)
-          VALIDATE_YAML: true
-          VALIDATE_JSON: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_GITHUB_ACTIONS: true
-          VALIDATE_ENV: true
-
-          # Force comprehensive validation
-          FILTER_REGEX_EXCLUDE: ''  # Don't exclude any files for validation
-          VALIDATE_ALL_CODEBASE_YAML: true  # Always validate all YAML files
-          VALIDATE_ALL_CODEBASE_GITHUB_ACTIONS: true  # Always validate all GitHub Actions
-
-          # Conditional linters based on file presence
-          VALIDATE_ANSIBLE: true
+          # 🎯 INTELLIGENT CONDITIONAL VALIDATION - Only run linters when files exist
+          
+          # Core linters (always run - these files almost always exist)
+          VALIDATE_YAML: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
+          VALIDATE_JSON: ${{ needs.quick-validation.outputs.files-json != '0' }}
+          VALIDATE_MARKDOWN: ${{ needs.quick-validation.outputs.files-markdown != '0' }}
+          VALIDATE_GITHUB_ACTIONS: true  # Always validate workflows
+          
+          # Language-specific linters (conditional)
+          VALIDATE_ANSIBLE: ${{ needs.quick-validation.outputs.files-yaml != '0' }}  # Ansible uses YAML
           VALIDATE_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
           VALIDATE_PYTHON_PYLINT: ${{ needs.quick-validation.outputs.files-python != '0' }}
           VALIDATE_PYTHON_FLAKE8: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_PYTHON_MYPY: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          
+          # Shell scripting
           VALIDATE_BASH: ${{ needs.quick-validation.outputs.files-shell != '0' }}
           VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
-          VALIDATE_DOCKERFILE_HADOLINT: true
-
-          # Configuration files (all auto-detected at repo root)
-          # .ansible-lint - automatically detected
-          # .yamllint - automatically detected
-          # .markdownlint.json - automatically detected
+          
+          # Infrastructure as Code
+          VALIDATE_DOCKERFILE_HADOLINT: ${{ needs.quick-validation.outputs.files-dockerfile != '0' }}
+          VALIDATE_TERRAFORM_TFLINT: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
+          VALIDATE_TERRAFORM_TERRASCAN: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
+          VALIDATE_TERRAFORM_TFSEC: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
+          VALIDATE_KUBERNETES_KUBECONFORM: ${{ needs.quick-validation.outputs.files-kubernetes != '0' }}
+          
+          # Web technologies (conditional)
+          VALIDATE_JAVASCRIPT_ES: ${{ needs.quick-validation.outputs.files-javascript != '0' }}
+          VALIDATE_TYPESCRIPT_ES: ${{ needs.quick-validation.outputs.files-javascript != '0' }}
+          VALIDATE_CSS: ${{ needs.quick-validation.outputs.files-css != '0' }}
+          
+          # Other formats
+          VALIDATE_XML: ${{ needs.quick-validation.outputs.files-xml != '0' }}
+          VALIDATE_SQL: ${{ needs.quick-validation.outputs.files-sql != '0' }}
+          VALIDATE_POWERSHELL: ${{ needs.quick-validation.outputs.files-powershell != '0' }}
+          VALIDATE_ENV: ${{ needs.quick-validation.outputs.files-env_files != '0' }}
+          
+          # Security and quality (always run when files exist)
+          VALIDATE_GITLEAKS: true  # Always check for secrets
+          VALIDATE_CHECKOV: ${{ needs.quick-validation.outputs.files-terraform != '0' || needs.quick-validation.outputs.files-dockerfile != '0' || needs.quick-validation.outputs.files-kubernetes != '0' }}
+          
+          # Auto-fix settings (conditional)
+          FIX_ANSIBLE: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
+          FIX_YAML: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
+          FIX_MARKDOWN: ${{ needs.quick-validation.outputs.files-markdown != '0' }}
+          FIX_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          FIX_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          FIX_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
+          FIX_JSON: ${{ needs.quick-validation.outputs.files-json != '0' }}
+          FIX_CSS: ${{ needs.quick-validation.outputs.files-css != '0' }}
 
           # Performance settings
           SUPPRESS_POSSUM: true
