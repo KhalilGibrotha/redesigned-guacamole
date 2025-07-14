@@ -94,11 +94,20 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      files-yaml: ${{ steps.file-count.outputs.yaml }}
-      files-python: ${{ steps.file-count.outputs.python }}
-      files-shell: ${{ steps.file-count.outputs.shell }}
-      files-markdown: ${{ steps.file-count.outputs.markdown }}
-      files-json: ${{ steps.file-count.outputs.json }}
+      files_yaml: ${{ steps.file-count.outputs.yaml }}
+      files_python: ${{ steps.file-count.outputs.python }}
+      files_shell: ${{ steps.file-count.outputs.shell }}
+      files_markdown: ${{ steps.file-count.outputs.markdown }}
+      files_json: ${{ steps.file-count.outputs.json }}
+      files_dockerfile: ${{ steps.file-count.outputs.dockerfile }}
+      files_javascript: ${{ steps.file-count.outputs.javascript }}
+      files_css: ${{ steps.file-count.outputs.css }}
+      files_xml: ${{ steps.file-count.outputs.xml }}
+      files_sql: ${{ steps.file-count.outputs.sql }}
+      files_terraform: ${{ steps.file-count.outputs.terraform }}
+      files_kubernetes: ${{ steps.file-count.outputs.kubernetes }}
+      files_powershell: ${{ steps.file-count.outputs.powershell }}
+      files_env_files: ${{ steps.file-count.outputs.env_files }}
 
     steps:
       - name: 📥 Checkout Code
@@ -171,7 +180,7 @@ jobs:
           echo "markdown=$(find . -name '*.md' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "json=$(find . -name '*.json' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "dockerfile=$(find . -name 'Dockerfile*' -o -name '*.dockerfile' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "javascript=$(find . -name '*.js' -o -name '*.ts' | grep -v ".git" -grep -v node_modules | wc -l)" >> $GITHUB_OUTPUT
+          echo "javascript=$(find . -name '*.js' -o -name '*.ts' | grep -v ".git" | grep -v node_modules | wc -l)" >> $GITHUB_OUTPUT
           echo "css=$(find . -name '*.css' -o -name '*.scss' -o -name '*.sass' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "xml=$(find . -name '*.xml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
           echo "sql=$(find . -name '*.sql' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
@@ -217,7 +226,12 @@ jobs:
           echo "| Dockerfiles | ${{ steps.file-count.outputs.dockerfile }} | ${{ steps.file-count.outputs.dockerfile != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform files | ${{ steps.file-count.outputs.terraform }} | ${{ steps.file-count.outputs.terraform != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| JavaScript/TypeScript | ${{ steps.file-count.outputs.javascript }} | ${{ steps.file-count.outputs.javascript != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Kubernetes | ${{ steps.file-count.outputs.kubernetes }} | ${{ steps.file-count.outputs.kubernetes != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| CSS/SCSS | ${{ steps.file-count.outputs.css }} | ${{ steps.file-count.outputs.css != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| XML files | ${{ steps.file-count.outputs.xml }} | ${{ steps.file-count.outputs.xml != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SQL files | ${{ steps.file-count.outputs.sql }} | ${{ steps.file-count.outputs.sql != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| PowerShell | ${{ steps.file-count.outputs.powershell }} | ${{ steps.file-count.outputs.powershell != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment files | ${{ steps.file-count.outputs.env_files }} | ${{ steps.file-count.outputs.env_files != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "🎯 **Smart Linting**: Only relevant linters will run based on file presence" >> $GITHUB_STEP_SUMMARY
 
@@ -307,54 +321,54 @@ jobs:
           # 🎯 INTELLIGENT CONDITIONAL VALIDATION - Only run linters when files exist
           
           # Core linters (always run - these files almost always exist)
-          VALIDATE_YAML: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
-          VALIDATE_JSON: ${{ needs.quick-validation.outputs.files-json != '0' }}
-          VALIDATE_MARKDOWN: ${{ needs.quick-validation.outputs.files-markdown != '0' }}
+          VALIDATE_YAML: ${{ needs.quick-validation.outputs.files_yaml != '0' }}
+          VALIDATE_JSON: ${{ needs.quick-validation.outputs.files_json != '0' }}
+          VALIDATE_MARKDOWN: ${{ needs.quick-validation.outputs.files_markdown != '0' }}
           VALIDATE_GITHUB_ACTIONS: true  # Always validate workflows
           
           # Language-specific linters (conditional)
-          VALIDATE_ANSIBLE: ${{ needs.quick-validation.outputs.files-yaml != '0' }}  # Ansible uses YAML
-          VALIDATE_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          VALIDATE_PYTHON_PYLINT: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          VALIDATE_PYTHON_FLAKE8: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          VALIDATE_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          VALIDATE_PYTHON_MYPY: ${{ needs.quick-validation.outputs.files-python != '0' }}
+          VALIDATE_ANSIBLE: ${{ needs.quick-validation.outputs.files_yaml != '0' }}  # Ansible uses YAML
+          VALIDATE_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          VALIDATE_PYTHON_PYLINT: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          VALIDATE_PYTHON_FLAKE8: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          VALIDATE_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          VALIDATE_PYTHON_MYPY: ${{ needs.quick-validation.outputs.files_python != '0' }}
           
           # Shell scripting
-          VALIDATE_BASH: ${{ needs.quick-validation.outputs.files-shell != '0' }}
-          VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
+          VALIDATE_BASH: ${{ needs.quick-validation.outputs.files_shell != '0' }}
+          VALIDATE_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files_shell != '0' }}
           
           # Infrastructure as Code
-          VALIDATE_DOCKERFILE_HADOLINT: ${{ needs.quick-validation.outputs.files-dockerfile != '0' }}
-          VALIDATE_TERRAFORM_TFLINT: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
-          VALIDATE_TERRAFORM_TERRASCAN: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
-          VALIDATE_TERRAFORM_TFSEC: ${{ needs.quick-validation.outputs.files-terraform != '0' }}
-          VALIDATE_KUBERNETES_KUBECONFORM: ${{ needs.quick-validation.outputs.files-kubernetes != '0' }}
+          VALIDATE_DOCKERFILE_HADOLINT: ${{ needs.quick-validation.outputs.files_dockerfile != '0' }}
+          VALIDATE_TERRAFORM_TFLINT: ${{ needs.quick-validation.outputs.files_terraform != '0' }}
+          VALIDATE_TERRAFORM_TERRASCAN: ${{ needs.quick-validation.outputs.files_terraform != '0' }}
+          VALIDATE_TERRAFORM_TFSEC: ${{ needs.quick-validation.outputs.files_terraform != '0' }}
+          VALIDATE_KUBERNETES_KUBECONFORM: ${{ needs.quick-validation.outputs.files_kubernetes != '0' }}
           
           # Web technologies (conditional)
-          VALIDATE_JAVASCRIPT_ES: ${{ needs.quick-validation.outputs.files-javascript != '0' }}
-          VALIDATE_TYPESCRIPT_ES: ${{ needs.quick-validation.outputs.files-javascript != '0' }}
-          VALIDATE_CSS: ${{ needs.quick-validation.outputs.files-css != '0' }}
+          VALIDATE_JAVASCRIPT_ES: ${{ needs.quick-validation.outputs.files_javascript != '0' }}
+          VALIDATE_TYPESCRIPT_ES: ${{ needs.quick-validation.outputs.files_javascript != '0' }}
+          VALIDATE_CSS: ${{ needs.quick-validation.outputs.files_css != '0' }}
           
           # Other formats
-          VALIDATE_XML: ${{ needs.quick-validation.outputs.files-xml != '0' }}
-          VALIDATE_SQL: ${{ needs.quick-validation.outputs.files-sql != '0' }}
-          VALIDATE_POWERSHELL: ${{ needs.quick-validation.outputs.files-powershell != '0' }}
-          VALIDATE_ENV: ${{ needs.quick-validation.outputs.files-env_files != '0' }}
+          VALIDATE_XML: ${{ needs.quick-validation.outputs.files_xml != '0' }}
+          VALIDATE_SQL: ${{ needs.quick-validation.outputs.files_sql != '0' }}
+          VALIDATE_POWERSHELL: ${{ needs.quick-validation.outputs.files_powershell != '0' }}
+          VALIDATE_ENV: ${{ needs.quick-validation.outputs.files_env_files != '0' }}
           
           # Security and quality (always run when files exist)
           VALIDATE_GITLEAKS: true  # Always check for secrets
-          VALIDATE_CHECKOV: ${{ needs.quick-validation.outputs.files-terraform != '0' || needs.quick-validation.outputs.files-dockerfile != '0' || needs.quick-validation.outputs.files-kubernetes != '0' }}
+          VALIDATE_CHECKOV: ${{ needs.quick-validation.outputs.files_terraform != '0' || needs.quick-validation.outputs.files_dockerfile != '0' || needs.quick-validation.outputs.files_kubernetes != '0' }}
           
           # Auto-fix settings (conditional)
-          FIX_ANSIBLE: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
-          FIX_YAML: ${{ needs.quick-validation.outputs.files-yaml != '0' }}
-          FIX_MARKDOWN: ${{ needs.quick-validation.outputs.files-markdown != '0' }}
-          FIX_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          FIX_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files-python != '0' }}
-          FIX_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files-shell != '0' }}
-          FIX_JSON: ${{ needs.quick-validation.outputs.files-json != '0' }}
-          FIX_CSS: ${{ needs.quick-validation.outputs.files-css != '0' }}
+          FIX_ANSIBLE: ${{ needs.quick-validation.outputs.files_yaml != '0' }}
+          FIX_YAML: ${{ needs.quick-validation.outputs.files_yaml != '0' }}
+          FIX_MARKDOWN: ${{ needs.quick-validation.outputs.files_markdown != '0' }}
+          FIX_PYTHON_BLACK: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          FIX_PYTHON_ISORT: ${{ needs.quick-validation.outputs.files_python != '0' }}
+          FIX_SHELL_SHFMT: ${{ needs.quick-validation.outputs.files_shell != '0' }}
+          FIX_JSON: ${{ needs.quick-validation.outputs.files_json != '0' }}
+          FIX_CSS: ${{ needs.quick-validation.outputs.files_css != '0' }}
 
           # Performance settings
           SUPPRESS_POSSUM: true
@@ -738,14 +752,14 @@ jobs:
           echo "- ✅ YAML (yamllint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Ansible (ansible-lint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
           # Compute status icons for Shell/Bash and Python linters
-          if [ "${{ needs.quick-validation.outputs.files-shell }}" != "0" ]; then
+          if [ "${{ needs.quick-validation.outputs.files_shell }}" != "0" ]; then
             shell_status="✅"
             shell_autofix="[🤖 auto-fix enabled]"
           else
             shell_status="⏸️"
             shell_autofix=""
           fi
-          if [ "${{ needs.quick-validation.outputs.files-python }}" != "0" ]; then
+          if [ "${{ needs.quick-validation.outputs.files_python }}" != "0" ]; then
             python_status="✅"
             python_autofix="[🤖 auto-fix enabled]"
           else
@@ -753,8 +767,8 @@ jobs:
             python_autofix=""
           fi
           if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
-            [ "${{ needs.quick-validation.outputs.files-shell }}" != "0" ] && shell_autofix="🤖 auto-fix enabled" || shell_autofix=""
-            [ "${{ needs.quick-validation.outputs.files-python }}" != "0" ] && python_autofix="🤖 auto-fix enabled" || python_autofix=""
+            [ "${{ needs.quick-validation.outputs.files_shell }}" != "0" ] && shell_autofix="🤖 auto-fix enabled" || shell_autofix=""
+            [ "${{ needs.quick-validation.outputs.files_python }}" != "0" ] && python_autofix="🤖 auto-fix enabled" || python_autofix=""
           else
             shell_autofix=""
             python_autofix=""
