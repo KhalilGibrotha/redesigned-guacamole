@@ -105,6 +105,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: � Debug Trigger Information
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
           echo "🔍 Workflow Trigger Debug Information:"
           echo "Event name: ${{ github.event_name }}"
@@ -113,8 +116,8 @@ jobs:
           echo "Full ref: ${{ github.ref }}"
           echo "Actor: ${{ github.actor }}"
           echo "Commit SHA: ${{ github.sha }}"
-          echo "Base ref: ${{ github.base_ref }}"
-          echo "Head ref: ${{ github.head_ref }}"
+          echo "Base ref: $BASE_REF"
+          echo "Head ref: $HEAD_REF"
           echo ""
           echo "📋 This confirms your branch trigger is working!"
           echo "✅ Supported patterns:"
@@ -474,20 +477,55 @@ jobs:
 
             # Create temporary files for processing
             temp_violations="/tmp/violations.txt"
+            temp_descriptions="/tmp/descriptions.txt"
             temp_counts="/tmp/rule_counts.txt"
 
             # Extract lines with rule violations (those ending with [rulename])
             grep -E '\[[a-zA-Z0-9_-]+\]$' super-linter.log > "$temp_violations" || echo "No rule violations found in specific format"
 
             if [ -s "$temp_violations" ]; then
-              # Extract just the rule names and count occurrences
-              sed -E 's/.*\[([a-zA-Z0-9_-]+)\]$/\1/' "$temp_violations" | sort | uniq -c | sort -nr > "$temp_counts"
+              echo "Processing violation details..."
+
+              # Process each violation to extract linter, description, and rule
+              while IFS= read -r line; do
+                # Extract the rule/linter name (last item in brackets)
+                rule=$(echo "$line" | sed -E 's/.*\[([a-zA-Z0-9_-]+)\]$/\1/')
+                
+                # Extract the description - different patterns for different linters
+                if [[ "$line" == *"shellcheck reported issue"* ]]; then
+                  # For shellcheck: extract description after the rule code
+                  description=$(echo "$line" | sed -E 's/.*SC[0-9]+:[^:]+:[^:]+:[^:]+: ([^[]+) \[shellcheck\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="shellcheck"
+                elif [[ "$line" == *"expression"* ]]; then
+                  # For actionlint expression warnings
+                  description=$(echo "$line" | sed -E 's/^[^:]*:[^:]*:[^:]*: ([^[]+) \[expression\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="actionlint"
+                else
+                  # For other linters, try to extract description before the rule
+                  description=$(echo "$line" | sed -E 's/^[^:]*:[^:]*:[^:]*: ([^[]+) \[[^]]+\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="$rule"
+                fi
+
+                # Clean up description - remove extra whitespace and truncate if too long
+                description=$(echo "$description" | sed 's/  */ /g' | cut -c1-80)
+                
+                # If description extraction failed, use a fallback
+                if [[ -z "$description" || "$description" == "$line" ]]; then
+                  description="Rule violation detected"
+                fi
+
+                # Create a combined key for grouping: linter|description
+                echo "${linter}|${description}" >> "$temp_descriptions"
+              done < "$temp_violations"
+
+              # Count occurrences of each linter|description combination
+              sort "$temp_descriptions" | uniq -c | sort -nr > "$temp_counts"
 
               # Count total violations
               total_violations=$(wc -l < "$temp_violations")
               unique_rules=$(wc -l < "$temp_counts")
 
-              echo "Found $total_violations total violations across $unique_rules unique rules"
+              echo "Found $total_violations total violations across $unique_rules unique rule types"
 
               # Generate summary for outputs
               echo "total_violations=$total_violations" >> $GITHUB_OUTPUT
@@ -498,24 +536,48 @@ jobs:
 
               # Generate markdown table data
               rules_table=""
-              while read -r count rule; do
-                # Determine severity icon based on rule patterns
+              total_count=0
+              
+              while IFS= read -r line; do
+                # Extract count (first field)
+                count=$(echo "$line" | awk '{print $1}')
+                # Extract everything after the count
+                rest=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ *//')
+                # Split on pipe character
+                linter=$(echo "$rest" | cut -d'|' -f1)
+                description=$(echo "$rest" | cut -d'|' -f2-)
+                
+                # Determine severity icon based on linter and patterns
                 severity_icon="⚠️"
-                if [[ "$rule" == *"error"* ]] || [[ "$rule" == *"security"* ]]; then
-                  severity_icon="🔴"
-                elif [[ "$rule" == *"warning"* ]] || [[ "$rule" == *"style"* ]]; then
+                if [[ "$linter" == "shellcheck" ]]; then
+                  if [[ "$description" == *"warning"* ]]; then
+                    severity_icon="🟡"
+                  elif [[ "$description" == *"error"* ]]; then
+                    severity_icon="🔴"
+                  else
+                    severity_icon="🔵"
+                  fi
+                elif [[ "$linter" == "actionlint" ]]; then
                   severity_icon="🟡"
-                elif [[ "$rule" == *"info"* ]]; then
+                elif [[ "$description" == *"error"* ]] || [[ "$description" == *"security"* ]]; then
+                  severity_icon="🔴"
+                elif [[ "$description" == *"warning"* ]] || [[ "$description" == *"style"* ]]; then
+                  severity_icon="🟡"
+                elif [[ "$description" == *"info"* ]]; then
                   severity_icon="🔵"
                 fi
 
-                rules_table="$rules_table| $severity_icon \`$rule\` | $count |\n"
+                rules_table="$rules_table| $severity_icon **$linter** | $description | $count |\n"
+                total_count=$((total_count + count))
               done < "$temp_counts"
 
-              # Save for use in summary step
-              echo "$rules_table" > /tmp/rules_table.md
+              # Add total row
+              rules_table="$rules_table| 📊 **TOTAL** | **All violations** | **$total_count** |\n"
 
-              echo "✅ Rule analysis completed"
+              # Save for use in summary step
+              echo -e "$rules_table" > /tmp/rules_table.md
+
+              echo "✅ Rule analysis completed with detailed descriptions"
             else
               echo "No rule violations found or different log format"
               echo "violations_found=false" >> $GITHUB_OUTPUT
@@ -524,7 +586,7 @@ jobs:
             fi
 
             # Clean up temp files
-            rm -f "$temp_violations" "$temp_counts"
+            rm -f "$temp_violations" "$temp_descriptions" "$temp_counts"
           else
             echo "⚠️ Super Linter log file not found for analysis"
             echo "violations_found=false" >> $GITHUB_OUTPUT
@@ -567,15 +629,15 @@ jobs:
             echo "**Total Violations:** ${{ steps.rule-analysis.outputs.total_violations }}" >> $GITHUB_STEP_SUMMARY
             echo "**Unique Rules:** ${{ steps.rule-analysis.outputs.unique_rules }}" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Rule | Occurrences |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|-------------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Linter | Description | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------------|-------|" >> $GITHUB_STEP_SUMMARY
             
             # Add the rules table if it exists
             if [ -f "/tmp/rules_table.md" ]; then
               cat /tmp/rules_table.md >> $GITHUB_STEP_SUMMARY
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Legend:** 🔴 Error/Security | 🟡 Warning/Style | 🔵 Info | ⚠️ General" >> $GITHUB_STEP_SUMMARY
+            echo "**Legend:** 🔴 Error | 🟡 Warning | 🔵 Info | ⚠️ General | 📊 Total" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
