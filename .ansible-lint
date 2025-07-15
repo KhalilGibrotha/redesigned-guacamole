@@ -8,16 +8,17 @@ enable_list:
   - yaml
   - no-log-password
   - var-naming
+  - no-unsafe-temporary-file
+  - avoid-implicit
+  - no-jinja-when
+  - meta-runtime
+  - no-same-owner
+
+rulesdir:
+  - ./custom_rules
 
 # Exclude specific patterns
 exclude_paths:
   - .git/
   - .github/
   - ci-cd-templates/
-
-collections:
-  - redhat.*
-  - ansible.*
-  - community.general
-  - community.crypto
-  - community.network

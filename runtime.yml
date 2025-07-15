@@ -1,0 +1,46 @@
+---
+# Ansible Runtime Requirements
+# This file specifies the minimum Ansible version and dependencies required to run this project
+
+# Minimum Ansible version requirement
+requires_ansible: ">=2.15.0"
+
+# Python version requirements
+python:
+  minimum_version: "3.9"
+  
+# Collection version requirements for better compatibility
+collections:
+  # Core collections used in playbooks
+  ansible.posix: ">=1.5.0"
+  community.general: ">=7.0.0"
+  community.crypto: ">=2.15.0"
+  
+  # Optional: Add more collections as needed
+  # community.docker: ">=3.4.0"
+  # kubernetes.core: ">=2.4.0"
+
+# Action groups for module aliases (optional)
+action_groups:
+  # Group related modules for easier management
+  package_managers:
+    - package
+    - yum
+    - apt
+    - dnf
+    - pip
+    
+  file_operations:
+    - copy
+    - template
+    - file
+    - lineinfile
+    - blockinfile
+
+# Plugin routing (optional - for advanced use cases)
+plugin_routing:
+  # Example: redirect deprecated modules to newer ones
+  modules:
+    # This would redirect old module names to new ones
+    # deprecated_module: 
+    #   redirect: new_module_name
