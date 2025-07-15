@@ -77,7 +77,7 @@
 ```yaml
 VALIDATE_ALL_CODEBASE: true  # Always scan everything
 LOG_LEVEL: 'INFO'           # Capture detailed violations
-FILTER_REGEX_EXCLUDE: ''    # Don't exclude any files
+#FILTER_REGEX_EXCLUDE: ''    # See .github/super-linter.env for project-wide excludes
 ```
 
 ### Enhanced Environment Variables
