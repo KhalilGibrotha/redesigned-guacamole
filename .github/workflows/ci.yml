@@ -1147,54 +1147,54 @@ publish:
     CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 
 # Comprehensive pipeline summary with enhanced reporting
-  summary:
-    name: 📋 Pipeline Summary & Quality Report
-    if: always()
-    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, publish]
-    runs-on: ubuntu-latest
-    steps:
-      - name: � Checkout Code
-        uses: actions/checkout@v4
+summary:
+  name: 📋 Pipeline Summary & Quality Report
+  if: always()
+  needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, publish]
+  runs-on: ubuntu-latest
+  steps:
+    - name: � Checkout Code
+      uses: actions/checkout@v4
 
-      - name: 📊 Generate Comprehensive Report
-        run: |
-          # Determine status based on job results
-          if [ "${{ needs.super-linter.result }}" = "success" ]; then
-            export linting_status="✅ Passed"
-          else
-            export linting_status="❌ Failed"
-          fi
+    - name: 📊 Generate Comprehensive Report
+      run: |
+        # Determine status based on job results
+        if [ "${{ needs.super-linter.result }}" = "success" ]; then
+          export linting_status="✅ Passed"
+        else
+          export linting_status="❌ Failed"
+        fi
 
-          if [ "${{ needs.security.result }}" = "success" ]; then
-            export security_status="✅ Passed"
-          else
-            export security_status="❌ Failed"
-          fi
+        if [ "${{ needs.security.result }}" = "success" ]; then
+          export security_status="✅ Passed"
+        else
+          export security_status="❌ Failed"
+        fi
 
-          if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-            export ansible_status="✅ Passed"
-          else
-            export ansible_status="❌ Failed"
-          fi
+        if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
+          export ansible_status="✅ Passed"
+        else
+          export ansible_status="❌ Failed"
+        fi
 
-          # Determine overall status
-          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] \
-          && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-          export overall_status="✅ All Checks Passed"
-          else
-            export overall_status="❌ Some Checks Failed"
-          fi
+        # Determine overall status
+        if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] \
+        && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
+        export overall_status="✅ All Checks Passed"
+        else
+          export overall_status="❌ Some Checks Failed"
+        fi
 
-          # Generate the report
-          if [ -f "templates/autofix_summary.md" ]; then
-            envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## 📋 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-            echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Linting | $linting_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Security | $security_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Ansible | $ansible_status |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Overall Status:** $overall_status" >> $GITHUB_STEP_SUMMARY
-          fi
+        # Generate the report
+        if [ -f "templates/autofix_summary.md" ]; then
+          envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
+        else
+          echo "## 📋 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linting | $linting_status |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security | $security_status |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ansible | $ansible_status |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Status:** $overall_status" >> $GITHUB_STEP_SUMMARY
+        fi
