@@ -650,66 +650,8 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: � Checkout Code (for scripts)
+        uses: actions/checkout@v4
+
       - name: 📝 Generate Summary from All Reports
-        run: |
-          import json
-          import os
-          import glob
-
-          summary_file = os.getenv('GITHUB_STEP_SUMMARY')
-          reports_dir = './reports'
-          overall_total = 0
-
-          # Helper function to parse a SARIF file and return a formatted string
-          def parse_sarif(file_path):
-              if not os.path.exists(file_path):
-                  return "| N/A | No report found | This scan may have failed to produce a report. | N/A |\n", 0
-
-              report_md = ""
-              results = {}
-              total_issues = 0
-              with open(file_path) as f:
-                  sarif_data = json.load(f)
-                  for run in sarif_data.get('runs', []):
-                      for result in run.get('results', []):
-                          total_issues += 1
-                          rule_id = result['ruleId']
-                          message = result['message']['text']
-                          level = result.get('level', 'warning').upper()
-                          key = (level, rule_id, message)
-                          results[key] = results.get(key, 0) + 1
-              
-              if not results:
-                  report_md += "| ✅ | None | No issues found! | 0 |\n"
-              else:
-                  for (level, rule, msg), count in sorted(results.items()):
-                      report_md += f'| {level} | `{rule}` | {msg} | {count} |\n'
-              
-              return report_md, total_issues
-
-          # --- Process Each Report ---
-          all_reports = {
-              "Trivy Vulnerability Scan": os.path.join(reports_dir, 'trivy-results', 'trivy-results.sarif'),
-              "Ansible Lint": os.path.join(reports_dir, 'ansible-lint-results', 'ansible-lint-results.sarif')
-              # Add other tools here as you generate more SARIF files
-          }
-          
-          for tool_name, report_path in all_reports.items():
-              with open(summary_file, 'a') as f:
-                  f.write(f'## {tool_name} Report\n')
-                  f.write('| Severity | Rule ID | Description | Total |\n')
-                  f.write('|----------|---------|-------------|-------|\n')
-              
-              report_content, issue_count = parse_sarif(report_path)
-              overall_total += issue_count
-              
-              with open(summary_file, 'a') as f:
-                  f.write(report_content)
-                  f.write('\n')
-
-          # --- Final Summary ---
-          with open(summary_file, 'a') as f:
-            f.write('---\n')
-            f.write(f'### Grand Total of All Issues Found: {overall_total}\n')
-
-        shell: python
+        run: python scripts/generate_sarif_summary.py
