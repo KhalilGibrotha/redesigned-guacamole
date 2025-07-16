@@ -30,7 +30,7 @@ def parse_sarif(file_path):
     total_issues = 0
     
     try:
-        with open(file_path) as f:
+        with open(file_path, 'r', encoding='utf-8') as f:
             sarif_data = json.load(f)
             for run in sarif_data.get('runs', []):
                 for result in run.get('results', []):
