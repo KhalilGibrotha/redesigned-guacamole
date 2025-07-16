@@ -59,7 +59,7 @@ def main():
     # Get environment variables
     summary_file = os.getenv('GITHUB_STEP_SUMMARY')
     if not summary_file:
-        print("ERROR: GITHUB_STEP_SUMMARY environment variable not set")
+        print("ERROR: GITHUB_STEP_SUMMARY environment variable not set", file=sys.stderr)
         sys.exit(1)
     
     reports_dir = './reports'
