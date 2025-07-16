@@ -1,35 +1,88 @@
-# Makefile for Ansible project linting and validation
+# Modern Documentation Automation Makefile
+# Dynamic discovery, processing, and publishing
 
+<<<<<<< HEAD
 .PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup
+=======
+.PHONY: help lint test install-tools clean run-full convert-templates-dynamic convert-markdown discover-enhanced test-confluence validate-confluence-page debug-conversion verify-html clean-conversion check-deps
+>>>>>>> main
 
 # Default target
 help:
-	@echo "Available targets:"
+	@echo "🚀 Modern Documentation Automation"
+	@echo ""
+	@echo "🎯 PRIMARY WORKFLOW:"
+	@echo "  run-full         - Complete automation (recommended) ✅"
+	@echo ""
+	@echo "🔧 INDIVIDUAL STEPS:"
+	@echo "  convert-templates-dynamic - Dynamic template discovery and conversion"
+	@echo "  convert-markdown - Convert markdown files to HTML"  
+	@echo "  discover-enhanced - Show discovered documentation structure"
+	@echo ""
+	@echo "🔍 CONFLUENCE INTERACTION:"
+	@echo "  test-confluence  - Test Confluence connectivity"
+	@echo "  validate-confluence-page - Validate specific page content"
+	@echo ""
+	@echo "�️ DEVELOPMENT:"
 	@echo "  lint             - Run all linting checks"
-	@echo "  lint-yaml        - Run yamllint only"
-	@echo "  lint-ansible     - Run ansible-lint only"
-	@echo "  fix              - Auto-fix some linting issues"
-	@echo "  install-tools    - Install required linting tools"
-	@echo "  install-rhel-prereqs - Install RHEL/CentOS prerequisites"
-	@echo "  install-rhel-dnf-only - Install tools via DNF only (restricted environments)"
-	@echo "  install-ubuntu-apt-only - Install tools via APT only (restricted environments)"
+	@echo "  test             - Ansible syntax validation"
+	@echo "  install-tools    - Install required dependencies"
+	@echo "  debug-conversion - Debug conversion issues"
+	@echo "  verify-html      - Verify HTML generation"
+	@echo ""
+	@echo "🧹 MAINTENANCE:"
+	@echo "  clean            - Remove temporary files"
+	@echo "  clean-conversion - Clean conversion artifacts"
 	@echo "  test             - Run ansible playbook syntax check"
 	@echo "  test-syntax      - Comprehensive syntax validation"
 	@echo "  sanity-check     - Quick sanity checks for development"
 	@echo "  security-check   - Security validation"
 	@echo "  validate-templates - Validate template structure"
+	@echo ""
+	@echo "🛠️  Installation & Setup:"
+	@echo "  install-tools    - Install required linting tools"
+	@echo "  install-rhel-prereqs - Install RHEL/CentOS prerequisites"
+	@echo "  install-rhel-dnf-only - Install tools via DNF only (restricted environments)"
+	@echo "  install-ubuntu-apt-only - Install tools via APT only (restricted environments)"
 	@echo "  check-os         - Display OS and compatibility info"
 	@echo "  check-deps       - Check if required dependencies are installed"
 	@echo "  test-compatibility - Run comprehensive compatibility test"
 	@echo "  secure-setup     - Set up credentials securely with ansible-vault"
-	@echo "  debug-conversion - Debug markdown to HTML conversion issues"
+	@echo ""
+	@echo "📚 Documentation Workflow (Primary):"
+	@echo "  run-full         - Complete dynamic workflow with publishing ✅"
+	@echo "  run-dynamic-publish - Dynamic discovery + conversion + publishing ✅"
+	@echo "  convert-templates-dynamic - Dynamic template discovery and conversion ✅"
+	@echo "  convert-markdown - Convert markdown files to HTML"
+	@echo "  convert-all      - Complete conversion workflow"
+	@echo "  discover-enhanced - Enhanced documentation discovery"
+	@echo ""
+	@echo "🔄 Individual Playbook Execution:"
+	@echo "  run-validate     - Validate environment"
+	@echo "  run-templates    - Convert templates"
+	@echo "  run-html         - Convert to HTML"
+	@echo "  run-publish      - Publish to Confluence"
+	@echo ""
+	@echo "🧹 Maintenance:"
 	@echo "  clean            - Remove temporary files"
+	@echo "  clean-conversion - Clean conversion artifacts"
+	@echo "  verify-html      - Verify HTML generation"
+	@echo "  debug-conversion - Debug markdown to HTML conversion issues"
+	@echo ""
+	@echo "🔄 Repository & Legacy:"
+	@echo "  sync-repos       - Synchronize documentation repositories"
+	@echo "  run-legacy-full  - Run legacy complete workflow"
+	@echo "  run-legacy       - Run legacy playbook"
 	@echo ""
 	@echo "📋 Status Legend:"
 	@echo "  ✅ = Fully tested and production ready"  
 	@echo "  ⚠️  = Work in progress / experimental"
 	@echo ""
+<<<<<<< HEAD
 	@echo "⚠️  Note: CI/CD templates are experimental"
+=======
+	@echo "💡 Recommended workflow: make run-full"
+>>>>>>> main
 
 # Install required linting tools
 install-tools:
@@ -599,71 +652,19 @@ test-pandoc:
 	@cat /tmp/test.html
 	@rm -f /tmp/test.md /tmp/test.html
 
-# Confluence Documentation Conversion Targets
-# These targets are used by the Ansible playbook for markdown to HTML conversion
-
-convert-templates-nested:
-	@echo "🔄 Converting nested templates to markdown..."
-	@mkdir -p ~/tmp
-	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering main automation_hub page..."; \
-		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md failed"; \
-		echo "   📝 Rendering direct children..."; \
-		for template in docs/automation_hub/*.j2; do \
-			if [ -f "$$template" ]; then \
-				basename=$$(basename $$template .j2); \
-				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
-					echo "      � Rendering $$basename..."; \
-					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename failed"; \
-				fi; \
-			fi; \
-		done; \
-		echo "   📝 Rendering nested sections..."; \
-		for nested_dir in docs/automation_hub/*/; do \
-			if [ -d "$$nested_dir" ]; then \
-				section_name=$$(basename $$nested_dir); \
-				echo "      📁 Processing $$section_name section..."; \
-				for nested_template in $$nested_dir*.j2; do \
-					if [ -f "$$nested_template" ]; then \
-						nested_basename=$$(basename $$nested_template .j2); \
-						echo "         📄 Rendering $$nested_basename..."; \
-						ansible localhost -m template -a "src=$$nested_template dest=~/tmp/$$nested_basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "         ❌ $$nested_basename failed"; \
-					fi; \
-				done; \
-			fi; \
-		done; \
-		echo "   ✅ Nested template rendering complete"; \
-	else \
-		echo "   ❌ vars/vars.yml not found"; \
-		exit 1; \
-	fi
+# Dynamic Template Conversion (Primary Method)
+# Uses discovery script to dynamically find and process templates
 
 convert-templates-dynamic:
 	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering automation_hub main page..."; \
-		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
-		echo "   📝 Rendering automation_hub child pages..."; \
-		for template in docs/automation_hub/*.j2; do \
-			if [ -f "$$template" ]; then \
-				basename=$$(basename $$template .j2); \
-				if [ "$$basename" != "automation_hub" ] && [ "$$basename" != "macros" ]; then \
-					echo "      📄 Rendering $$basename..."; \
-					ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "      ❌ $$basename template failed"; \
-				fi; \
-			fi; \
-		done; \
-		echo "   ✅ Dynamic template rendering complete"; \
-	else \
-		echo "   ❌ vars/vars.yml not found"; \
-		exit 1; \
-	fi
-	@echo "🔄 Converting Jinja templates to markdown (dynamic discovery)..."
-	@mkdir -p ~/tmp
-	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering automation_hub main page..."; \
-		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		if grep -q "skip_main_page: true" vars/vars.yml; then \
+			echo "   ⏩ Skipping main page (skip_main_page=true in config)"; \
+		else \
+			echo "   📝 Rendering automation_hub main page..."; \
+			ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
+		fi; \
 		echo "   📝 Rendering automation_hub child pages..."; \
 		for template in docs/automation_hub/*.j2; do \
 			if [ -f "$$template" ]; then \
@@ -680,23 +681,17 @@ convert-templates-dynamic:
 		exit 1; \
 	fi
 
+# Legacy template conversion (kept for compatibility)
 convert-templates:
-	@echo "🔄 Converting Jinja templates to markdown..."
+	@echo "🔄 Converting specific templates to markdown (legacy mode)..."
 	@mkdir -p ~/tmp
 	@if [ -f vars/vars.yml ]; then \
-		echo "   📝 Rendering templates with vars.yml and aap.yml..."; \
+		echo "   📝 Rendering core templates with vars.yml and aap.yml..."; \
 		ansible localhost -m template -a "src=docs/automation_hub/automation_hub.j2 dest=~/tmp/automation_hub.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ automation_hub.md template failed"; \
 		ansible localhost -m template -a "src=docs/automation_hub/platform_governance.j2 dest=~/tmp/platform_governance.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_governance.md template failed"; \
 		ansible localhost -m template -a "src=docs/automation_hub/platform_runbook.j2 dest=~/tmp/platform_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ platform_runbook.md template failed"; \
 		ansible localhost -m template -a "src=docs/automation_hub/operator_runbook.j2 dest=~/tmp/operator_runbook.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ operator_runbook.md template failed"; \
 		ansible localhost -m template -a "src=docs/automation_hub/training_enablement.j2 dest=~/tmp/training_enablement.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ training_enablement.md template failed"; \
-		for template in docs/aap_*.j2; do \
-			if [ -f "$$template" ]; then \
-				basename=$$(basename $$template .j2); \
-				echo "   📝 Rendering $$basename..."; \
-				ansible localhost -m template -a "src=$$template dest=~/tmp/$$basename.md" -e @vars/vars.yml -e @vars/aap.yml --connection=local 2>/dev/null || echo "   ❌ $$basename template failed"; \
-			fi; \
-		done; \
 		echo "   ✅ Template rendering complete"; \
 	else \
 		echo "   ❌ vars/vars.yml not found"; \
@@ -723,8 +718,14 @@ convert-markdown:
 		exit 1; \
 	fi
 
+<<<<<<< HEAD
 convert-all: convert-templates convert-markdown
 	@echo "✅ Complete documentation conversion finished (including direct markdown support)"
+=======
+# Updated conversion workflow (using dynamic discovery)
+convert-all: convert-templates-dynamic convert-markdown
+	@echo "✅ Complete documentation conversion finished (using dynamic discovery)"
+>>>>>>> main
 
 verify-html:
 	@echo "🔍 Verifying HTML files..."
@@ -742,9 +743,23 @@ clean-conversion:
 	@rm -rf ~/tmp/main.md ~/tmp/*.md.html ~/tmp/platform_*.md ~/tmp/operator_*.md ~/tmp/training_*.md
 	@echo "   ✅ Cleanup complete"
 
-# Modular Playbook Execution Targets
-run-full:
-	@echo "🚀 Running complete Confluence automation..."
+# Publishing workflow using dynamic discovery
+run-dynamic-publish:
+	@echo "🚀 Running complete dynamic workflow with publishing..."
+	$(MAKE) convert-templates-dynamic
+	$(MAKE) convert-markdown
+	@echo "📊 Generated files:"
+	@ls -la ~/tmp/*.md ~/tmp/*.html 2>/dev/null | head -10 || echo "No files generated"
+	@echo "📋 Publishing to Confluence..."
+	ansible-playbook playbooks/publish_confluence.yml
+
+# Streamlined workflow targets
+run-full: run-dynamic-publish
+	@echo "✅ Complete Confluence automation finished!"
+
+# Legacy workflow (for compatibility)
+run-legacy-full:
+	@echo "🚀 Running legacy complete Confluence automation..."
 	ansible-playbook playbooks/main.yml
 
 run-validate:
@@ -761,10 +776,44 @@ run-html:
 
 run-publish:
 	@echo "☁️  Publishing to Confluence..."
-	ansible-playbook playbooks/04-publish-confluence.yml
+	ansible-playbook playbooks/publish_confluence.yml
 
-run-cleanup:
-	@echo "🧹 Running cleanup..."
-	ansible-playbook playbooks/cleanup.yml
-
+<<<<<<< HEAD
 # End of Makefile
+=======
+run-legacy:
+	@echo "🔄 Running legacy playbook..."
+	ansible-playbook playbook.yml
+
+# Repository synchronization (kept for multi-repo setups)
+sync-repos:
+	@echo "🔄 Synchronizing documentation repositories..."
+	@if [ -f scripts/sync_documentation_repos.py ]; then \
+		python3 scripts/sync_documentation_repos.py; \
+	else \
+		echo "   ℹ️  sync_documentation_repos.py not found - skipping"; \
+	fi
+
+sync-repos-force:
+	@echo "🔄 Force synchronizing documentation repositories..."
+	@if [ -f scripts/sync_documentation_repos.py ]; then \
+		python3 scripts/sync_documentation_repos.py --force; \
+	else \
+		echo "   ℹ️  sync_documentation_repos.py not found - skipping"; \
+	fi
+
+# Discovery and documentation analysis
+discover-enhanced:
+	@echo "� Enhanced documentation discovery..."
+	python3 scripts/discover_docs_enhanced.py
+
+test-confluence:
+	@echo "🔍 Testing Confluence connectivity..."
+	@python3 scripts/confluence_manager.py --action find --title "Automation Hub" || echo "   ❌ Connection failed"
+
+validate-confluence-page:
+	@echo "🔍 Validating Confluence page content..."
+	@python3 scripts/confluence_manager.py --action validate --page-id $(CONFLUENCE_PAGE_ID) || echo "   ❌ Validation failed"
+
+
+>>>>>>> main

@@ -1,0 +1,93 @@
+---
+# Modern Confluence Publishing Playbook
+# Uses enhanced confluence_manager.py for robust publishing
+
+- name: "🚀 Modern Confluence Documentation Publishing"
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  vars_files:
+    - ../vars/vars.yml
+    - ../vars/aap.yml
+
+  tasks:
+    - name: "🔍 Discover documentation structure"
+      ansible.builtin.command: python3 scripts/discover_docs_enhanced.py --format json
+      args:
+        chdir: "/home/gambia/Documents/redesigned-guacamole"
+      register: discovery_result
+
+    - name: "📝 Parse discovery results"
+      ansible.builtin.set_fact:
+        docs_structure: "{{ discovery_result.stdout | from_json }}"
+
+    - name: "📄 Display discovered structure"
+      ansible.builtin.debug:
+        msg: |
+          📚 Discovered Documentation Structure:
+          Main Page: automation_hub.j2
+          Child Pages: {{ docs_structure.automation_hub.children | length }}
+          {% for child in docs_structure.automation_hub.children %}
+          - {{ child.name }} ({{ child.type }})
+          {% endfor %}
+
+    - name: "💾 Save discovery structure for publishing"
+      ansible.builtin.copy:
+        content: "{{ docs_structure | to_nice_json }}"
+        dest: "/tmp/discovered_docs.json"
+
+    - name: "🚀 Publish documentation with enhanced validation"
+      ansible.builtin.command: >
+        python3 scripts/confluence_manager.py
+        --action publish
+        --docs-structure /tmp/discovered_docs.json
+      args:
+        chdir: "/home/gambia/Documents/redesigned-guacamole"
+      register: publishing_result
+
+    - name: "📊 Parse publishing results"
+      ansible.builtin.set_fact:
+        publishing_results: "{{ publishing_result.stdout | from_json }}"
+
+    - name: "📋 Display publishing summary"
+      ansible.builtin.debug:
+        msg: |
+          🎉 Publishing Complete!
+
+          📊 Summary:
+          - Pages Created: {{ publishing_results | selectattr('action', 'equalto', 'created') | list | length }}
+          - Pages Updated: {{ publishing_results | selectattr('action', 'equalto', 'updated') | list | length }}
+          - Pages Skipped: {{ publishing_results | selectattr('action', 'equalto', 'skipped') | list | length }}
+          - Total Pages: {{ publishing_results | length }}
+
+          📄 Published Pages:
+          {% for result in publishing_results %}
+          {% if result.action in ['created', 'updated'] %}
+
+          🔗 {{ result.title }}:
+            - Action: {{ result.action | upper }}
+            - Page ID: {{ result.page_id }}
+            - Version: {{ result.version }}
+            {% if result.action == 'updated' %}
+            - Previous Version: {{ result.previous_version }}
+            {% endif %}
+            - View: {{ result.url }}
+            - Storage View: {{ result.storage_view_url }}
+            {% if result.validation is defined %}
+            - Content Length: {{ result.validation.content_length }}
+            - Content Hash: {{ result.validation.content_hash[:8] }}...
+            {% endif %}
+          {% elif result.action == 'skipped' %}
+
+          ⏩ {{ result.title }}:
+            - Reason: {{ result.reason }}
+            - Page ID: {{ result.page_id }}
+            - Current Version: {{ result.version }}
+          {% endif %}
+          {% endfor %}
+
+    - name: "🧹 Cleanup temporary files"
+      ansible.builtin.file:
+        path: "/tmp/discovered_docs.json"
+        state: absent
+      ignore_errors: true

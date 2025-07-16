@@ -1,0 +1,64 @@
+{%- from 'macros.j2' import oxford_comma_list -%}
+
+# Operator Runbook
+
+**🔧 Operator Procedures - Updated [Auto-generated]**
+
+## Overview
+Detailed operational procedures and troubleshooting guide for platform operators.
+
+## Operator Responsibilities
+
+### 🎯 Primary Functions
+- **System Monitoring**: Continuous monitoring of platform health
+- **Incident Response**: First-line response to alerts and issues
+- **Routine Maintenance**: Scheduled maintenance and updates
+- **Documentation**: Maintaining operational logs and procedures
+
+### 📊 Daily Tasks
+- Morning system health checks
+- Review overnight logs and alerts
+- Monitor job execution metrics
+- Validate backup completion
+- Update operational status
+
+## Operational Procedures
+
+### 🚀 System Startup Procedures
+1. **Pre-startup Checks**: Verify system prerequisites
+2. **Service Startup**: Start services in correct order
+3. **Health Validation**: Confirm all services are operational
+4. **Integration Testing**: Verify external system connectivity
+
+### 🛑 System Shutdown Procedures
+1. **Pre-shutdown Notification**: Alert users of planned downtime
+2. **Graceful Job Termination**: Allow running jobs to complete
+3. **Service Shutdown**: Stop services in reverse order
+4. **Post-shutdown Verification**: Confirm clean shutdown
+
+### 🔄 Restart Procedures
+1. **Impact Assessment**: Evaluate restart requirements
+2. **User Notification**: Communicate restart timeline
+3. **Graceful Restart**: Minimize service disruption
+4. **Validation Testing**: Confirm successful restart
+
+## Troubleshooting Guide
+
+### 🚨 Common Issues
+- **Service Failures**: Service startup and runtime issues
+- **Performance Degradation**: Resource constraints and optimization
+- **Connectivity Problems**: Network and external system issues
+- **Authentication Failures**: User access and permission problems
+
+### 🔍 Diagnostic Procedures
+- Log analysis and error tracking
+- Resource utilization monitoring
+- Network connectivity testing
+- Database performance evaluation
+
+Environment: **{{ env }}**
+Project: **{{ project_name }}**
+
+---
+
+*This operator runbook is part of the Automation Hub operational documentation.*
