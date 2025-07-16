@@ -1196,7 +1196,7 @@ trivy-report:
           if not os.path.exists(report_path):
             with open(summary_file, 'a') as f:
               f.write('| N/A | No report found | The Trivy scan may have failed to produce a report. | N/A |\n')
-            exit()
+            sys.exit()
             
           results = {}
           total_issues = 0
