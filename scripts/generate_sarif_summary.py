@@ -80,7 +80,7 @@ def main():
     
     # Check if reports directory exists
     if not os.path.exists(reports_dir):
-        print(f"WARNING: Reports directory '{reports_dir}' does not exist")
+        print(f"WARNING: Reports directory '{reports_dir}' does not exist", file=sys.stderr)
         with open(summary_file, 'a') as f:
             f.write('## ⚠️ No Reports Found\n')
             f.write('The reports directory was not found. This may indicate that the scanning jobs failed to run or produce artifacts.\n\n')
