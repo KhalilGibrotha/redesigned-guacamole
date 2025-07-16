@@ -23,244 +23,8 @@ on:
         required: false
 
 jobs:
-  # Security: Mask sensitive values across all jobs
-  setup-security:
-    name: 🔒 Security Setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: 🎭 Mask Sensitive Values
-        run: |
-          echo "🎭 Setting up comprehensive secret masking..."
-          
-          # Mask GitHub-specific secrets
-          echo "::add-mask::${{ secrets.GITHUB_TOKEN }}"
-
-          # Mask Confluence-related secrets if they exist
-          if [ -n "${{ secrets.CONFLUENCE_URL }}" ]; then
-            echo "::add-mask::${{ secrets.CONFLUENCE_URL }}"
-          fi
-          if [ -n "${{ secrets.CONFLUENCE_SPACE }}" ]; then
-            echo "::add-mask::${{ secrets.CONFLUENCE_SPACE }}"
-          fi
-          if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
-            echo "::add-mask::${{ secrets.CONFLUENCE_AUTH }}"
-          fi
-
-          # Mask partial token patterns (first/last chars of tokens) to prevent inference
-          if [ -n "${{ secrets.CONFLUENCE_AUTH }}" ]; then
-            AUTH_PARTIAL=$(echo "${{ secrets.CONFLUENCE_AUTH }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
-            echo "::add-mask::$AUTH_PARTIAL"
-          fi
-          
-          if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
-            TOKEN_PARTIAL=$(echo "${{ secrets.GITHUB_TOKEN }}" | sed 's/\(.\{4\}\).*\(.\{4\}\)/\1****\2/')
-            echo "::add-mask::$TOKEN_PARTIAL"
-          fi
-
-          # GitHub token prefixes (mask any token that starts with these)
-          echo "::add-mask::ghp_"      # Personal access tokens
-          echo "::add-mask::gho_"      # OAuth tokens
-          echo "::add-mask::ghu_"      # User tokens
-          echo "::add-mask::ghs_"      # Server tokens
-          echo "::add-mask::github_pat_"  # Personal access tokens (new format)
-          echo "::add-mask::ghr_"      # Refresh tokens
-          echo "::add-mask::ghs_"      # Server-to-server tokens
-
-          # Atlassian/Confluence token prefixes
-          echo "::add-mask::ATATT"     # Atlassian API tokens
-          echo "::add-mask::ATCTT"     # Confluence tokens
-          echo "::add-mask::ATBT"      # Bitbucket tokens
-          
-          # AWS and cloud provider patterns
-          echo "::add-mask::AKIA"      # AWS Access Key ID prefix
-          echo "::add-mask::ASIA"      # AWS Session Token prefix
-          echo "::add-mask::AROA"      # AWS Role prefix
-          
-          # Authentication header patterns
-          echo "::add-mask::Basic "
-          echo "::add-mask::Bearer "
-          echo "::add-mask::Token "
-          echo "::add-mask::Authorization: "
-          
-          # Generic secret patterns
-          echo "::add-mask::api_key"
-          echo "::add-mask::secret_key"
-          echo "::add-mask::private_key"
-          echo "::add-mask::access_token"
-          echo "::add-mask::refresh_token"
-          echo "::add-mask::client_secret"
-          
-          # SSH key patterns
-          echo "::add-mask::-----BEGIN"
-          echo "::add-mask::-----END"
-          echo "::add-mask::ssh-rsa"
-          echo "::add-mask::ssh-ed25519"
-          
-          # Database and service URLs that might contain credentials
-          echo "::add-mask::://.*:.*@"  # URLs with embedded credentials
-          
-          # Environment variable names that commonly contain secrets
-          echo "::add-mask::PASSWORD="
-          echo "::add-mask::SECRET="
-          echo "::add-mask::TOKEN="
-          echo "::add-mask::KEY="
-          echo "::add-mask::AUTH="
-          
-          echo "✅ Comprehensive secret masking configured successfully"
-          echo "🔒 All GitHub Actions logs will automatically mask these patterns"
-
-  # Quick validation for fast feedback
-  quick-validation:
-    name: ⚡ Quick Validation
-    needs: setup-security
-    runs-on: ubuntu-latest
-
-    outputs:
-      files_yaml: ${{ steps.file-count.outputs.yaml }}
-      files_python: ${{ steps.file-count.outputs.python }}
-      files_shell: ${{ steps.file-count.outputs.shell }}
-      files_markdown: ${{ steps.file-count.outputs.markdown }}
-      files_json: ${{ steps.file-count.outputs.json }}
-      files_dockerfile: ${{ steps.file-count.outputs.dockerfile }}
-      files_javascript: ${{ steps.file-count.outputs.javascript }}
-      files_css: ${{ steps.file-count.outputs.css }}
-      files_xml: ${{ steps.file-count.outputs.xml }}
-      files_sql: ${{ steps.file-count.outputs.sql }}
-      files_terraform: ${{ steps.file-count.outputs.terraform }}
-      files_kubernetes: ${{ steps.file-count.outputs.kubernetes }}
-      files_powershell: ${{ steps.file-count.outputs.powershell }}
-      files_env_files: ${{ steps.file-count.outputs.env_files }}
-
-    steps:
-      - name: 📥 Checkout Code
-        uses: actions/checkout@v4
-
-      - name: � Debug Trigger Information
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          echo "🔍 Workflow Trigger Debug Information:"
-          echo "Event name: ${{ github.event_name }}"
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Full ref: ${{ github.ref }}"
-          echo "Actor: ${{ github.actor }}"
-          echo "Commit SHA: ${{ github.sha }}"
-          echo "Base ref: $BASE_REF"
-          echo "Head ref: $HEAD_REF"
-          echo ""
-          echo "📋 This confirms your branch trigger is working!"
-          echo "✅ Supported patterns:"
-          echo "   - feature/* and feature/** (standard feature branches)"
-          echo "   - ft/* and ft/** (alternative feature prefix)"
-          echo "   - release/* and release/** (release branches)"
-          echo "   - rel/* and rel/** (alternative release prefix)"
-          echo "   - hotfix/* and hotfix/** (hotfix branches)"
-          echo "   - hf/* and hf/** (alternative hotfix prefix)"
-          echo ""
-
-          # Show branch pattern matching validation for all supported prefixes
-          BRANCH_NAME="${{ github.ref_name }}"
-          if [[ "$BRANCH_NAME" == feature/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches feature/* pattern"
-          elif [[ "$BRANCH_NAME" == ft/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches ft/* pattern (alternative feature prefix)"
-          elif [[ "$BRANCH_NAME" == release/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches release/* pattern"
-          elif [[ "$BRANCH_NAME" == rel/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches rel/* pattern (alternative release prefix)"
-          elif [[ "$BRANCH_NAME" == hotfix/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches hotfix/* pattern"
-          elif [[ "$BRANCH_NAME" == hf/* ]]; then
-            echo "✅ Branch '$BRANCH_NAME' matches hf/* pattern (alternative hotfix prefix)"
-          elif [[ "$BRANCH_NAME" == "main" ]] || [[ "$BRANCH_NAME" == "develop" ]]; then
-            echo "✅ Branch '$BRANCH_NAME' is a main development branch"
-          else
-            echo "ℹ️ Branch '$BRANCH_NAME' uses a custom pattern or is not in supported categories"
-          fi
-
-          # Show examples of supported branch names
-          echo ""
-          echo "📝 Examples of supported branch names:"
-          echo "   ✅ feature/user-management"
-          echo "   ✅ feature/auth/login-system"
-          echo "   ✅ ft/user-auth"
-          echo "   ✅ ft/api/user-endpoints"
-          echo "   ✅ release/v1.2.0"
-          echo "   ✅ release/sprint-3"
-          echo "   ✅ rel/v1.1.0"
-          echo "   ✅ hotfix/critical-security-fix"
-          echo "   ✅ hf/auth-bug"
-
-      - name: �📊 Count Files by Type for Conditional Validation
-        id: file-count
-        run: |
-          echo "yaml=$(find . -name '*.yml' -o -name '*.yaml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "python=$(find . -name '*.py' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "shell=$(find . -name '*.sh' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "markdown=$(find . -name '*.md' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "json=$(find . -name '*.json' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "dockerfile=$(find . -name 'Dockerfile*' -o -name '*.dockerfile' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "javascript=$(find . -name '*.js' -o -name '*.ts' | grep -v ".git" | grep -v node_modules | wc -l)" >> $GITHUB_OUTPUT
-          echo "css=$(find . -name '*.css' -o -name '*.scss' -o -name '*.sass' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "xml=$(find . -name '*.xml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "sql=$(find . -name '*.sql' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "terraform=$(find . -name '*.tf' -o -name '*.tfvars' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "kubernetes=$(find . -name '*k8s*.yml' -o -name '*k8s*.yaml' -o -path '*/k8s/*' -name '*.yml' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "powershell=$(find . -name '*.ps1' -o -name '*.psm1' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT
-          echo "env_files=$(find . -name '.env*' -o -name '*.env' | grep -v ".git" | wc -l)" >> $GITHUB_OUTPUT  
-
-      - name: 🧪 Basic Syntax Checks
-        run: |
-          echo "🔍 Running quick syntax validation..."
-
-          # Check for basic YAML syntax
-          echo "Checking YAML files..."
-          find . -name "*.yml" -o -name "*.yaml" | head -20 | while read file; do
-            if [ "$file" != "./vars/vars.yml" ]; then  # Skip encrypted file
-              python3 -c "import yaml; yaml.safe_load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
-            fi
-          done
-
-          # Check for basic JSON syntax
-          echo "Checking JSON files..."
-          find . -name "*.json" | head -10 | while read file; do
-            python3 -c "import json; json.load(open('$file'))" && echo "✅ $file" || echo "❌ $file"
-          done
-
-          # Check for executable permissions on shell scripts
-          echo "Checking shell script permissions..."
-          find . -name "*.sh" -not -executable | while read file; do
-            echo "⚠️ $file may need executable permissions"
-          done
-
-      - name: 📊 Repository Statistics
-        run: |
-          echo "## 📊 Repository Statistics" >> $GITHUB_STEP_SUMMARY
-          echo "| File Type | Count | Linter Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|-------|---------------|" >> $GITHUB_STEP_SUMMARY
-          echo "| YAML files | ${{ steps.file-count.outputs.yaml }} | ${{ steps.file-count.outputs.yaml != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Markdown files | ${{ steps.file-count.outputs.markdown }} | ${{ steps.file-count.outputs.markdown != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Python files | ${{ steps.file-count.outputs.python }} | ${{ steps.file-count.outputs.python != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Shell scripts | ${{ steps.file-count.outputs.shell }} | ${{ steps.file-count.outputs.shell != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| JSON files | ${{ steps.file-count.outputs.json }} | ${{ steps.file-count.outputs.json != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Dockerfiles | ${{ steps.file-count.outputs.dockerfile }} | ${{ steps.file-count.outputs.dockerfile != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Terraform files | ${{ steps.file-count.outputs.terraform }} | ${{ steps.file-count.outputs.terraform != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| JavaScript/TypeScript | ${{ steps.file-count.outputs.javascript }} | ${{ steps.file-count.outputs.javascript != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Kubernetes | ${{ steps.file-count.outputs.kubernetes }} | ${{ steps.file-count.outputs.kubernetes != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| CSS/SCSS | ${{ steps.file-count.outputs.css }} | ${{ steps.file-count.outputs.css != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| XML files | ${{ steps.file-count.outputs.xml }} | ${{ steps.file-count.outputs.xml != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SQL files | ${{ steps.file-count.outputs.sql }} | ${{ steps.file-count.outputs.sql != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| PowerShell | ${{ steps.file-count.outputs.powershell }} | ${{ steps.file-count.outputs.powershell != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment files | ${{ steps.file-count.outputs.env_files }} | ${{ steps.file-count.outputs.env_files != '0' && '✅ Will lint' || '⏸️ Skipped' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🎯 **Smart Linting**: Only relevant linters will run based on file presence" >> $GITHUB_STEP_SUMMARY
-
-  # Enhanced linting with Super Linter
   super-linter:
     name: 🔍 Super Linter
-    needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
 
     permissions:
@@ -320,198 +84,6 @@ jobs:
           fi
 
           echo "🎯 Super Linter will auto-detect all configuration files at repo root"
-
-      - name: 🎯 Generate Dynamic Super Linter Configuration
-        id: generate-config
-        run: |
-          echo "🎯 Generating dynamic Super Linter configuration based on detected file types..."
-          
-          # Create dynamic configuration file
-          cat > .github/super-linter-dynamic.env << EOF
-          # === DYNAMIC SUPER LINTER CONFIGURATION ===
-          # Generated based on file detection results
-          # Only includes linters for file types that exist in the repository
-          
-          # Core settings (always set)
-          VALIDATE_ALL_CODEBASE=true
-          DEFAULT_BRANCH=${{ steps.config.outputs.default_branch }}
-          CREATE_LOG_FILE=true
-          LOG_LEVEL=INFO
-          IGNORE_GITIGNORED_FILES=true
-          ACTIONS_RUNNER_DEBUG=false
-          ACTIONS_STEP_DEBUG=false
-          SUPPRESS_POSSUM=true
-          MULTI_STATUS=true
-          DISABLE_ERRORS=false
-          
-          # Security (always enabled)
-          VALIDATE_GITLEAKS=true
-          VALIDATE_GITHUB_ACTIONS=true
-          
-          EOF
-          
-          # Only add VALIDATE_* variables for file types that exist (count > 0)
-          echo "📊 File detection results:"
-          
-          # YAML files (includes Ansible)
-          if [ "${{ needs.quick-validation.outputs.files_yaml }}" != "0" ]; then
-            echo "✅ YAML files detected (${{ needs.quick-validation.outputs.files_yaml }}) - enabling YAML and Ansible linters"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_YAML=true
-          VALIDATE_ANSIBLE=true
-          FIX_YAML=true
-          FIX_ANSIBLE=true
-          EOF
-          else
-            echo "⏸️ No YAML files detected - skipping YAML/Ansible linters"
-          fi
-          
-          # Python files
-          if [ "${{ needs.quick-validation.outputs.files_python }}" != "0" ]; then
-            echo "✅ Python files detected (${{ needs.quick-validation.outputs.files_python }}) - enabling Python linters"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_PYTHON_BLACK=true
-          VALIDATE_PYTHON_PYLINT=true
-          VALIDATE_PYTHON_FLAKE8=true
-          VALIDATE_PYTHON_ISORT=true
-          VALIDATE_PYTHON_MYPY=true
-          FIX_PYTHON_BLACK=true
-          FIX_PYTHON_ISORT=true
-          EOF
-          else
-            echo "⏸️ No Python files detected - skipping Python linters"
-          fi
-          
-          # Shell scripts
-          if [ "${{ needs.quick-validation.outputs.files_shell }}" != "0" ]; then
-            echo "✅ Shell scripts detected (${{ needs.quick-validation.outputs.files_shell }}) - enabling Shell linters"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_BASH=true
-          VALIDATE_SHELL_SHFMT=true
-          FIX_SHELL_SHFMT=true
-          EOF
-          else
-            echo "⏸️ No Shell scripts detected - skipping Shell linters"
-          fi
-          
-          # Markdown files
-          if [ "${{ needs.quick-validation.outputs.files_markdown }}" != "0" ]; then
-            echo "✅ Markdown files detected (${{ needs.quick-validation.outputs.files_markdown }}) - enabling Markdown linter"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_MARKDOWN=true
-          FIX_MARKDOWN=true
-          EOF
-          else
-            echo "⏸️ No Markdown files detected - skipping Markdown linter"
-          fi
-          
-          # JSON files
-          if [ "${{ needs.quick-validation.outputs.files_json }}" != "0" ]; then
-            echo "✅ JSON files detected (${{ needs.quick-validation.outputs.files_json }}) - enabling JSON linter"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_JSON=true
-          FIX_JSON=true
-          EOF
-          else
-            echo "⏸️ No JSON files detected - skipping JSON linter"
-          fi
-          
-          # Dockerfile
-          if [ "${{ needs.quick-validation.outputs.files_dockerfile }}" != "0" ]; then
-            echo "✅ Dockerfiles detected (${{ needs.quick-validation.outputs.files_dockerfile }}) - enabling Dockerfile linter"
-            echo "VALIDATE_DOCKERFILE_HADOLINT=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No Dockerfiles detected - skipping Dockerfile linter"
-          fi
-          
-          # JavaScript/TypeScript
-          if [ "${{ needs.quick-validation.outputs.files_javascript }}" != "0" ]; then
-            echo "✅ JavaScript/TypeScript files detected (${{ needs.quick-validation.outputs.files_javascript }}) - enabling JS/TS linters"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_JAVASCRIPT_ES=true
-          VALIDATE_TYPESCRIPT_ES=true
-          EOF
-          else
-            echo "⏸️ No JavaScript/TypeScript files detected - skipping JS/TS linters"
-          fi
-          
-          # CSS/SCSS
-          if [ "${{ needs.quick-validation.outputs.files_css }}" != "0" ]; then
-            echo "✅ CSS/SCSS files detected (${{ needs.quick-validation.outputs.files_css }}) - enabling CSS linter"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_CSS=true
-          FIX_CSS=true
-          EOF
-          else
-            echo "⏸️ No CSS/SCSS files detected - skipping CSS linter"
-          fi
-          
-          # Terraform
-          if [ "${{ needs.quick-validation.outputs.files_terraform }}" != "0" ]; then
-            echo "✅ Terraform files detected (${{ needs.quick-validation.outputs.files_terraform }}) - enabling Terraform linters"
-            cat >> .github/super-linter-dynamic.env << EOF
-          VALIDATE_TERRAFORM_TFLINT=true
-          VALIDATE_TERRAFORM_TERRASCAN=true
-          VALIDATE_TERRAFORM_TFSEC=true
-          EOF
-          else
-            echo "⏸️ No Terraform files detected - skipping Terraform linters"
-          fi
-          
-          # Kubernetes
-          if [ "${{ needs.quick-validation.outputs.files_kubernetes }}" != "0" ]; then
-            echo "✅ Kubernetes files detected (${{ needs.quick-validation.outputs.files_kubernetes }}) - enabling Kubernetes linter"
-            echo "VALIDATE_KUBERNETES_KUBECONFORM=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No Kubernetes files detected - skipping Kubernetes linter"
-          fi
-          
-          # XML files
-          if [ "${{ needs.quick-validation.outputs.files_xml }}" != "0" ]; then
-            echo "✅ XML files detected (${{ needs.quick-validation.outputs.files_xml }}) - enabling XML linter"
-            echo "VALIDATE_XML=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No XML files detected - skipping XML linter"
-          fi
-          
-          # SQL files
-          if [ "${{ needs.quick-validation.outputs.files_sql }}" != "0" ]; then
-            echo "✅ SQL files detected (${{ needs.quick-validation.outputs.files_sql }}) - enabling SQL linter"
-            echo "VALIDATE_SQL=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No SQL files detected - skipping SQL linter"
-          fi
-          
-          # PowerShell files
-          if [ "${{ needs.quick-validation.outputs.files_powershell }}" != "0" ]; then
-            echo "✅ PowerShell files detected (${{ needs.quick-validation.outputs.files_powershell }}) - enabling PowerShell linter"
-            echo "VALIDATE_POWERSHELL=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No PowerShell files detected - skipping PowerShell linter"
-          fi
-          
-          # Environment files
-          if [ "${{ needs.quick-validation.outputs.files_env_files }}" != "0" ]; then
-            echo "✅ Environment files detected (${{ needs.quick-validation.outputs.files_env_files }}) - enabling ENV linter"
-            echo "VALIDATE_ENV=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No Environment files detected - skipping ENV linter"
-          fi
-          
-          # Conditional Checkov (security scanner for IaC)
-          if [ "${{ needs.quick-validation.outputs.files_terraform }}" != "0" ] || [ "${{ needs.quick-validation.outputs.files_dockerfile }}" != "0" ] || [ "${{ needs.quick-validation.outputs.files_kubernetes }}" != "0" ]; then
-            echo "✅ Infrastructure files detected - enabling Checkov security scanner"
-            echo "VALIDATE_CHECKOV=true" >> .github/super-linter-dynamic.env
-          else
-            echo "⏸️ No Infrastructure files detected - skipping Checkov"
-          fi
-          
-          echo ""
-          echo "📄 Generated configuration file contents:"
-          cat .github/super-linter-dynamic.env
-          
-          echo ""
-          echo "✅ Dynamic configuration generated successfully!"
 
       - name: 🔍 Run Super Linter
         id: super-linter
@@ -927,94 +499,9 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-      - name: 📋 Super Linter Summary
-        if: always()
-        run: |
-          echo "## 🔍 Super Linter Results" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.super-linter.outcome }}" = "success" ]; then
-            echo "**Status:** ✅ All linting checks passed!" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**Status:** ❌ Linting issues detected" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "**Validation Scope:** ${{ github.event.inputs.full_scan == 'true' && 'Full codebase' || 'Changed files only' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # Rule violations summary
-          if [ "${{ steps.rule-analysis.outputs.violations_found }}" = "true" ]; then
-            echo "## 📊 Rule Violations Summary" >> $GITHUB_STEP_SUMMARY
-            echo "**Total Violations:** ${{ steps.rule-analysis.outputs.total_violations }}" >> $GITHUB_STEP_SUMMARY
-            echo "**Unique Rules:** ${{ steps.rule-analysis.outputs.unique_rules }}" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Linter | Description | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|-------------|-------|" >> $GITHUB_STEP_SUMMARY
-            
-            # Add the rules table if it exists
-            if [ -f "/tmp/rules_table.md" ]; then
-              cat /tmp/rules_table.md >> $GITHUB_STEP_SUMMARY
-            fi
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Legend:** 🔴 Error | 🟡 Warning | 🔵 Info | ⚠️ General | 📊 Total" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          # Auto-fix summary
-          if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
-            echo "## 🤖 Auto-fixes Applied" >> $GITHUB_STEP_SUMMARY
-            echo "**Total Fixes:** ${{ steps.autofix-analysis.outputs.total_fixes }} changes" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Category | Fixes Applied |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|---------------|" >> $GITHUB_STEP_SUMMARY
-            echo "| 📄 YAML | ${{ steps.autofix-analysis.outputs.yaml_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| 🎭 Ansible | ${{ steps.autofix-analysis.outputs.ansible_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| 🐍 Python | ${{ steps.autofix-analysis.outputs.python_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| 🐚 Shell/Bash | ${{ steps.autofix-analysis.outputs.shell_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| 📝 Markdown | ${{ steps.autofix-analysis.outputs.markdown_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| 📋 JSON | ${{ steps.autofix-analysis.outputs.json_fixes }} |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **Auto-fixes have been committed to the branch**" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## ✨ Code Quality Status" >> $GITHUB_STEP_SUMMARY
-            echo "✅ **No auto-fixes needed - code already compliant!**" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          echo "**Enabled Linters:**" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ YAML (yamllint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Ansible (ansible-lint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          # Compute status icons for Shell/Bash and Python linters
-          if [ "${{ needs.quick-validation.outputs.files_shell }}" != "0" ]; then
-            shell_status="✅"
-            shell_autofix="[🤖 auto-fix enabled]"
-          else
-            shell_status="⏸️"
-            shell_autofix=""
-          fi
-          if [ "${{ needs.quick-validation.outputs.files_python }}" != "0" ]; then
-            python_status="✅"
-            python_autofix="[🤖 auto-fix enabled]"
-          else
-            python_status="⏸️"
-            python_autofix=""
-          fi
-          if [ "${{ steps.autofix-analysis.outputs.autofix_needed }}" = "true" ]; then
-            [ "${{ needs.quick-validation.outputs.files_shell }}" != "0" ] && shell_autofix="🤖 auto-fix enabled" || shell_autofix=""
-            [ "${{ needs.quick-validation.outputs.files_python }}" != "0" ] && python_autofix="🤖 auto-fix enabled" || python_autofix=""
-          else
-            shell_autofix=""
-            python_autofix=""
-          fi
-          echo "- $shell_status Shell/Bash (shellcheck, shfmt) $shell_autofix" >> $GITHUB_STEP_SUMMARY
-          echo "- $python_status Python (black, pylint, flake8) $python_autofix" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Markdown (markdownlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ JSON (jsonlint) ${{ steps.autofix-analysis.outputs.autofix_needed == 'true' && '🤖 auto-fix enabled' || '' }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Dockerfile (hadolint)" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ GitHub Actions (actionlint)" >> $GITHUB_STEP_SUMMARY
-
   # Enhanced security scanning
   security:
     name: 🛡️ Security Scan
-    needs: [setup-security, quick-validation]
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -1032,6 +519,20 @@ jobs:
         with:
           sarif_file: devskim-results.sarif
 
+      - name: ☢️ Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@v0.10.0
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: 📤 Upload Trivy Scan Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
       - name: 🔐 Advanced Secret Detection
         run: |
           echo "🔍 Running security validation..."
@@ -1070,61 +571,43 @@ jobs:
           echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
           echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
 
-  # Enhanced Ansible validation
   ansible-syntax-check:
-    name: 🎭 Ansible Validation
-    needs: [setup-security, quick-validation]
+    name:  Ansible Syntax Check
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      - name: 🔧 Set up Python
+      - name: 🔧 Set up Python & Install Dependencies
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
-
-      - name: 📦 Install Ansible
-        run: |
+      - run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install ansible-lint # We only need ansible-lint
 
-      - name: 🎭 Ansible Lint
+      - name: 🎭 Run Ansible Lint
+        id: lint # Give this step an ID to reference its outcome
         run: |
-          echo "🔍 Running Ansible-specific validation..."
+          # This single command lints all files, respects .ansible-lint config,
+          # and creates the SARIF report.
+          ansible-lint --sarif-file=ansible-results.sarif
+        continue-on-error: true # Allow the workflow to continue to the upload step
 
-          # Run ansible-lint with custom config if it exists
-          if [ -f .ansible-lint ]; then
-            echo "Using custom .ansible-lint configuration"
-            ansible-lint .
-          else
-            echo "Using default ansible-lint configuration"
-            ansible-lint --exclude .github/ .
-          fi
+      - name: 📤 Upload Ansible-Lint SARIF Report
+        if: always() # Always run this step to upload the report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ansible-lint-results
+          path: ansible-results.sarif
 
-      - name: 🧪 Ansible Syntax Check
+      - name: 📋 Check Linting Results
+        if: steps.lint.outcome == 'failure'
         run: |
-          echo "🧪 Running Ansible syntax checks..."
-
-          # Check main playbooks
-          for playbook in playbook.yml playbooks/*.yml; do
-            if [ -f "$playbook" ]; then
-              echo "Checking: $playbook"
-              ansible-playbook --syntax-check "$playbook" || echo "❌ Syntax error in $playbook"
-            fi
-          done
-
-      - name: 📋 Ansible Summary
-        run: |
-          echo "## 🎭 Ansible Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Ansible lint completed**" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Syntax validation completed**" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Playbooks checked:**" >> $GITHUB_STEP_SUMMARY
-          find . -name "*.yml" -path "./playbooks/*" -o -name "playbook.yml" | while read file; do
-            echo "- \`$file\`" >> $GITHUB_STEP_SUMMARY
-          done
+          echo "❌ Ansible-lint found issues."
+          exit 1 # Explicitly fail the job if the linting step failed
+        continue-on-error: true # Allow the workflow to continue even if linting fails
 
   publish:
     name: 🚀 Publish to Confluence
@@ -1146,54 +629,87 @@ jobs:
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 
-  summary:
-    name: 📋 Pipeline Summary & Quality Report
-    if: always()
-    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, publish]
+# In ci.yml, this replaces all other summary/report jobs
+
+  comprehensive-report:
+    name: 📊 Generate Comprehensive Report
+    # This job runs after all checks are complete
+    needs: [security, ansible-syntax-check]
+    if: always() # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
-      - name: � Checkout Code
-        uses: actions/checkout@v4
+      - name: 📥 Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          # Download all artifacts into a 'reports' directory
+          path: ./reports
+        continue-on-error: true
 
-      - name: 📊 Generate Comprehensive Report
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 📝 Generate Summary from All Reports
         run: |
-          # Determine status based on job results
-          if [ "${{ needs.super-linter.result }}" = "success" ]; then
-            export linting_status="✅ Passed"
-          else
-            export linting_status="❌ Failed"
-          fi
+          import json
+          import os
+          import glob
 
-          if [ "${{ needs.security.result }}" = "success" ]; then
-            export security_status="✅ Passed"
-          else
-            export security_status="❌ Failed"
-          fi
+          summary_file = os.getenv('GITHUB_STEP_SUMMARY')
+          reports_dir = './reports'
+          overall_total = 0
 
-          if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-            export ansible_status="✅ Passed"
-          else
-            export ansible_status="❌ Failed"
-          fi
+          # Helper function to parse a SARIF file and return a formatted string
+          def parse_sarif(file_path):
+              if not os.path.exists(file_path):
+                  return "| N/A | No report found | This scan may have failed to produce a report. | N/A |\n", 0
 
-          # Determine overall status
-          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] \
-          && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-          export overall_status="✅ All Checks Passed"
-          else
-            export overall_status="❌ Some Checks Failed"
-          fi
+              report_md = ""
+              results = {}
+              total_issues = 0
+              with open(file_path) as f:
+                  sarif_data = json.load(f)
+                  for run in sarif_data.get('runs', []):
+                      for result in run.get('results', []):
+                          total_issues += 1
+                          rule_id = result['ruleId']
+                          message = result['message']['text']
+                          level = result.get('level', 'warning').upper()
+                          key = (level, rule_id, message)
+                          results[key] = results.get(key, 0) + 1
+              
+              if not results:
+                  report_md += "| ✅ | None | No issues found! | 0 |\n"
+              else:
+                  for (level, rule, msg), count in sorted(results.items()):
+                      report_md += f'| {level} | `{rule}` | {msg} | {count} |\n'
+              
+              return report_md, total_issues
 
-          # Generate the report
-          if [ -f "templates/autofix_summary.md" ]; then
-            envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## 📋 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-            echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Linting | $linting_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Security | $security_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Ansible | $ansible_status |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Overall Status:** $overall_status" >> $GITHUB_STEP_SUMMARY
-          fi
+          # --- Process Each Report ---
+          all_reports = {
+              "Trivy Vulnerability Scan": os.path.join(reports_dir, 'trivy-results', 'trivy-results.sarif'),
+              "Ansible Lint": os.path.join(reports_dir, 'ansible-lint-results', 'ansible-lint-results.sarif')
+              # Add other tools here as you generate more SARIF files
+          }
+          
+          for tool_name, report_path in all_reports.items():
+              with open(summary_file, 'a') as f:
+                  f.write(f'## {tool_name} Report\n')
+                  f.write('| Severity | Rule ID | Description | Total |\n')
+                  f.write('|----------|---------|-------------|-------|\n')
+              
+              report_content, issue_count = parse_sarif(report_path)
+              overall_total += issue_count
+              
+              with open(summary_file, 'a') as f:
+                  f.write(report_content)
+                  f.write('\n')
+
+          # --- Final Summary ---
+          with open(summary_file, 'a') as f:
+            f.write('---\n')
+            f.write(f'### Grand Total of All Issues Found: {overall_total}\n')
+
+        shell: python
