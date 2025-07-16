@@ -23,12 +23,23 @@ on:
       - 'hf/**'          # hf/critical-bug (alternative prefix)
       - 'hf/*'           # hf/critical-bug (alternative prefix)
 
+# Grant all permissions needed by the reusable workflow
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+  security-events: write
+  actions: read
+  # I've commented these out since they are not needed in this context:
+  # pull-requests: write
+  # issues: write
+  # checks: write
+
 jobs:
   test_the_reusable_workflow:
-    # This job calls the *other* workflow file in this same repo
     uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/ci.yml@main
-
-    # It passes the secrets needed for the test run
+    with:
+      branch_name: ${{ github.ref_name }}
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
