@@ -9,18 +9,18 @@ on:
         required: false
         type: boolean
         default: true
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-# Define permissions for the entire workflow
-permissions:
-  contents: read
-  packages: read
-  pull-requests: write
-  statuses: write
-  security-events: write
+      branch_name:
+        description: 'Branch name to checkout'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CONFLUENCE_URL:
+        required: false
+      CONFLUENCE_USER:
+        required: false
+      CONFLUENCE_API_TOKEN:
+        required: false
 
 jobs:
   # Security: Mask sensitive values across all jobs
