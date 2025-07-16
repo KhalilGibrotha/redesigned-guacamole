@@ -1032,6 +1032,20 @@ jobs:
         with:
           sarif_file: devskim-results.sarif
 
+      - name: ☢️ Run Trivy Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: 📤 Upload Trivy Scan Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-results
+          path: trivy-results.sarif
       - name: 🔐 Advanced Secret Detection
         run: |
           echo "🔍 Running security validation..."
@@ -1146,54 +1160,66 @@ jobs:
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 
-  summary:
-    name: 📋 Pipeline Summary & Quality Report
+trivy-report:
+    name: 📊 Generate Trivy Report
+    # This job runs after the security job is complete
+    needs: [security]
+    # This ensures it runs even if the security job fails, so you still get a report
     if: always()
-    needs: [setup-security, quick-validation, super-linter, security, ansible-syntax-check, publish]
     runs-on: ubuntu-latest
     steps:
-      - name: � Checkout Code
-        uses: actions/checkout@v4
+      - name: 📥 Download Trivy results
+        uses: actions/download-artifact@v4
+        with:
+          name: trivy-results
+          path: ./reports
+        continue-on-error: true
 
-      - name: 📊 Generate Comprehensive Report
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      
+      - name: 📝 Generate Trivy Summary Table
         run: |
-          # Determine status based on job results
-          if [ "${{ needs.super-linter.result }}" = "success" ]; then
-            export linting_status="✅ Passed"
-          else
-            export linting_status="❌ Failed"
-          fi
+          import json
+          import os
 
-          if [ "${{ needs.security.result }}" = "success" ]; then
-            export security_status="✅ Passed"
-          else
-            export security_status="❌ Failed"
-          fi
+          summary_file = os.getenv('GITHUB_STEP_SUMMARY')
+          report_path = './reports/trivy-results.sarif'
+          
+          with open(summary_file, 'a') as f:
+            f.write('## ☢️ Trivy Vulnerability Scan Report\n')
+            f.write('| Severity | Rule ID | Description | Total |\n')
+            f.write('|----------|---------|-------------|-------|\n')
 
-          if [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-            export ansible_status="✅ Passed"
-          else
-            export ansible_status="❌ Failed"
-          fi
+          if not os.path.exists(report_path):
+            with open(summary_file, 'a') as f:
+              f.write('| N/A | No report found | The Trivy scan may have failed to produce a report. | N/A |\n')
+            exit()
+            
+          results = {}
+          total_issues = 0
+          with open(report_path) as f:
+            sarif_data = json.load(f)
+            for run in sarif_data.get('runs', []):
+              for result in run.get('results', []):
+                total_issues += 1
+                rule_id = result['ruleId']
+                message = result['message']['text']
+                level = result.get('level', 'warning').upper()
+                key = (level, rule_id, message)
+                results[key] = results.get(key, 0) + 1
 
-          # Determine overall status
-          if [ "${{ needs.super-linter.result }}" = "success" ] && [ "${{ needs.security.result }}" = "success" ] \
-          && [ "${{ needs.ansible-syntax-check.result }}" = "success" ]; then
-          export overall_status="✅ All Checks Passed"
-          else
-            export overall_status="❌ Some Checks Failed"
-          fi
-
-          # Generate the report
-          if [ -f "templates/autofix_summary.md" ]; then
-            envsubst < templates/autofix_summary.md >> $GITHUB_STEP_SUMMARY
-          else
-            echo "## 📋 Pipeline Summary" >> $GITHUB_STEP_SUMMARY
-            echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
-            echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Linting | $linting_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Security | $security_status |" >> $GITHUB_STEP_SUMMARY
-            echo "| Ansible | $ansible_status |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Overall Status:** $overall_status" >> $GITHUB_STEP_SUMMARY
-          fi
+          if not results:
+            with open(summary_file, 'a') as f:
+              f.write('| ✅ | None | No vulnerabilities found! | 0 |\n')
+          else:
+            for (level, rule, msg), count in sorted(results.items()):
+              with open(summary_file, 'a') as f:
+                f.write(f'| {level} | `{rule}` | {msg} | {count} |\n')
+          
+          with open(summary_file, 'a') as f:
+            f.write('\n---\n')
+            f.write(f'**Total Issues Found:** {total_issues}\n')
+        shell: python
