@@ -48,7 +48,7 @@ def parse_sarif(file_path):
     else:
         for (level, rule, msg), count in sorted(results.items()):
             # Escape markdown special characters in message
-            msg_escaped = msg.replace('|', '\\|').replace('\n', ' ').replace('\r', '')
+            msg_escaped = msg.replace('|', '\\|').replace('\n', ' ').replace('\r', '').replace('`', '\\`')
             report_md += f'| {level} | `{rule}` | {msg_escaped} | {count} |\n'
     
     return report_md, total_issues
