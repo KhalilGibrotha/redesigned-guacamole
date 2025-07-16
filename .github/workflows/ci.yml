@@ -1033,7 +1033,7 @@ jobs:
           sarif_file: devskim-results.sarif
 
       - name: ☢️ Run Trivy Vulnerability Scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.10.0
         with:
           scan-type: 'fs'
           ignore-unfixed: true
