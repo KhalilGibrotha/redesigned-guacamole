@@ -607,7 +607,6 @@ jobs:
         run: |
           echo "❌ Ansible-lint found issues."
           exit 1 # Explicitly fail the job if the linting step failed
-        continue-on-error: true # Allow the workflow to continue even if linting fails
 
   publish:
     name: 🚀 Publish to Confluence
@@ -634,7 +633,7 @@ jobs:
   comprehensive-report:
     name: 📊 Generate Comprehensive Report
     # This job runs after all checks are complete
-    needs: [security, ansible-syntax-check]
+    needs: [super-linter, security, ansible-syntax-check]
     if: always() # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
