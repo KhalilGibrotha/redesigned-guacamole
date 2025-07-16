@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 =======
 # Confluence Documentation Automation
 
@@ -80,7 +79,6 @@ make convert-markdown           # Convert to HTML
 make run-publish               # Publish to Confluence
 ```
 
-<<<<<<< HEAD
 These options install available tools through system package managers and provide guidance on what functionality is available without PyPI access.
 
 ### Basic Usage
@@ -174,9 +172,6 @@ confluence-automation/
 ## Development Workflow
 
 ### Daily Development
-=======
-### **Development & Testing**
->>>>>>> ac5ebea51ca19bef2af1c03cbe2fec0d779e8cab
 ```bash
 make help                      # See all available commands
 make check-deps               # Verify dependencies
