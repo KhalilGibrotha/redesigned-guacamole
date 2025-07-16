@@ -5,7 +5,7 @@
     -#}
 
     {%- if items is not defined or items is none or items | length == 0 -%}
-        MISSING VALUES MAKE ALEX SAD
+        {{- '' -}}
     {%- elif items is string -%}
         {{- items -}}
     {%- elif items is iterable and items is not string -%}
