@@ -1127,26 +1127,26 @@ jobs:
           done
 
 publish:
-    name: 🚀 Publish to Confluence
-    # Your conditions for running the job remain the same
-    needs: [super-linter, security, ansible-syntax-check]
-    if: >
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      needs.ansible-syntax-check.result == 'success'
+  name: 🚀 Publish to Confluence
+  # Your conditions for running the job remain the same
+  needs: [super-linter, security, ansible-syntax-check]
+  if: >
+    github.event_name == 'push' &&
+    (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
+    needs.ansible-syntax-check.result == 'success'
 
-    # 💡 1. The 'uses' key now calls your reusable workflow.
-    # The runs-on and steps are removed.
-    # Make sure to use the correct branch name or tag (e.g., @main).
-    uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@main
+  # 💡 1. The 'uses' key now calls your reusable workflow.
+  # The runs-on and steps are removed.
+  # Make sure to use the correct branch name or tag (e.g., @main).
+  uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@main
 
-    # 💡 2. Pass the required secrets to the reusable workflow.
-    secrets:
-      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
-      CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+  # 💡 2. Pass the required secrets to the reusable workflow.
+  secrets:
+    CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+    CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+    CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 
-  # Comprehensive pipeline summary with enhanced reporting
+# Comprehensive pipeline summary with enhanced reporting
   summary:
     name: 📋 Pipeline Summary & Quality Report
     if: always()
