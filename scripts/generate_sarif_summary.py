@@ -66,11 +66,13 @@ def main():
     overall_total = 0
 
     # Define all the reports to process
-    all_reports = {
-        "Trivy Vulnerability Scan": os.path.join(reports_dir, 'trivy-results', 'trivy-results.sarif'),
-        "Ansible Lint": os.path.join(reports_dir, 'ansible-lint-results', 'ansible-lint-results.sarif')
-        # Add other tools here as you generate more SARIF files
-    }
+    # Dynamically discover all SARIF reports to process
+    all_reports = {}
+    for p in glob.glob(os.path.join(reports_dir, '**', '*.sarif'), recursive=True):
+        # Generate a tool name from the parent directory of the report.
+        name = os.path.basename(os.path.dirname(p)).replace('-', ' ').replace('_', ' ').title()
+        if name:
+            all_reports[name] = p
     
     print(f"Processing {len(all_reports)} report types...")
     print(f"Reports directory: {reports_dir}")
