@@ -2,26 +2,6 @@
 name: 🚀 CI/CD Pipeline
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-      # Feature branches - multiple prefixes supported
-      - 'feature/**'     # feature/user-management, feature/auth/login, etc.
-      - 'feature/*'      # feature/login, feature/user-auth, etc.
-      - 'ft/**'          # ft/user-management, ft/auth/login, etc.
-      - 'ft/*'           # ft/login, ft/user-auth, etc.
-      # Release branches
-      - 'release/**'     # release/v1.2.0, release/hotfix/v1.1.1, etc.
-      - 'release/*'      # release/v1.2.0, release/sprint-1, etc.
-      - 'rel/**'         # rel/v1.2.0 (alternative prefix)
-      - 'rel/*'          # rel/v1.2.0 (alternative prefix)
-      # Hotfix branches
-      - 'hotfix/**'      # hotfix/critical-bug, hotfix/security/auth-fix, etc.
-      - 'hotfix/*'       # hotfix/critical-bug, hotfix/auth-fix, etc.
-      - 'hf/**'          # hf/critical-bug (alternative prefix)
-      - 'hf/*'           # hf/critical-bug (alternative prefix)
-
   workflow_dispatch:
     inputs:
       full_scan:
@@ -1158,7 +1138,7 @@ publish:
     # 💡 1. The 'uses' key now calls your reusable workflow.
     # The runs-on and steps are removed.
     # Make sure to use the correct branch name or tag (e.g., @main).
-    uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@feature/file-structure-initial-code
+    uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@main
 
     # 💡 2. Pass the required secrets to the reusable workflow.
     secrets:
