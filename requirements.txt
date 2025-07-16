@@ -3,3 +3,4 @@ ansible-lint
 yamllint
 frontmatter
 mdit_py_plugins.admon
+entrypoints==0.4
