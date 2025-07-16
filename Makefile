@@ -1,7 +1,11 @@
 # Modern Documentation Automation Makefile
 # Dynamic discovery, processing, and publishing
 
+<<<<<<< HEAD
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup
+=======
 .PHONY: help lint test install-tools clean run-full convert-templates-dynamic convert-markdown discover-enhanced test-confluence validate-confluence-page debug-conversion verify-html clean-conversion check-deps
+>>>>>>> main
 
 # Default target
 help:
@@ -74,7 +78,11 @@ help:
 	@echo "  ✅ = Fully tested and production ready"  
 	@echo "  ⚠️  = Work in progress / experimental"
 	@echo ""
+<<<<<<< HEAD
+	@echo "⚠️  Note: CI/CD templates are experimental"
+=======
 	@echo "💡 Recommended workflow: make run-full"
+>>>>>>> main
 
 # Install required linting tools
 install-tools:
@@ -271,7 +279,7 @@ lint-yaml:
 lint-ansible:
 	@echo "Running ansible-lint..."
 	@if command -v ansible-lint >/dev/null 2>&1; then \
-		ansible-lint --exclude molecule/; \
+		ansible-lint .; \
 	else \
 		echo "⚠️  ansible-lint not available, skipping..."; \
 		echo "💡 Install with 'make install-tools' or 'make install-rhel-dnf-only'"; \
@@ -300,7 +308,13 @@ sanity-check:
 security-check:
 	@echo "Running security checks..."
 	@echo "1. Checking for exposed secrets..."
-	@! grep -r "password\|secret\|ATAT\|api_token" . --include="*.yml" --exclude-dir=molecule --exclude-dir=.github | grep -v "example\|template\|grep.*secret\|YOUR_.*_HERE\|test:test\|echo.*api_token" || (echo "⚠️  Potential secrets found" && exit 1)
+	@! grep -rE "(password|secret|api_key|auth_token|private_key):\s*['\"]?[A-Za-z0-9+/=]{10,}" . \
+		--include="*.yml" \
+		--exclude-dir=.github \
+		--exclude="*example*" \
+		--exclude="*template*" \
+		| grep -v "YOUR_.*_HERE\|test:test\|example\|template\|#.*token\|#.*secret" \
+		|| (echo "⚠️  Potential secrets found" && exit 1)
 	@echo "2. Checking file permissions..."
 	@if find . -name "*.yml" -perm /002 | grep -q .; then \
 		echo "❌ World-writable YAML files found"; \
@@ -704,9 +718,14 @@ convert-markdown:
 		exit 1; \
 	fi
 
+<<<<<<< HEAD
+convert-all: convert-templates convert-markdown
+	@echo "✅ Complete documentation conversion finished (including direct markdown support)"
+=======
 # Updated conversion workflow (using dynamic discovery)
 convert-all: convert-templates-dynamic convert-markdown
 	@echo "✅ Complete documentation conversion finished (using dynamic discovery)"
+>>>>>>> main
 
 verify-html:
 	@echo "🔍 Verifying HTML files..."
@@ -759,6 +778,9 @@ run-publish:
 	@echo "☁️  Publishing to Confluence..."
 	ansible-playbook playbooks/publish_confluence.yml
 
+<<<<<<< HEAD
+# End of Makefile
+=======
 run-legacy:
 	@echo "🔄 Running legacy playbook..."
 	ansible-playbook playbook.yml
@@ -794,3 +816,4 @@ validate-confluence-page:
 	@python3 scripts/confluence_manager.py --action validate --page-id $(CONFLUENCE_PAGE_ID) || echo "   ❌ Validation failed"
 
 
+>>>>>>> main

@@ -1,5 +1,8 @@
 # Confluence Documentation Automation - Git Ignore
 
+# Testing script
+scripts/test_confluence_auth.py
+
 # Temporary files
 *.tmp
 *.temp
@@ -15,6 +18,9 @@ secrets.yml
 vault.yml
 .vault_pass
 .vault_pass_*
+
+# Allow example files for sensitive configurations
+!vars/vars.yml.example
 
 # Ansible specific
 *.retry
@@ -76,10 +82,6 @@ vars/vars.yml
 .env
 .secrets
 
-# Molecule
-.molecule/
-.cache/
-
 # Testing
 .tox/
 .coverage
@@ -92,3 +94,7 @@ docs/_build/
 # Backup files
 *.bak
 *.backup
+
+# Allow CI/CD workflow files and configurations
+!.github/**
+confluence_test.code-workspace

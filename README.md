@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 # Confluence Documentation Automation
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -514,3 +516,4 @@ git add . && git commit -m "Update documentation" && git push
 
 > **💡 Pro Tip**: The entire workflow is now just one command: `make run-full`. Everything else is automatic! 🎯
 >>>>>>> ac5ebea51ca19bef2af1c03cbe2fec0d779e8cab
+>>>>>>> main
