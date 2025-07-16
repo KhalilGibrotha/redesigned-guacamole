@@ -1,3 +1,5 @@
 ansible-core>=2.12
 ansible-lint
 yamllint
+frontmatter
+mdit_py_plugins.admon
