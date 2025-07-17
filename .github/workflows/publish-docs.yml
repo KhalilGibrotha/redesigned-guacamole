@@ -46,7 +46,12 @@ jobs:
       - name: 📦 Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ansible jinja2 requests markdown beautifulsoup4
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            # Fallback to manual installation
+            pip install ansible jinja2 requests markdown beautifulsoup4
+          fi
           
           # Install pandoc for document conversion
           sudo apt-get update
