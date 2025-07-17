@@ -23,7 +23,7 @@ on:
         required: false
 
 jobs:
-  # Job to detect what types of files have changed for optimized execution
+  # Job to detect what types of files have changed
   detect-changes:
     name: 🔍 Detect File Changes
     runs-on: ubuntu-latest
@@ -44,6 +44,41 @@ jobs:
         id: changes
         with:
           filters: |
+            docs:
+              - 'docs/**'
+              - '*.md'
+              - 'README*'
+            ansible:
+              - 'playbooks/**'
+              - 'roles/**'
+              - 'inventory/**'
+              - 'vars/**'
+              - '*.yml'
+              - '*.yaml'
+              - '.ansible-lint'
+              - 'ansible.cfg'
+            python:
+              - '**/*.py'
+              - 'requirements*.txt'
+              - 'pyproject.toml'
+              - '.flake8'
+              - '.pylintrc'
+            workflows:
+              - '.github/workflows/**'
+              - '.github/super-linter*'
+            code:
+              - '**/*.py'
+              - '**/*.yml'
+              - '**/*.yaml'
+              - '**/*.sh'
+              - '**/*.json'
+              - '.github/workflows/**'
+
+  ansible-syntax-check:
+    name: 🎭 Ansible Syntax Check
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ansible-changed == 'true' || inputs.full_scan == true
             docs:
               - 'docs/**'
               - '*.md'
@@ -414,6 +449,273 @@ jobs:
 
           echo "✅ Auto-fixes committed and pushed!"
 
+      - name: 🧹 Sanitize Super Linter Logs
+        if: always()
+        run: |
+          echo "🧹 Starting log sanitization process..."
+          
+          # Check if log file exists and sanitize it
+          if [ -f "super-linter.log" ]; then
+            echo "✅ Super Linter log file found: $(ls -la super-linter.log)"
+            echo "📊 Original log file size: $(wc -l < super-linter.log) lines, $(du -h super-linter.log | cut -f1) size"
+
+            # Create a backup
+            cp super-linter.log super-linter.log.original
+            echo "✅ Backup created: $(ls -la super-linter.log.original)"
+
+            # Enhanced masking - Remove or mask potential sensitive patterns
+            echo "🎭 Applying comprehensive masking rules..."
+            
+            # GitHub token patterns (various formats)
+            sed -i 's/ghp_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/gho_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/ghu_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/ghs_[a-zA-Z0-9]\{36\}/***GITHUB_TOKEN***/g' super-linter.log
+            sed -i 's/github_pat_[a-zA-Z0-9_]\{82\}/***GITHUB_PAT***/g' super-linter.log
+            
+            # Atlassian/Confluence tokens
+            sed -i 's/ATATT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            sed -i 's/ATCTT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            sed -i 's/ATBT[a-zA-Z0-9+/=]\{40,\}/***ATLASSIAN_TOKEN***/g' super-linter.log
+            
+            # Authentication headers and tokens
+            sed -i 's/Basic [a-zA-Z0-9+/=]\{20,\}/Basic ***ENCODED_CREDENTIALS***/g' super-linter.log
+            sed -i 's/Bearer [a-zA-Z0-9+/=]\{20,\}/Bearer ***TOKEN***/g' super-linter.log
+            sed -i 's/Authorization: [^[:space:]]\+/Authorization: ***MASKED***/g' super-linter.log
+            
+            # API keys and secrets (various patterns)
+            sed -i 's/[aA][pP][iI][_-][kK][eE][yY][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{20,\}['\''"]*/API_KEY: ***MASKED***/g' super-linter.log
+            sed -i 's/[sS][eE][cC][rR][eE][tT][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{20,\}['\''"]*/SECRET: ***MASKED***/g' super-linter.log
+            sed -i 's/[pP][aA][sS][sS][wW][oO][rR][dD][_-]*[:=][[:space:]]*['\''"][a-zA-Z0-9+/=]\{8,\}['\''"]*/PASSWORD: ***MASKED***/g' super-linter.log
+            
+            # Generic long base64 patterns that could be credentials (but be careful not to mask normal data)
+            sed -i 's/[a-zA-Z0-9+/=]\{60,\}/***POTENTIAL_ENCODED_DATA***/g' super-linter.log
+            
+            # URLs with embedded credentials
+            sed -i 's|https://[^:]*:[^@]*@|https://***USER***:***PASS***@|g' super-linter.log
+            sed -i 's|http://[^:]*:[^@]*@|http://***USER***:***PASS***@|g' super-linter.log
+            
+            # Common environment variable patterns that might contain secrets
+            sed -i 's/CONFLUENCE_AUTH=[^[:space:]]*/CONFLUENCE_AUTH=***MASKED***/g' super-linter.log
+            sed -i 's/CONFLUENCE_URL=[^[:space:]]*/CONFLUENCE_URL=***MASKED***/g' super-linter.log
+            sed -i 's/GITHUB_TOKEN=[^[:space:]]*/GITHUB_TOKEN=***MASKED***/g' super-linter.log
+            
+            # AWS and other cloud provider keys
+            sed -i 's/AKIA[0-9A-Z]\{16\}/***AWS_ACCESS_KEY***/g' super-linter.log
+            sed -i 's/[0-9a-zA-Z/+]\{40\}/***AWS_SECRET_KEY***/g' super-linter.log
+            
+            # SSH keys
+            sed -i 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/***SSH_PRIVATE_KEY***/g' super-linter.log
+            
+            echo "✅ Masking rules applied successfully"
+            echo "📊 Sanitized log file size: $(wc -l < super-linter.log) lines, $(du -h super-linter.log | cut -f1) size"
+
+            # Verify sanitization by checking for common patterns
+            echo "🔍 Verifying sanitization effectiveness..."
+            potential_leaks=0
+            
+            # Check for remaining sensitive patterns
+            if grep -q "ghp_\|gho_\|ghu_\|ghs_\|github_pat_" super-linter.log; then
+              echo "⚠️ Warning: Potential GitHub tokens still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if grep -q "ATATT\|ATCTT\|ATBT" super-linter.log; then
+              echo "⚠️ Warning: Potential Atlassian tokens still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if grep -qE "Bearer [a-zA-Z0-9+/=]{20,}|Basic [a-zA-Z0-9+/=]{20,}" super-linter.log; then
+              echo "⚠️ Warning: Potential authentication headers still found"
+              potential_leaks=$((potential_leaks + 1))
+            fi
+            
+            if [ $potential_leaks -eq 0 ]; then
+              echo "✅ Sanitization verification passed - no obvious sensitive patterns detected"
+            else
+              echo "⚠️ Sanitization verification found $potential_leaks potential issues - please review"
+            fi
+
+            # Show a safe sample of sanitized content for debugging
+            echo "📋 Sanitized log sample (first 20 lines, excluding any masked content):"
+            head -20 super-linter.log | grep -v "\*\*\*" | head -10 || echo "All sample lines contain masked content"
+            
+            echo "📋 Sanitized log sample (last 10 lines, excluding any masked content):"
+            tail -20 super-linter.log | grep -v "\*\*\*" | head -10 || echo "All sample lines contain masked content"
+            
+          else
+            echo "❌ Super Linter log file not found"
+            echo "📂 Current directory contents:"
+            ls -la
+            echo "📂 Looking for any log files:"
+            find . -name "*.log" -type f 2>/dev/null || echo "No .log files found"
+            
+            # Create an empty log file so upload doesn't fail
+            echo "🔧 Creating placeholder log file for upload"
+            echo "Super Linter log file was not generated or not found." > super-linter.log
+            echo "This may indicate that Super Linter failed early or encountered an error." >> super-linter.log
+            echo "Check the Super Linter step output for more details." >> super-linter.log
+            echo "Generated at: $(date)" >> super-linter.log
+          fi
+
+      - name: � Analyze Linting Rule Violations
+        if: always()
+        id: rule-analysis
+        run: |
+          echo "🔍 Analyzing linting rule violations..."
+
+          if [ -f "super-linter.log" ]; then
+            echo "✅ Super Linter log file found"
+            echo "📊 Log file size: $(wc -l < super-linter.log) lines"
+            
+            # Show sample of log to debug format
+            echo "🔍 First 10 lines of super-linter.log:"
+            head -10 super-linter.log
+            echo ""
+            echo "🔍 Last 10 lines of super-linter.log:"
+            tail -10 super-linter.log
+            echo ""
+            
+            # Extract rule violations and count them
+            echo "Extracting rule violations from logs..."
+
+            # Create temporary files for processing
+            temp_violations="/tmp/violations.txt"
+            temp_descriptions="/tmp/descriptions.txt"
+            temp_counts="/tmp/rule_counts.txt"
+
+            # Extract lines with rule violations (those ending with [rulename])
+            echo "🔍 Looking for lines ending with [rulename]..."
+            grep -E '\[[a-zA-Z0-9_-]+\]$' super-linter.log > "$temp_violations" || echo "No rule violations found in specific format"
+            
+            if [ -s "$temp_violations" ]; then
+              echo "✅ Found $(wc -l < "$temp_violations") violation lines"
+              echo "🔍 Sample violations found:"
+              head -3 "$temp_violations"
+              echo ""
+            else
+              echo "❌ No violations found in expected format"
+              echo "🔍 Searching for alternative patterns..."
+              echo "Lines containing 'shellcheck':"
+              grep -i "shellcheck" super-linter.log | head -3 || echo "None found"
+              echo "Lines containing 'actionlint':"
+              grep -i "actionlint" super-linter.log | head -3 || echo "None found"
+              echo "Lines containing any brackets:"
+              grep '\[.*\]' super-linter.log | head -3 || echo "None found"
+              echo ""
+            fi
+
+            if [ -s "$temp_violations" ]; then
+              echo "Processing violation details..."
+
+              # Process each violation to extract linter, description, and rule
+              while IFS= read -r line; do
+                # Extract the rule/linter name (last item in brackets)
+                rule=$(echo "$line" | sed -E 's/.*\[([a-zA-Z0-9_-]+)\]$/\1/')
+                
+                # Extract the description - different patterns for different linters
+                if [[ "$line" == *"shellcheck reported issue"* ]]; then
+                  # For shellcheck: extract description after the rule code
+                  description=$(echo "$line" | sed -E 's/.*SC[0-9]+:[^:]+:[^:]+:[^:]+: ([^[]+) \[shellcheck\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="shellcheck"
+                elif [[ "$line" == *"expression"* ]]; then
+                  # For actionlint expression warnings
+                  description=$(echo "$line" | sed -E 's/^[^:]*:[^:]*:[^:]*: ([^[]+) \[expression\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="actionlint"
+                else
+                  # For other linters, try to extract description before the rule
+                  description=$(echo "$line" | sed -E 's/^[^:]*:[^:]*:[^:]*: ([^[]+) \[[^]]+\]$/\1/' | sed 's/^ *//' | sed 's/ *$//')
+                  linter="$rule"
+                fi
+
+                # Clean up description - remove extra whitespace and truncate if too long
+                description=$(echo "$description" | sed 's/  */ /g' | cut -c1-80)
+                
+                # If description extraction failed, use a fallback
+                if [[ -z "$description" || "$description" == "$line" ]]; then
+                  description="Rule violation detected"
+                fi
+
+                # Create a combined key for grouping: linter|description
+                echo "${linter}|${description}" >> "$temp_descriptions"
+              done < "$temp_violations"
+
+              # Count occurrences of each linter|description combination
+              sort "$temp_descriptions" | uniq -c | sort -nr > "$temp_counts"
+
+              # Count total violations
+              total_violations=$(wc -l < "$temp_violations")
+              unique_rules=$(wc -l < "$temp_counts")
+
+              echo "Found $total_violations total violations across $unique_rules unique rule types"
+
+              # Generate summary for outputs
+              echo "total_violations=$total_violations" >> $GITHUB_OUTPUT
+              echo "unique_rules=$unique_rules" >> $GITHUB_OUTPUT
+
+              # Create detailed rule breakdown
+              echo "violations_found=true" >> $GITHUB_OUTPUT
+
+              # Generate markdown table data
+              rules_table=""
+              total_count=0
+              
+              while IFS= read -r line; do
+                # Extract count (first field)
+                count=$(echo "$line" | awk '{print $1}')
+                # Extract everything after the count
+                rest=$(echo "$line" | awk '{$1=""; print $0}' | sed 's/^ *//')
+                # Split on pipe character
+                linter=$(echo "$rest" | cut -d'|' -f1)
+                description=$(echo "$rest" | cut -d'|' -f2-)
+                
+                # Determine severity icon based on linter and patterns
+                severity_icon="⚠️"
+                if [[ "$linter" == "shellcheck" ]]; then
+                  if [[ "$description" == *"warning"* ]]; then
+                    severity_icon="🟡"
+                  elif [[ "$description" == *"error"* ]]; then
+                    severity_icon="🔴"
+                  else
+                    severity_icon="🔵"
+                  fi
+                elif [[ "$linter" == "actionlint" ]]; then
+                  severity_icon="🟡"
+                elif [[ "$description" == *"error"* ]] || [[ "$description" == *"security"* ]]; then
+                  severity_icon="🔴"
+                elif [[ "$description" == *"warning"* ]] || [[ "$description" == *"style"* ]]; then
+                  severity_icon="🟡"
+                elif [[ "$description" == *"info"* ]]; then
+                  severity_icon="🔵"
+                fi
+
+                rules_table="$rules_table| $severity_icon **$linter** | $description | $count |\n"
+                total_count=$((total_count + count))
+              done < "$temp_counts"
+
+              # Add total row
+              rules_table="$rules_table| 📊 **TOTAL** | **All violations** | **$total_count** |\n"
+
+              # Save for use in summary step
+              echo -e "$rules_table" > /tmp/rules_table.md
+
+              echo "✅ Rule analysis completed with detailed descriptions"
+            else
+              echo "No rule violations found or different log format"
+              echo "violations_found=false" >> $GITHUB_OUTPUT
+              echo "total_violations=0" >> $GITHUB_OUTPUT
+              echo "unique_rules=0" >> $GITHUB_OUTPUT
+            fi
+
+            # Clean up temp files
+            rm -f "$temp_violations" "$temp_descriptions" "$temp_counts"
+          else
+            echo "⚠️ Super Linter log file not found for analysis"
+            echo "violations_found=false" >> $GITHUB_OUTPUT
+            echo "total_violations=0" >> $GITHUB_OUTPUT
+            echo "unique_rules=0" >> $GITHUB_OUTPUT
+          fi
+
       - name: 📤 Upload Sanitized Super Linter Logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -421,6 +723,15 @@ jobs:
           name: super-linter-logs-sanitized-${{ github.run_id }}
           path: super-linter.log
           retention-days: 30
+          if-no-files-found: warn
+
+      - name: 📤 Upload Original Super Linter Logs (Debug Only)
+        if: always() && github.event.inputs.full_scan == 'true'  # Only upload original logs for full scans
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-linter-logs-original-${{ github.run_id }}
+          path: super-linter.log.original
+          retention-days: 7  # Shorter retention for potentially sensitive logs
           if-no-files-found: warn
 
       - name: 📤 Upload Dynamic Configuration (Debug)
@@ -432,7 +743,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  # Enhanced security scanning - only runs when code changes
+  # Enhanced security scanning
   security:
     name: 🛡️ Security Scan
     runs-on: ubuntu-latest
@@ -468,7 +779,6 @@ jobs:
         with:
           name: trivy-results
           path: trivy-results.sarif
-
       - name: 🔐 Advanced Secret Detection
         run: |
           echo "🔍 Running security validation..."
@@ -507,12 +817,9 @@ jobs:
           echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
           echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
 
-  # Ansible syntax check - only runs when Ansible files change
   ansible-syntax-check:
-    name: 🎭 Ansible Syntax Check
+    name:  Ansible Syntax Check
     runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.ansible-changed == 'true' || inputs.full_scan == true
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -547,30 +854,32 @@ jobs:
           echo "❌ Ansible-lint found issues."
           exit 1 # Explicitly fail the job if the linting step failed
 
-  # Publish job - only runs on main/release/hotfix branches and when docs change
   publish:
     name: 🚀 Publish to Confluence
-    needs: [super-linter, security, ansible-syntax-check, detect-changes]
+    # Your conditions for running the job remain the same
+    needs: [super-linter, security, ansible-syntax-check]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      needs.ansible-syntax-check.result == 'success' &&
-      (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true)
+      needs.ansible-syntax-check.result == 'success'
 
+    # 💡 1. The 'uses' key now calls your local reusable workflow.
+    # The runs-on and steps are removed.
     # Using local workflow instead of external dependency for better reliability.
     uses: ./.github/workflows/publish-docs.yml
 
-    # Pass the required secrets to the reusable workflow.
+    # 💡 2. Pass the required secrets to the reusable workflow.
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 
-  # Comprehensive report - always runs to provide summary
+# In ci.yml, this replaces all other summary/report jobs
+
   comprehensive-report:
     name: 📊 Generate Comprehensive Report
     # This job runs after all checks are complete
-    needs: [super-linter, security, ansible-syntax-check, detect-changes]
+    needs: [super-linter, security, ansible-syntax-check]
     if: always() # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
@@ -598,30 +907,5 @@ jobs:
       - name: 🔧 Checkout Code (for scripts)
         uses: actions/checkout@v4
 
-      - name: 📦 Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          fi
-
       - name: 📝 Generate Summary from All Reports
         run: python scripts/generate_sarif_summary.py
-
-      - name: 📊 Execution Summary
-        if: always()
-        run: |
-          echo "## 🚀 Workflow Execution Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Workflow files changed**: ${{ needs.detect-changes.outputs.workflows-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Any code changed**: ${{ needs.detect-changes.outputs.any-code-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Job Execution Status" >> $GITHUB_STEP_SUMMARY
-          echo "- **Super Linter**: ${{ needs.super-linter.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Security Scan**: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ansible Syntax Check**: ${{ needs.ansible-syntax-check.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}" >> $GITHUB_STEP_SUMMARY
