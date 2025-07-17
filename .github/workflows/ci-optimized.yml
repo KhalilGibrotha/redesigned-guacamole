@@ -422,10 +422,9 @@ jobs:
           path: |
             super-linter.log
             github-super-linter.log
-            /github/workspace/super-linter.log
-            /tmp/lint/super-linter.log
+            .github/super-linter-dynamic.env
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
 
       - name: 📤 Upload Dynamic Configuration (Debug)
         if: always()
