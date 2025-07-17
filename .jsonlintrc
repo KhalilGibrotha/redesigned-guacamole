@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json.schemastore.org/package.json",
+  "name": "json-lint-config",
+  "version": "1.0.0",
+  "description": "JSON linting configuration for the project",
+  "jsonlint": {
+    "comments": false,
+    "trailing_commas": false,
+    "duplicate_keys": false,
+    "sort_keys": false,
+    "ensure_ascii": false,
+    "indent": 2,
+    "separators": [",", ": "],
+    "skipkeys": false,
+    "strict": true
+  },
+  "eslint": {
+    "extends": ["eslint:recommended"],
+    "plugins": ["json-format"],
+    "rules": {
+      "json-format/auto": "error"
+    },
+    "overrides": [
+      {
+        "files": ["*.json"],
+        "rules": {
+          "quotes": ["error", "double"],
+          "quote-props": ["error", "always"],
+          "comma-dangle": ["error", "never"],
+          "semi": ["error", "never"]
+        }
+      }
+    ]
+  },
+  "prettier": {
+    "parser": "json",
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": false,
+    "singleQuote": false,
+    "quoteProps": "preserve",
+    "trailingComma": "none",
+    "bracketSpacing": true,
+    "printWidth": 120,
+    "endOfLine": "lf"
+  }
+}

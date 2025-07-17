@@ -1,0 +1,47 @@
+# ShellCheck configuration for shell script linting
+# https://github.com/koalaman/shellcheck
+
+# Enable all optional checks by default
+# Comment out any you don't want to enforce
+
+# Require variable bracing ${var} instead of $var
+# enable=require-variable-bracing
+
+# Check for POSIX compliance issues
+# enable=check-unassigned-uppercase
+
+# External sources (files included via 'source' or '.')
+# external-sources=true
+
+# Follow source statements to included files
+# source-path=SCRIPTDIR
+
+# Shell dialect to target (bash, sh, dash, ksh)
+shell=bash
+
+# Exclude specific warnings/errors
+# SC1091: Not following sourced files (can't find include files)
+# SC2034: Variable appears unused (false positives with dynamic variables)
+# SC2154: Variable is referenced but not assigned (false positives with inherited variables)
+# SC2164: Use 'cd ... || exit' or 'cd ... || return' in case cd fails
+
+exclude=SC1091,SC2034,SC2154
+
+# Optional: Include directories for sourced files
+# source-path=.:scripts:lib
+
+# Optional: Enable warnings that are disabled by default
+# enable=all
+
+# Severity levels: error, warning, info, style
+# severity=warning
+
+# Output format: gcc, json, tty, checkstyle
+# format=gcc
+
+# Enable/disable specific rule categories
+# enable=deprecation
+# enable=portability
+# enable=security
+# enable=correctness
+# enable=style
