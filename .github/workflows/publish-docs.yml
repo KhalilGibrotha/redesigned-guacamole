@@ -150,12 +150,12 @@ jobs:
             python3 scripts/confluence_publisher.py \
               --dry-run \
               --docs-dir docs \
-              --vars-file vars/aap.yml
+              --vars-file docs/vars.yaml
           else
             echo "🚀 Running in LIVE mode"
             python3 scripts/confluence_publisher.py \
               --docs-dir docs \
-              --vars-file vars/aap.yml \
+              --vars-file docs/vars.yaml \
               --confluence-url "${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" \
               --confluence-user "${{ secrets.CONFLUENCE_USER || 'not-configured' }}" \
               --confluence-token "${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
