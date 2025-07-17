@@ -10,7 +10,7 @@ Features:
 - Extracts YAML frontmatter for Confluence configuration
 - Renders Jinja2 templates with variables from vars.yaml
 - Uploads content to Confluence via REST API
-- Handles image attachments
+- Handles image attachments and uploads
 - Supports dry-run mode
 
 Usage:
@@ -24,6 +24,7 @@ import yaml
 import re
 import requests
 import base64
+import mimetypes
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
 from urllib.parse import urljoin
@@ -37,6 +38,19 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Supported image formats for Confluence
+SUPPORTED_IMAGE_FORMATS = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.webp': 'image/webp',
+    '.bmp': 'image/bmp',
+    '.svg': 'image/svg+xml',
+    '.tiff': 'image/tiff',
+    '.tif': 'image/tiff'
+}
 
 
 class ConfluencePublisher:
@@ -181,6 +195,134 @@ class ConfluencePublisher:
         except Exception as e:
             logger.error(f"❌ Failed to get page by title {title}: {e}")
             return None
+    
+    def upload_attachment(self, page_id: str, file_path: Path, file_name: str = None) -> Optional[Dict]:
+        """
+        Upload an attachment to a Confluence page
+        
+        Args:
+            page_id: The ID of the page to attach to
+            file_path: Path to the file to upload
+            file_name: Optional custom filename (defaults to file_path.name)
+            
+        Returns:
+            Attachment info dict or None if failed
+        """
+        if self.dry_run:
+            logger.info(f"🧪 [DRY RUN] Would upload attachment: {file_path.name}")
+            return {"id": "dry-run-attachment-id", "title": file_path.name}
+        
+        try:
+            if not file_path.exists():
+                logger.error(f"❌ File not found: {file_path}")
+                return None
+                
+            # Check if file format is supported
+            file_ext = file_path.suffix.lower()
+            if file_ext not in SUPPORTED_IMAGE_FORMATS:
+                logger.warning(f"⚠️  Unsupported image format: {file_ext}")
+                return None
+            
+            mime_type = SUPPORTED_IMAGE_FORMATS[file_ext]
+            attachment_name = file_name or file_path.name
+            
+            # Prepare the file for upload
+            with open(file_path, 'rb') as f:
+                files = {
+                    'file': (attachment_name, f, mime_type)
+                }
+                
+                # Remove Content-Type header for file uploads
+                headers = {k: v for k, v in self.session.headers.items() 
+                          if k.lower() != 'content-type'}
+                
+                response = self.session.post(
+                    f"{self.confluence_url}/rest/api/content/{page_id}/child/attachment",
+                    files=files,
+                    headers=headers
+                )
+                
+                if response.status_code == 200:
+                    attachment_data = response.json()
+                    attachment_info = attachment_data['results'][0]
+                    logger.info(f"✅ Uploaded attachment: {attachment_name}")
+                    return attachment_info
+                else:
+                    response.raise_for_status()
+                    
+        except Exception as e:
+            logger.error(f"❌ Failed to upload attachment {file_path.name}: {e}")
+            return None
+    
+    def process_images_in_content(self, content: str, page_id: str, base_path: Path) -> str:
+        """
+        Process images in content, upload them as attachments, and update references
+        
+        Args:
+            content: HTML content with image references
+            page_id: Confluence page ID to attach images to
+            base_path: Base path for resolving relative image paths
+            
+        Returns:
+            Updated content with Confluence attachment references
+        """
+        if self.dry_run:
+            logger.info("🧪 [DRY RUN] Would process images in content")
+            return content
+        
+        # Find all image references in the content
+        img_pattern = r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>'
+        markdown_img_pattern = r'!\[[^\]]*\]\(([^)]+)\)'
+        
+        def replace_image_reference(match, is_markdown=False):
+            if is_markdown:
+                alt_text = match.group(0)[2:match.group(0).find(']')]
+                image_path = match.group(1)
+            else:
+                image_path = match.group(1)
+                alt_text = ""
+            
+            # Skip if it's already a URL
+            if image_path.startswith(('http://', 'https://', '//')):
+                return match.group(0)
+            
+            # Resolve relative path
+            if not Path(image_path).is_absolute():
+                full_image_path = base_path / image_path
+            else:
+                full_image_path = Path(image_path)
+            
+            # Check if image exists and is supported
+            if full_image_path.exists():
+                file_ext = full_image_path.suffix.lower()
+                if file_ext in SUPPORTED_IMAGE_FORMATS:
+                    # Upload the image
+                    attachment_info = self.upload_attachment(page_id, full_image_path)
+                    if attachment_info:
+                        # Create Confluence attachment reference
+                        attachment_id = attachment_info['id']
+                        attachment_name = attachment_info['title']
+                        
+                        if is_markdown:
+                            return f'<ac:image ac:height="400"><ri:attachment ri:filename="{attachment_name}" /></ac:image>'
+                        else:
+                            return f'<ac:image ac:height="400"><ri:attachment ri:filename="{attachment_name}" /></ac:image>'
+                else:
+                    logger.warning(f"⚠️  Unsupported image format: {full_image_path}")
+            else:
+                logger.warning(f"⚠️  Image not found: {full_image_path}")
+            
+            return match.group(0)  # Return original if we can't process
+        
+        # Replace HTML img tags
+        content = re.sub(img_pattern, replace_image_reference, content)
+        
+        # Replace Markdown image syntax
+        content = re.sub(markdown_img_pattern, 
+                        lambda m: replace_image_reference(m, is_markdown=True), 
+                        content)
+        
+        return content
 
 
 class DocumentProcessor:
@@ -398,6 +540,7 @@ def main():
         title = confluence_config.get('title', 'Untitled Document')
         parent_page_id = confluence_config.get('parentPageId')
         
+        # First create/update the page
         page_id = publisher.create_or_update_page(
             space_key=space_key,
             title=title,
@@ -406,7 +549,30 @@ def main():
         )
         
         if page_id:
-            published_count += 1
+            # Process images and update content if necessary
+            original_content = file_info['html_content']
+            base_path = file_info['file_path'].parent
+            
+            # Process images in the content
+            updated_content = publisher.process_images_in_content(
+                original_content, page_id, base_path
+            )
+            
+            # If content was updated with image attachments, update the page again
+            if updated_content != original_content:
+                logger.info(f"🖼️  Updating page with image attachments: {title}")
+                final_page_id = publisher.create_or_update_page(
+                    space_key=space_key,
+                    title=title,
+                    content=updated_content,
+                    parent_page_id=parent_page_id
+                )
+                if final_page_id:
+                    published_count += 1
+            else:
+                published_count += 1
+        else:
+            logger.error(f"❌ Failed to publish: {title}")
     
     # Summary
     if args.dry_run:

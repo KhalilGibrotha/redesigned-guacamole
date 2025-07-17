@@ -1,0 +1,46 @@
+{# 
+   Shared Macros for AAP Documentation Templates
+   These macros provide common functionality across documentation
+#}
+
+{# Generate a section header with consistent formatting #}
+{% macro section_header(title, level=2) -%}
+{% for i in range(level) %}#{% endfor %} {{ title }}
+{%- endmacro %}
+
+{# Create a formatted list from array #}
+{% macro format_list(items, bullet="- ") -%}
+{% for item in items %}{{ bullet }}{{ item }}
+{% endfor %}
+{%- endmacro %}
+
+{# Generate technology stack table #}
+{% macro tech_stack_table(tech_dict) -%}
+| Category | Technologies |
+|----------|-------------|
+{% for category, technologies in tech_dict.items() %}| {{ category.replace('AAP_', '').replace('_TECH', '').title().replace('_', ' ') }} | {{ technologies | join(', ') }} |
+{% endfor %}
+{%- endmacro %}
+
+{# Create a warning callout #}
+{% macro warning(message) -%}
+> ⚠️ **Warning**: {{ message }}
+{%- endmacro %}
+
+{# Create an info callout #}
+{% macro info(message) -%}
+> ℹ️ **Info**: {{ message }}
+{%- endmacro %}
+
+{# Create a success callout #}
+{% macro success(message) -%}
+> ✅ **Success**: {{ message }}
+{%- endmacro %}
+
+{# Format a list with Oxford comma #}
+{% macro oxford_comma_list(items) -%}
+{% if items|length == 1 %}{{ items[0] }}
+{% elif items|length == 2 %}{{ items[0] }} and {{ items[1] }}
+{% else %}{{ items[:-1]|join(', ') }}, and {{ items[-1] }}
+{% endif %}
+{%- endmacro %}
