@@ -1,9 +1,4 @@
 {%- macro oxford_comma_list(items) -%}
-    {#-
-    This macro takes a list of items and returns a string formatted with an Oxford comma.
-    If the input is a single string, it returns the string as is.
-    -#}
-
     {%- if items is not defined or items is none or items | length == 0 -%}
         MISSING VALUES MAKE ALEX SAD
     {%- elif items is string -%}
@@ -12,6 +7,8 @@
         {%- set items = items | list -%}
         {%- if items | length == 1 -%}
             {{- items[0] -}}
+        {%- elif items | length == 2 -%}
+            {{- items[0] ~ ' and ' ~ items[1] -}}
         {%- else -%}
             {{- items[:-1] | join(', ') ~ ', and ' ~ items[-1] -}}
         {%- endif -%}

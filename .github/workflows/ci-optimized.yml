@@ -559,6 +559,9 @@ jobs:
 
     # Using local workflow instead of external dependency for better reliability.
     uses: ./.github/workflows/publish-docs.yml
+    with:
+      target_environment: 'production'
+      dry_run: false
 
     # Pass the required secrets to the reusable workflow.
     secrets:
