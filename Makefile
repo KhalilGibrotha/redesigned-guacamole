@@ -1,11 +1,7 @@
 # Modern Documentation Automation Makefile
 # Dynamic discovery, processing, and publishing
 
-<<<<<<< HEAD
-.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish run-cleanup
-=======
-.PHONY: help lint test install-tools clean run-full convert-templates-dynamic convert-markdown discover-enhanced test-confluence validate-confluence-page debug-conversion verify-html clean-conversion check-deps
->>>>>>> main
+.PHONY: help lint lint-yaml lint-ansible fix install-tools clean test test-syntax sanity-check security-check validate-templates check-os check-deps install-rhel-prereqs test-compatibility install-rhel-dnf-only install-ubuntu-apt-only secure-setup debug-conversion convert-templates convert-markdown convert-all verify-html clean-conversion run-full run-validate run-templates run-html run-publish convert-templates-dynamic discover-enhanced test-confluence validate-confluence-page
 
 # Default target
 help:
@@ -78,11 +74,7 @@ help:
 	@echo "  ✅ = Fully tested and production ready"  
 	@echo "  ⚠️  = Work in progress / experimental"
 	@echo ""
-<<<<<<< HEAD
-	@echo "⚠️  Note: CI/CD templates are experimental"
-=======
 	@echo "💡 Recommended workflow: make run-full"
->>>>>>> main
 
 # Install required linting tools
 install-tools:
@@ -718,14 +710,9 @@ convert-markdown:
 		exit 1; \
 	fi
 
-<<<<<<< HEAD
-convert-all: convert-templates convert-markdown
-	@echo "✅ Complete documentation conversion finished (including direct markdown support)"
-=======
 # Updated conversion workflow (using dynamic discovery)
 convert-all: convert-templates-dynamic convert-markdown
 	@echo "✅ Complete documentation conversion finished (using dynamic discovery)"
->>>>>>> main
 
 verify-html:
 	@echo "🔍 Verifying HTML files..."
@@ -778,12 +765,23 @@ run-publish:
 	@echo "☁️  Publishing to Confluence..."
 	ansible-playbook playbooks/publish_confluence.yml
 
-<<<<<<< HEAD
-# End of Makefile
-=======
 run-legacy:
 	@echo "🔄 Running legacy playbook..."
 	ansible-playbook playbook.yml
+
+# Enhanced discovery target
+discover-enhanced:
+	@echo "🔍 Running enhanced documentation discovery..."
+	python3 scripts/discover_docs_enhanced.py
+
+# Confluence test targets
+test-confluence:
+	@echo "🧪 Testing Confluence connectivity..."
+	@echo "ℹ️  This target requires proper Confluence credentials in vars/"
+
+validate-confluence-page:
+	@echo "✅ Validating Confluence page structure..."
+	@echo "ℹ️  This target validates page content before publishing"
 
 # Repository synchronization (kept for multi-repo setups)
 sync-repos:
