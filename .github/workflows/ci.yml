@@ -303,6 +303,53 @@ jobs:
           
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+          # Enable logging and SARIF output
+          CREATE_LOG_FILE: true
+          OUTPUT_FORMAT: sarif
+          LOG_LEVEL: VERBOSE
+          
+          # Ensure logs are created in accessible location
+          SARIF_RESULTS_FILE_NAME: super-linter-results.sarif
+
+      # Immediately capture Super Linter output while it's fresh
+      - name: 🔍 Capture Super Linter Output (Immediate)
+        if: always()
+        run: |
+          echo "=== Immediate Super Linter Output Capture ==="
+          echo "Timestamp: $(date)"
+          echo "Exit code from Super Linter: ${{ steps.super-linter.outcome }}"
+          echo ""
+          
+          # Show what files exist immediately after Super Linter
+          echo "=== Files in current directory ==="
+          ls -la
+          echo ""
+          
+          # Check for log files immediately
+          echo "=== Super Linter log file status ==="
+          if [ -f "super-linter.log" ]; then
+            echo "✅ super-linter.log found!"
+            echo "Size: $(ls -lh super-linter.log | awk '{print $5}')"
+            echo "Lines: $(wc -l super-linter.log | awk '{print $1}')"
+            echo "Last modified: $(ls -l super-linter.log | awk '{print $6" "$7" "$8}')"
+            echo ""
+            echo "=== Last 10 lines of super-linter.log ==="
+            tail -10 super-linter.log 2>/dev/null || echo "Cannot read super-linter.log"
+          else
+            echo "❌ super-linter.log NOT FOUND"
+          fi
+          echo ""
+          
+          # Check for SARIF files
+          echo "=== SARIF file status ==="
+          if [ -f "super-linter-results.sarif" ]; then
+            echo "✅ super-linter-results.sarif found!"
+            echo "Size: $(ls -lh super-linter-results.sarif | awk '{print $5}')"
+            echo "Lines: $(wc -l super-linter-results.sarif | awk '{print $1}')"
+          else
+            echo "❌ super-linter-results.sarif NOT FOUND"
+          fi
 
       - name: 📊 Analyze Auto-fixes Applied
         if: always()
@@ -414,12 +461,55 @@ jobs:
 
           echo "✅ Auto-fixes committed and pushed!"
 
-      - name: 📤 Upload Sanitized Super Linter Logs
+      # Collect detailed debugging information about log generation
+      - name: � Collect Super Linter Debug Info
+        if: always()
+        run: |
+          echo "=== Super Linter Execution Debug Info ===" | tee debug-info.log
+          echo "Timestamp: $(date)" | tee -a debug-info.log
+          echo "Working Directory: $(pwd)" | tee -a debug-info.log
+          echo "User: $(whoami)" | tee -a debug-info.log
+          echo "" | tee -a debug-info.log
+          
+          echo "=== Log Files Search ===" | tee -a debug-info.log
+          echo "Searching for all .log files:" | tee -a debug-info.log
+          find . -name "*.log" -type f 2>/dev/null | head -20 | tee -a debug-info.log
+          echo "" | tee -a debug-info.log
+          
+          echo "=== SARIF Files Search ===" | tee -a debug-info.log
+          echo "Searching for all .sarif files:" | tee -a debug-info.log
+          find . -name "*.sarif" -type f 2>/dev/null | head -20 | tee -a debug-info.log
+          echo "" | tee -a debug-info.log
+          
+          echo "=== Super Linter Expected Locations ===" | tee -a debug-info.log
+          for location in "super-linter.log" "/tmp/super-linter.log" "/github/workspace/super-linter.log" "super-linter-results.sarif"; do
+            if [ -f "$location" ]; then
+              echo "✅ Found: $location ($(ls -lh "$location" | awk '{print $5}'), $(wc -l "$location" 2>/dev/null | awk '{print $1}') lines)" | tee -a debug-info.log
+              echo "   First 5 lines:" | tee -a debug-info.log
+              head -5 "$location" 2>/dev/null | sed 's/^/   /' | tee -a debug-info.log
+            else
+              echo "❌ Missing: $location" | tee -a debug-info.log
+            fi
+          done
+          echo "" | tee -a debug-info.log
+          
+          echo "=== Super Linter Environment Variables ===" | tee -a debug-info.log
+          env | grep -E "(LINTER|LOG|SARIF)" | sort | tee -a debug-info.log
+          echo "" | tee -a debug-info.log
+          
+          echo "=== Process Information ===" | tee -a debug-info.log
+          echo "Super Linter processes (if any):" | tee -a debug-info.log
+          ps aux | grep -i linter | grep -v grep | tee -a debug-info.log || echo "No active linter processes" | tee -a debug-info.log
+
+      - name: 📤 Upload Super Linter Logs (Enhanced)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: super-linter-logs-sanitized-${{ github.run_id }}
-          path: super-linter.log
+          name: super-linter-logs-enhanced-${{ github.run_id }}
+          path: |
+            super-linter.log
+            super-linter-results.sarif
+            debug-info.log
           retention-days: 30
           if-no-files-found: warn
 
