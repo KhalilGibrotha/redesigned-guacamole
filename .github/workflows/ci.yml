@@ -720,8 +720,28 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: 📝 Generate Summary from All Reports
+      - name: � Ensure reports directory exists and check contents
+        run: |
+          echo "🔍 Checking reports directory..."
+          if [ ! -d "./reports" ]; then
+            echo "⚠️ Creating missing reports directory"
+            mkdir -p ./reports
+          fi
+          
+          echo "📁 Reports directory contents:"
+          ls -la ./reports/ || echo "Reports directory is empty"
+          
+          echo "🔍 Looking for SARIF files:"
+          find ./reports -name "*.sarif" -type f 2>/dev/null || echo "No SARIF files found"
+          
+          echo "📊 Artifact subdirectories:"
+          if [ -d "./reports" ]; then
+            find ./reports -type d -mindepth 1 2>/dev/null || echo "No artifact subdirectories found"
+          fi
+
+      - name: �📝 Generate Summary from All Reports
         run: python scripts/generate_sarif_summary.py
+        continue-on-error: true
 
       - name: 📊 Execution Summary
         if: always()

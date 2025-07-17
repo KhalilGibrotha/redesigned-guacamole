@@ -83,7 +83,31 @@ def main():
         print(f"WARNING: Reports directory '{reports_dir}' does not exist", file=sys.stderr)
         with open(summary_file, 'a') as f:
             f.write('## ⚠️ No Reports Found\n')
-            f.write('The reports directory was not found. This may indicate that the scanning jobs failed to run or produce artifacts.\n\n')
+            f.write('The reports directory was not found. This may indicate that:\n\n')
+            f.write('- The scanning jobs failed to run or produce artifacts\n')
+            f.write('- No artifacts were uploaded from previous jobs\n')
+            f.write('- The workflow configuration needs adjustment\n\n')
+            f.write('**Expected artifacts**: Super Linter logs, SARIF reports, security scan results\n\n')
+        return
+    
+    # Check if any SARIF files exist
+    if not all_reports:
+        print(f"WARNING: No SARIF files found in '{reports_dir}'", file=sys.stderr)
+        with open(summary_file, 'a') as f:
+            f.write('## ⚠️ No SARIF Reports Found\n')
+            f.write(f'The reports directory exists but contains no SARIF files.\n\n')
+            f.write('**Directory contents:**\n')
+            try:
+                for root, dirs, files in os.walk(reports_dir):
+                    level = root.replace(reports_dir, '').count(os.sep)
+                    indent = ' ' * 2 * level
+                    f.write(f'{indent}- {os.path.basename(root)}/\n')
+                    subindent = ' ' * 2 * (level + 1)
+                    for file in files:
+                        f.write(f'{subindent}- {file}\n')
+            except Exception as e:
+                f.write(f'Error listing directory contents: {e}\n')
+            f.write('\n')
         return
     
     # Process each report
