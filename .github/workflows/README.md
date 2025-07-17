@@ -10,7 +10,7 @@ The consolidated pipeline (`ci.yml`) includes:
 1. **⚡ Quick Validation** - Fast syntax checks and file statistics
 2. **🔍 Super Linter** - Comprehensive code quality analysis
 3. **🛡️ Security Scan** - Security vulnerability detection
-4. **🎭 Ansible Validation** - Ansible-specific linting and syntax checks
+4. **🎭 Ansible Validation** - Ansible-specific linting and syntax checks (integrated with Super Linter)
 5. **🧪 Molecule Testing** - Infrastructure testing (skippable)
 6. **🚀 Publishing** - Confluence deployment (conditional)
 

@@ -1,6 +1,13 @@
 # � Comprehensive CI/CD Pipeline with Documentation Publishing
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/Licens### Detailed Execution Flow:
+
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+5. **📊 Comprehensive Report**: Generates detailed execution summary
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failureslow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
@@ -12,7 +19,7 @@ A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automat
 This repository provides **reusable workflows** that any other repository can call to:
 - � **Intelligent Code Analysis**: Dynamic Super Linter with auto-fix capabilities
 - 🛡️ **Security Scanning**: DevSkim, Trivy vulnerability scanning, and secret detection
-- 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting
+- 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting (integrated with Super Linter)
 - � **Documentation Publishing**: Process and publish documentation to Confluence
 - 🚨 **Failure Notifications**: Automatic GitHub issue creation for CI/CD failures
 - 📊 **Comprehensive Reporting**: SARIF output and detailed execution summaries
@@ -101,19 +108,17 @@ graph TD
     C --> D[detect-changes]
     D --> E[super-linter]
     D --> F[security]
-    D --> G[ansible-syntax-check]
-    E --> H[publish]
-    F --> H
-    G --> H
-    H --> I[comprehensive-report]
-    C --> J[notifications.yml]
-    J --> K[GitHub Issue Creation]
+    E --> G[publish]
+    F --> G
+    G --> H[comprehensive-report]
+    C --> I[notifications.yml]
+    I --> J[GitHub Issue Creation]
     
     style A fill:#e1f5fe
     style C fill:#f3e5f5
-    style H fill:#e8f5e8
-    style J fill:#fff3e0
-    style K fill:#ffebee
+    style G fill:#e8f5e8
+    style I fill:#fff3e0
+    style J fill:#ffebee
 ```
 
 ### Detailed Execution Flow:
@@ -145,9 +150,8 @@ graph TD
 
 **Jobs**:
 - `detect-changes`: Analyzes file changes for optimized execution
-- `super-linter`: Intelligent linting with auto-fix capabilities
+- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
 - `security`: DevSkim, Trivy, and secret detection
-- `ansible-syntax-check`: Ansible validation (if applicable)
 - `publish`: Documentation publishing to Confluence
 - `comprehensive-report`: Detailed execution summary
 
@@ -253,8 +257,9 @@ python scripts/confluence_publisher.py
   --vars-file docs/vars.yaml
 
 # Run local linting
-ansible-lint
+python -m py_compile scripts/*.py
 yamllint .
+# Note: ansible-lint is now handled by Super Linter in CI/CD
 ```
 
 ## 📋 Requirements
