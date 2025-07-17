@@ -1,4 +1,10 @@
 ---
+# Project and Environment Information
+project_name: "AAP Documentation Project"
+env: "production"
+database_url: "https://your-database-url.example.com"
+
+# Organization Information
 organization_name: My Big Company
 sub_organization_name: Server Engineering and Operations
 sub_org_objective_title: Strategic Roadmap
