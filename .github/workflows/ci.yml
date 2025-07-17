@@ -581,22 +581,14 @@ jobs:
           path: ./reports
         continue-on-error: true
 
-      - name: 🐍 Set up Python
+      - name: � Checkout Code (for scripts)
+        uses: actions/checkout@v4
+
+      - name: � Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
           cache: 'pip'
-
-      - name: 📦 Cache Python Dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: 🔧 Checkout Code (for scripts)
-        uses: actions/checkout@v4
 
       - name: 📦 Install Dependencies
         run: |
