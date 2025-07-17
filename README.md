@@ -1,53 +1,311 @@
-# Confluence Documentation Automation
+# 📚 Confluence Documentation Publisher
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ansible Lint](https://img.shields.io/badge/ansible--lint-passing-brightgreen)](https://ansible-lint.readthedocs.io/)
-[![YAML Lint](https://img.shields.io/badge/yamllint-passing-brightgreen)](https://yamllint.readthedocs.io/)
-[![Dynamic Discovery](https://img.shields.io/badge/Discovery-Dynamic-blue)](./scripts/discover_docs_enhanced.py)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
 
-An enterprise-grade Ansible automation solution for **dynamic documentation discovery, processing, and publishing** to Atlassian Confluence. Features zero-maintenance template discovery, hierarchy-preserving publishing, and complete workflow automation.
+A **reusable GitHub Actions workflow** for automatically publishing documentation from any repository to Atlassian Confluence. Supports Markdown files and Jinja2 templates with YAML frontmatter configuration.
 
-Because manually maintaining documentation workflows is about as fun as debugging YAML at 2 a.m., this project does the heavy lifting for you with **fully automated dynamic discovery**! 🚀
+## 🎯 Purpose
 
-## ✨ Key Features
+This repository provides **reusable workflows** that any other repository can call to:
+- 📝 Process documentation files (`.md` and `.j2`) with YAML frontmatter
+- 🚀 Publish content to Confluence with proper page hierarchy
+- 🔄 Support both dry-run testing and live publishing
+- 🎨 Render Jinja2 templates with custom variables
+- 📊 Generate comprehensive publishing reports
 
-- 🎯 **Dynamic Discovery**: Automatically finds and processes all documentation templates - **zero maintenance required!**
-- 📁 **Hierarchy Preservation**: Maintains folder structure in Confluence for organized documentation
-- 🚀 **One-Command Workflow**: Complete documentation generation and publishing with `make run-full`
-- 🔄 **Auto-Adaptation**: New templates are automatically discovered and processed
-- 🤖 **GitHub Actions Ready**: Advanced CI/CD workflow for automatic publishing ✅
-- 🔄 **Dual Workflow Support**: Local Ansible development + GitHub Actions production publishing
-- 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint ✅
-- 🛡️ **Enterprise Security**: Built-in security scanning and credential protection ✅
-- 📝 **Smart Templates**: Jinja2-based with variable substitution and shared macros ✅
-- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
-- 📊 **Quality Gates**: Production-ready linting standards and validation ✅
-- 🔍 **Comprehensive Testing**: Multi-platform validation with yamllint, ansible-lint ✅
-- 📊 **Quality Assurance**: Production-ready standards and automated validation ✅
-- 🖥️ **Cross-Platform Support**: RHEL, Ubuntu, macOS, and more ✅
-- 📚 **Modular Design**: Reusable components for maintenance and debugging ✅
+## 🚀 Quick Start for Calling Repositories
 
-## 🚀 Quick Start
+### 1. Add Workflow to Your Repository
 
-### **The Modern Way (Recommended)**
+Create `.github/workflows/publish-docs.yml` in your repository:
+
+```yaml
+name: 📚 Publish Documentation
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/**']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no actual publishing)'
+        type: boolean
+        default: true
+
+jobs:
+  publish:
+    uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/publish-docs.yml@main
+    with:
+      dry_run: ${{ inputs.dry_run || false }}
+      target_environment: 'production'
+    secrets:
+      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+      CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+```
+
+### 2. Configure Your Documentation
+
+Create your documentation files in the `docs/` directory with YAML frontmatter:
+
+```markdown
+---
+confluence:
+  space_key: "DOCS"
+  title: "My Documentation Page"
+  parent_page_id: "123456"
+---
+
+# My Documentation
+
+Your content here...
+```
+
+### 3. Set Up Repository Secrets
+
+In your repository settings, add these secrets:
+- `CONFLUENCE_URL`: Your Confluence base URL (e.g., `https://company.atlassian.net`)
+- `CONFLUENCE_USER`: Your Confluence username/email
+- `CONFLUENCE_API_TOKEN`: Your Confluence API token
+
+### 4. Optional: Add Variables File
+
+Create `docs/vars.yaml` for Jinja2 template substitution:
+
+```yaml
+---
+project_name: "My Project"
+environment: "Production"
+version: "1.0.0"
+```
+
+## 📁 Documentation Structure
+
+Your calling repository should structure documentation like this:
+
+```
+your-repo/
+├── docs/
+│   ├── vars.yaml                 # Variables for Jinja2 templates
+│   ├── getting-started.md        # Simple Markdown file
+│   ├── api-reference.j2          # Jinja2 template
+│   └── admin/
+│       └── deployment-guide.md   # Nested documentation
+└── .github/
+    └── workflows/
+        └── publish-docs.yml       # Your workflow file
+```
+
+## 📝 File Format Examples
+
+### Markdown File with Frontmatter
+
+```markdown
+---
+confluence:
+  space_key: "DOCS"
+  title: "Getting Started Guide"
+  parent_page_id: "789012"
+---
+
+# Getting Started
+
+Welcome to our documentation...
+```
+
+### Jinja2 Template
+
+```jinja2
+---
+confluence:
+  space_key: "DOCS"
+  title: "{{ project_name }} Deployment Guide"
+  parent_page_id: "345678"
+---
+
+# {{ project_name }} Deployment Guide
+
+Environment: {{ environment }}
+Version: {{ version }}
+
+## Prerequisites
+
+...
+```
+
+## 🔧 Available Workflows
+
+### 1. Documentation Publishing (`publish-docs.yml`)
+
+**Purpose**: Process and publish documentation to Confluence
+
+**Inputs**:
+- `dry_run` (boolean): Run without actual publishing (default: false)
+- `target_environment` (string): Target environment (default: 'production')
+
+**Secrets**:
+- `CONFLUENCE_URL`: Confluence base URL
+- `CONFLUENCE_USER`: Confluence username
+- `CONFLUENCE_API_TOKEN`: Confluence API token
+
+### 2. CI/CD Pipeline (`ci.yml`)
+
+**Purpose**: Lint and validate your repository
+
+**Inputs**:
+- `full_scan` (boolean): Run full codebase scan (default: true)
+- `branch_name` (string): Branch to checkout
+
+## 🧪 Testing Your Setup
+
+1. **Dry Run Test**: Use manual workflow dispatch with `dry_run: true`
+2. **Check Logs**: Review the workflow output for processing details
+3. **Validate**: Confirm your YAML frontmatter is correctly formatted
+
+Example dry run output:
+```
+📤 Publishing 3 files to Confluence
+🔍 Processing: docs/getting-started.md
+  ✅ Title: Getting Started Guide
+  ✅ Space: DOCS
+  ✅ Content: 1,234 characters
+🧪 DRY RUN: Would create/update page in Confluence
+```
+
+## 🔍 Features
+
+### ✅ Supported File Types
+- **Markdown (`.md`)**: Direct processing with frontmatter
+- **Jinja2 Templates (`.j2`)**: Variable substitution + frontmatter
+
+### ✅ Frontmatter Configuration
+```yaml
+confluence:
+  space_key: "YOUR_SPACE"      # Required: Confluence space key
+  title: "Page Title"          # Required: Page title
+  parent_page_id: "123456"     # Optional: Parent page ID
+```
+
+### ✅ Template Variables
+- Use `docs/vars.yaml` to define variables
+- Reference in templates: `{{ variable_name }}`
+- Supports complex data structures (lists, dictionaries)
+
+### ✅ Publishing Modes
+- **Dry Run**: Preview changes without publishing
+- **Live Publishing**: Create/update pages in Confluence
+
+## 🛠️ Local Development
+
+If you want to contribute to this repository:
+
 ```bash
-# 1. Install dependencies (automatic OS detection)
-make install-tools
+# Clone the repository
+git clone https://github.com/KhalilGibrotha/redesigned-guacamole.git
+cd redesigned-guacamole
 
-# 2. Complete workflow in one command
-make run-full
+# Install dependencies
+pip install -r requirements.txt
+
+# Test the Python script locally
+python scripts/confluence_publisher.py \
+  --dry-run \
+  --docs-dir docs \
+  --vars-file docs/vars.yaml
 ```
-**That's it!** Your documentation is discovered, processed, and published automatically! 🎉
 
-### **What Just Happened?**
-1. ✅ **Dynamic Discovery**: All templates in `docs/automation_hub/` were found automatically
-2. ✅ **Template Processing**: Jinja2 templates rendered with your variables
-3. ✅ **HTML Generation**: Markdown converted to Confluence-ready HTML
-4. ✅ **Publishing**: Pages created/updated in Confluence with proper hierarchy
+## 📋 Requirements
 
-## 📁 Project Structure
+### For Calling Repositories:
+- GitHub repository with documentation in `docs/` directory
+- Confluence Cloud or Server instance
+- Valid Confluence API credentials
 
+### For This Repository:
+- Python 3.11+
+- Dependencies: `jinja2`, `pyyaml`, `requests`, `markdown`, `beautifulsoup4`
+
+## 🤝 Contributing
+
+1. Fork this repository
+2. Create a feature branch
+3. Make your changes
+4. Test with the provided documentation examples
+5. Submit a pull request
+
+## 📚 Advanced Configuration
+
+### Multiple Confluence Spaces
+
+You can publish to different spaces by setting different `space_key` values in your frontmatter:
+
+```yaml
+---
+confluence:
+  space_key: "DEV"     # Development space
+  title: "Dev Guide"
+---
 ```
+
+### Page Hierarchies
+
+Create nested page structures using `parent_page_id`:
+
+```yaml
+---
+confluence:
+  space_key: "DOCS"
+  title: "Child Page"
+  parent_page_id: "123456"  # ID of parent page
+---
+```
+
+### Template Variables
+
+Use complex variables in your `docs/vars.yaml`:
+
+```yaml
+---
+environments:
+  - name: "Development"
+    url: "https://dev.example.com"
+  - name: "Production"
+    url: "https://prod.example.com"
+
+features:
+  authentication: true
+  monitoring: true
+```
+
+Reference in templates:
+
+```jinja2
+## Environments
+
+{% for env in environments %}
+- **{{ env.name }}**: {{ env.url }}
+{% endfor %}
+
+## Available Features
+
+{% if features.authentication %}
+- ✅ Authentication enabled
+{% endif %}
+```
+
+## 📞 Support
+
+- 📖 Check the [examples](docs/) in this repository
+- 🐛 [Open an issue](https://github.com/KhalilGibrotha/redesigned-guacamole/issues) for bugs
+- 💡 [Request features](https://github.com/KhalilGibrotha/redesigned-guacamole/discussions) via discussions
+
+## � License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 docs/
 ├── automation_hub/              # 🎯 Primary documentation (auto-discovered)
 │   ├── automation_hub.j2        # Main parent page

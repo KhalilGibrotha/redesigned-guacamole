@@ -1,7 +1,9 @@
-ansible-core>=2.12
-ansible-lint
-yamllint
+# Python dependencies for Confluence publishing
 jinja2
+pyyaml
 requests
 markdown
 beautifulsoup4
+
+# Development and linting tools
+yamllint

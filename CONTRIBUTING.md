@@ -1,6 +1,6 @@
-# Contributing to Confluence Documentation Automation
+# Contributing to Confluence Documentation Publisher
 
-Thank you for your interest in contributing! This document provides guidelines for contributing to this project.
+Thank you for your interest in contributing! This project provides reusable GitHub Actions workflows for publishing documentation to Confluence.
 
 ## Code of Conduct
 
@@ -15,7 +15,7 @@ This project follows a simple code of conduct:
 
 1. Check existing issues first
 2. Use the provided issue templates
-3. Include relevant environment details
+3. Include relevant environment details (Python version, Confluence setup, etc.)
 4. Provide clear reproduction steps
 
 ### Submitting Changes
@@ -26,9 +26,14 @@ This project follows a simple code of conduct:
    git checkout -b feature/your-feature-name
    ```
 3. **Make your changes**
-4. **Run validation**
+4. **Test your changes**
    ```bash
-   make validate
+   # Test Python script locally
+   python scripts/confluence_publisher.py --dry-run --docs-dir docs --vars-file docs/vars.yaml
+   
+   # Run linting
+   yamllint .
+   python -m flake8 scripts/
    ```
 5. **Commit with clear messages**
    ```bash
@@ -40,49 +45,59 @@ This project follows a simple code of conduct:
 
 ```bash
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/confluence-automation.git
-cd confluence-automation
+git clone https://github.com/YOUR_USERNAME/redesigned-guacamole.git
+cd redesigned-guacamole
 
-# Install development tools
-make install-tools
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Set up pre-commit hooks
-pip install pre-commit
-pre-commit install
+# Install development tools (optional)
+pip install flake8 black
 
-# Run tests
-make dev
+# Test the confluence publisher
+python scripts/confluence_publisher.py --help
 ```
 
 ## Quality Standards
 
 ### Before Submitting
 
-- [ ] Code passes all linting checks (`make lint`)
-- [ ] Security checks pass (`make security-check`)
-- [ ] Templates validate (`make validate-templates`)
+- [ ] Python code passes linting (`python -m flake8 scripts/`)
+- [ ] YAML files validate (`yamllint .`)
+- [ ] Confluence publisher works in dry-run mode
 - [ ] Documentation is updated
 - [ ] Commit messages are clear and descriptive
 
 ### Coding Standards
 
-- Follow existing YAML formatting
+**Python Code:**
+- Follow PEP 8 style guidelines
+- Use type hints where appropriate
+- Include docstrings for functions and classes
+- Handle errors gracefully
+
+**YAML Files:**
 - Use 2-space indentation
 - Keep lines under 120 characters
 - Include descriptive comments
-- Use semantic task names
+- Follow GitHub Actions best practices
+
+**Documentation:**
+- Update README.md for user-facing changes
+- Include examples for new features
+- Use clear, concise language
 
 ### Testing
 
-- Add tests for new functionality
-- Ensure existing tests pass
-- Include documentation updates
-- Test with different Ansible versions if applicable
+- Test Python scripts with `--dry-run` mode
+- Validate YAML frontmatter formats
+- Test with different file structures
+- Include example documentation files
 
 ## Pull Request Process
 
 1. **Description**: Clearly describe what your PR does
-2. **Testing**: Include testing information
+2. **Testing**: Include testing information and screenshots if applicable
 3. **Documentation**: Update relevant documentation
 4. **Breaking Changes**: Call out any breaking changes
 5. **Review**: Be responsive to review feedback
@@ -94,75 +109,76 @@ make dev
 Brief description of changes
 
 ## Type of Change
-- [ ] Bug fix
-- [ ] New feature
+- [ ] Bug fix (Python script, workflows)
+- [ ] New feature (publishing functionality, workflow enhancements)
 - [ ] Documentation update
-- [ ] Performance improvement
+- [ ] Workflow improvement
 
 ## Testing
-- [ ] Passes make validate
+- [ ] Python script tested with `--dry-run`
+- [ ] YAML files pass validation
 - [ ] Manual testing completed
-- [ ] Added/updated tests
+- [ ] Works with sample documentation
 
 ## Checklist
 - [ ] Self-review completed
 - [ ] Documentation updated
 - [ ] No breaking changes (or clearly documented)
+- [ ] Follows repository patterns
 ```
 
 ## Areas for Contribution
 
 ### High Priority
-- Bug fixes and security improvements
-- Documentation enhancements
-- Test coverage improvements
-- CI/CD workflow enhancements
+- Bug fixes in Python publisher script
+- GitHub Actions workflow improvements
+- Documentation and example enhancements
+- Error handling and logging improvements
 
 ### Medium Priority
-- New template features
-- Additional validation rules
-- Performance optimizations
-- Integration examples
+- Additional file format support
+- Enhanced Jinja2 template features
+- Confluence API improvements
+- Publishing report enhancements
 
 ### Future Enhancements
 - Multi-space Confluence support
-- Advanced Molecule scenarios
-- Template library expansion
-- External integrations
+- Advanced template library
+- Integration with other documentation tools
+- Performance optimizations
 
 ## Development Guidelines
 
 ### File Organization
-- Keep playbooks focused and modular
-- Use descriptive variable names
-- Organize templates logically
-- Maintain consistent structure
+- Keep Python scripts modular and well-documented
+- Use descriptive variable names and function names
+- Organize workflows logically
+- Maintain consistent code style
 
 ### Documentation
-- Update README for significant changes
-- Include inline comments for complex logic
+- Update README.md for user-facing changes
+- Include docstrings in Python code
 - Provide examples for new features
-- Keep documentation current
+- Keep usage examples current
 
 ### Security
 - Never commit real credentials
-- Use Ansible Vault for sensitive data
+- Use GitHub secrets properly
 - Follow least-privilege principles
 - Include security considerations in PRs
 
 ## Release Process
 
-1. Version bumping follows semantic versioning
-2. Changelog updates for all releases
-3. Testing in multiple environments
-4. Documentation updates
-5. GitHub release creation
+1. Version updates follow semantic versioning
+2. Test workflows with multiple repository setups
+3. Update documentation and examples
+4. Create GitHub release with changelog
 
 ## Getting Help
 
-- **Issues**: Use GitHub issues for bugs and questions
+- **Issues**: Use GitHub issues for bugs and feature requests
 - **Discussions**: Use GitHub discussions for general questions
-- **Documentation**: Check existing documentation first
+- **Documentation**: Check README.md and docs/ folder first
 - **Code Review**: Ask for specific feedback in PRs
 
 ## Recognition

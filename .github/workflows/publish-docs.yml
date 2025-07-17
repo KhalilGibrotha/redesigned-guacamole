@@ -16,11 +16,11 @@ on:
         default: false
     secrets:
       CONFLUENCE_URL:
-        required: true
+        required: false
       CONFLUENCE_USER:
-        required: true
+        required: false
       CONFLUENCE_API_TOKEN:
-        required: true
+        required: false
 
   # Add manual trigger for testing
   workflow_dispatch:
@@ -67,35 +67,59 @@ jobs:
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
           else
-            # Fallback to manual installation
-            pip install ansible jinja2 requests markdown beautifulsoup4
+            # Install required packages for Confluence publishing
+            pip install jinja2 pyyaml requests markdown beautifulsoup4
           fi
-          
-          # Install pandoc for document conversion
-          sudo apt-get update
-          sudo apt-get install -y pandoc
 
       - name: 🔍 Validate Configuration
         run: |
           echo "🔍 Validating Confluence configuration..."
           
-          # Check if required secrets are provided
-          if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]]; then
-            echo "❌ CONFLUENCE_URL secret is required"
-            exit 1
+          # Check if we're in dry-run mode
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "🧪 Running in DRY RUN mode - secrets validation relaxed"
+            
+            # Check if secrets are available (but don't fail if missing)
+            if [[ -n "${{ secrets.CONFLUENCE_URL }}" ]]; then
+              echo "✅ CONFLUENCE_URL is configured"
+            else
+              echo "⚠️ CONFLUENCE_URL is not configured (OK for dry run)"
+            fi
+            
+            if [[ -n "${{ secrets.CONFLUENCE_USER }}" ]]; then
+              echo "✅ CONFLUENCE_USER is configured"
+            else
+              echo "⚠️ CONFLUENCE_USER is not configured (OK for dry run)"
+            fi
+            
+            if [[ -n "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
+              echo "✅ CONFLUENCE_API_TOKEN is configured"
+            else
+              echo "⚠️ CONFLUENCE_API_TOKEN is not configured (OK for dry run)"
+            fi
+            
+            echo "🧪 Dry run mode: proceeding with available configuration"
+          else
+            echo "🚀 Running in LIVE mode - all secrets required"
+            
+            # Check if required secrets are provided for live run
+            if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]]; then
+              echo "❌ CONFLUENCE_URL secret is required for live publishing"
+              exit 1
+            fi
+            
+            if [[ -z "${{ secrets.CONFLUENCE_USER }}" ]]; then
+              echo "❌ CONFLUENCE_USER secret is required for live publishing"
+              exit 1
+            fi
+            
+            if [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
+              echo "❌ CONFLUENCE_API_TOKEN secret is required for live publishing"
+              exit 1
+            fi
+            
+            echo "✅ All required secrets are configured for live publishing"
           fi
-          
-          if [[ -z "${{ secrets.CONFLUENCE_USER }}" ]]; then
-            echo "❌ CONFLUENCE_USER secret is required"
-            exit 1
-          fi
-          
-          if [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
-            echo "❌ CONFLUENCE_API_TOKEN secret is required"
-            exit 1
-          fi
-          
-          echo "✅ All required secrets are configured"
 
       - name: 🔧 Prepare Publishing Environment
         run: |
@@ -104,64 +128,37 @@ jobs:
           # Create output directory
           mkdir -p output/confluence
           
-          # Set environment variables
-          echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL }}" >> $GITHUB_ENV
-          echo "CONFLUENCE_USER=${{ secrets.CONFLUENCE_USER }}" >> $GITHUB_ENV
-          echo "CONFLUENCE_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN }}" >> $GITHUB_ENV
+          # Set environment variables (with defaults for missing secrets)
+          echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" >> $GITHUB_ENV
+          echo "CONFLUENCE_USER=${{ secrets.CONFLUENCE_USER || 'not-configured' }}" >> $GITHUB_ENV
+          echo "CONFLUENCE_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}" >> $GITHUB_ENV
           echo "DRY_RUN=${{ inputs.dry_run }}" >> $GITHUB_ENV
           echo "TARGET_ENV=${{ inputs.target_environment }}" >> $GITHUB_ENV
           
-          # Create configuration file for Ansible
-          cat > confluence_config.yml << EOF
-          confluence:
-            url: "${{ secrets.CONFLUENCE_URL }}"
-            username: "${{ secrets.CONFLUENCE_USER }}"
-            token: "${{ secrets.CONFLUENCE_API_TOKEN }}"
-            space_key: "DOCS"
-            parent_page_title: "Automation Documentation"
-          
-          publishing:
-            dry_run: ${{ inputs.dry_run }}
-            target_environment: "${{ inputs.target_environment }}"
-            timestamp: "$(date -u +"%Y-%m-%d %H:%M:%S UTC")"
-            git_ref: "${{ github.ref_name }}"
-            commit_sha: "${{ github.sha }}"
-          EOF
+          echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
 
       - name: 📝 Process AAP Documentation
         run: |
           echo "📝 Processing AAP documentation templates..."
           
-          # Run the AAP documentation processing playbook
-          if [[ -f "playbooks/publish_aap_docs.yml" ]]; then
-            echo "✅ Found AAP documentation playbook"
-            ansible-playbook -i inventory/hosts playbooks/publish_aap_docs.yml \
-              -e @confluence_config.yml \
-              -e dry_run=${{ inputs.dry_run }} \
-              -v
-          elif [[ -f "playbooks/publish_confluence.yml" ]]; then
-            echo "✅ Found general Confluence publishing playbook"
-            ansible-playbook -i inventory/hosts playbooks/publish_confluence.yml \
-              -e @confluence_config.yml \
-              -e dry_run=${{ inputs.dry_run }} \
-              -v
-          elif [[ -f "playbooks/04-publish-confluence.yml" ]]; then
-            echo "✅ Found numbered Confluence publishing playbook"
-            ansible-playbook -i inventory/hosts playbooks/04-publish-confluence.yml \
-              -e @confluence_config.yml \
-              -e dry_run=${{ inputs.dry_run }} \
-              -v
+          # Make the script executable
+          chmod +x scripts/confluence_publisher.py
+          
+          # Run the Python-based Confluence publisher
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            echo "🧪 Running in DRY RUN mode"
+            python3 scripts/confluence_publisher.py \
+              --dry-run \
+              --docs-dir docs \
+              --vars-file docs/vars.yaml
           else
-            echo "🔧 No specific Confluence playbook found, running main playbook..."
-            if [[ -f "playbooks/main.yml" ]]; then
-              ansible-playbook -i inventory/hosts playbooks/main.yml \
-                -e @confluence_config.yml \
-                -e dry_run=${{ inputs.dry_run }} \
-                -v
-            else
-              echo "❌ No suitable playbook found for Confluence publishing"
-              exit 1
-            fi
+            echo "🚀 Running in LIVE mode"
+            python3 scripts/confluence_publisher.py \
+              --docs-dir docs \
+              --vars-file docs/vars.yaml \
+              --confluence-url "${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" \
+              --confluence-user "${{ secrets.CONFLUENCE_USER || 'not-configured' }}" \
+              --confluence-token "${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
           fi
 
       - name: 📊 Generate Publishing Report
@@ -199,7 +196,6 @@ jobs:
           name: confluence-publishing-report-${{ github.run_id }}
           path: |
             output/confluence/
-            confluence_config.yml
           retention-days: 30
           if-no-files-found: warn
 
