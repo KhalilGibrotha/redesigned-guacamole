@@ -1,6 +1,94 @@
 # � Comprehensive CI/CD Pipeline with Documentation Publishing
 
-[![License: MIT](https://img.shields.io/badge/Licens### Detailed Execution Flow:
+[![License: MIT](https://img.shields.io/badge/Licens### Detai1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+5. **📊 Comprehensive Report**: Generates detailed execution summary
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
+
+## 📁 Repository Dependencies
+
+### What Your Repository Needs to Provide
+
+The CI/CD pipeline is designed to work with **minimal dependencies** from your repository. Here's what you need:
+
+#### For Basic CI/CD (Always Required):
+```
+your-repo/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml        # Your workflow that calls our pipeline
+└── [your code files]        # Python, YAML, Ansible, etc.
+```
+
+#### For Documentation Publishing (Optional):
+```
+your-repo/
+└── docs/
+    ├── vars.yaml            # Variables and Confluence hierarchy config
+    ├── *.j2                 # Jinja2 template files with YAML headers
+    ├── *.md                 # Markdown files with YAML headers
+    └── images/              # Images referenced in your documentation
+        ├── diagram.png
+        └── screenshot.jpg
+```
+
+### What We Automatically Provide
+
+**No need to copy these to your repository** - our pipeline automatically handles:
+
+```
+redesigned-guacamole/
+├── scripts/
+│   ├── confluence_publisher.py     # ✅ Documentation publishing script
+│   └── generate_sarif_summary.py   # ✅ Embedded in workflow
+├── docs/
+│   ├── macros.j2                   # ✅ Jinja2 macros for templates
+│   └── macros/                     # ✅ Additional macro files
+├── .github/workflows/
+│   ├── ci-optimized.yml            # ✅ Main CI/CD pipeline
+│   ├── publish-docs.yml            # ✅ Documentation publishing
+│   └── notifications.yml           # ✅ Failure notifications
+└── requirements.txt                # ✅ Python dependencies
+```
+
+### Documentation Template Example
+
+Your `.j2` files should follow this structure:
+
+```jinja2
+---
+# Metadata for Confluence Publishing
+varsFile: "vars/aap.yml"
+project_status: "In Review"
+
+# Confluence Metadata
+confluence:
+  title: "My Document Title"
+  space: "MYSPACE"
+  category: "operations"  # Uses hierarchy from vars.yaml
+  imageFolder: "docs/images"
+---
+
+{% import './docs/macros/macros.j2' as macros %}
+
+# {{ organization_name }} Documentation
+
+This document uses variables from vars.yaml like {{ organization_name }} 
+and macros provided by our pipeline.
+
+{{ macros.info_box("This is an info box from our macro library") }}
+```
+
+### Key Benefits:
+
+- ✅ **Zero Infrastructure Dependencies**: No need to copy our scripts or templates
+- ✅ **Automatic Updates**: Pipeline improvements benefit all repositories immediately
+- ✅ **Minimal Setup**: Only need your content and configuration
+- ✅ **Centralized Maintenance**: All pipeline logic maintained in one place
+
+## 📋 Available Workflowstion Flow:
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
