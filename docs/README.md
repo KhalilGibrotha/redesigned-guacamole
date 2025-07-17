@@ -26,7 +26,7 @@ project_status: "Active"
 confluence:
   title: "Document Title"
   space: "SPACE_KEY"
-  parentPageId: "123456"
+  category: "operations"           # Uses hierarchy from vars/aap.yml
   imageFolder: "docs/images"
 ---
 
@@ -57,8 +57,26 @@ For Confluence publishing, include the `confluence` section:
 confluence:
   title: "Your Document Title"      # Title in Confluence
   space: "AH"                      # Confluence space key (e.g., AH, DOC, PROJ)
-  parentPageId: "1343742"          # Parent page ID in Confluence
+  category: "operations"           # Category from hierarchy (operations, administration, governance, etc.)
   imageFolder: "docs/images"       # Relative path to images
+```
+
+**Available Categories:**
+- `operations` - Operations & Maintenance
+- `administration` - Platform Administration  
+- `governance` - Policies & Governance
+- `automation_hub` - Automation Hub
+- `guides` - User Guides & Training
+- `testing` - Testing & Validation
+
+**Legacy Support:**
+You can still use `parentPageId` directly if needed:
+```yaml
+confluence:
+  title: "Your Document Title"
+  space: "AH"
+  parentPageId: "123456"           # Direct parent page ID
+  imageFolder: "docs/images"
 ```
 
 ### Optional Fields
@@ -168,7 +186,7 @@ project_status: "Active"
 confluence:
   title: "{{ organization_name }} Operations Guide"
   space: "AH"
-  parentPageId: "1343742"
+  category: "operations"
   imageFolder: "docs/images"
 ---
 
@@ -205,7 +223,7 @@ project_status: "Active"
 confluence:
   title: "Platform Configuration Guide"
   space: "AH"
-  parentPageId: "1343742"
+  category: "administration"
   imageFolder: "docs/images"
 ---
 
@@ -267,7 +285,7 @@ project_status: "Active"
 confluence:
   title: "Complete Title"
   space: "AH"
-  parentPageId: "1343742"
+  category: "operations"
   imageFolder: "docs/images"
 ---
 

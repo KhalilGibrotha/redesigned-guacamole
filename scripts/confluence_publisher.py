@@ -107,6 +107,10 @@ class ConfluencePublisher:
         Returns:
             Page ID if successful, None otherwise
         """
+        # Validate parent page exists before proceeding
+        if not self._validate_parent_page(parent_page_id, space_key):
+            return None
+        
         if self.dry_run:
             logger.info(f"🧪 [DRY RUN] Would create/update page: {title} in space {space_key}")
             if parent_page_id:
@@ -195,6 +199,60 @@ class ConfluencePublisher:
         except Exception as e:
             logger.error(f"❌ Failed to get page by title {title}: {e}")
             return None
+    
+    def _get_page_by_id(self, page_id: str) -> Optional[Dict]:
+        """Get page by ID"""
+        try:
+            response = self.session.get(
+                f"{self.confluence_url}/rest/api/content/{page_id}",
+                params={"expand": "version,space"}
+            )
+            response.raise_for_status()
+            return response.json()
+            
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 404:
+                logger.warning(f"⚠️  Page with ID {page_id} not found")
+                return None
+            else:
+                logger.error(f"❌ Failed to get page by ID {page_id}: {e}")
+                return None
+        except Exception as e:
+            logger.error(f"❌ Failed to get page by ID {page_id}: {e}")
+            return None
+    
+    def _validate_parent_page(self, parent_page_id: str, space_key: str) -> bool:
+        """
+        Validate that the parent page exists
+        
+        Args:
+            parent_page_id: The parent page ID to validate
+            space_key: The space key where the parent should exist
+            
+        Returns:
+            True if parent page exists, False otherwise
+        """
+        if not parent_page_id:
+            return True  # No parent specified is valid
+        
+        if self.dry_run:
+            logger.info(f"🧪 [DRY RUN] Would validate parent page ID: {parent_page_id}")
+            return True
+        
+        parent_page = self._get_page_by_id(parent_page_id)
+        if not parent_page:
+            logger.error(f"❌ Parent page with ID {parent_page_id} does not exist!")
+            logger.error(f"🚨 Cannot create child page without valid parent. Please ensure parent page exists in Confluence.")
+            return False
+        
+        # Check if parent is in the correct space
+        parent_space = parent_page.get('space', {}).get('key')
+        if parent_space != space_key:
+            logger.warning(f"⚠️  Parent page {parent_page_id} is in space '{parent_space}', but child will be in space '{space_key}'")
+            logger.warning(f"⚠️  This may cause issues with page hierarchy")
+        
+        logger.info(f"✅ Parent page validated: {parent_page.get('title', 'Unknown Title')} (ID: {parent_page_id})")
+        return True
     
     def upload_attachment(self, page_id: str, file_path: Path, file_name: str = None) -> Optional[Dict]:
         """
@@ -365,6 +423,66 @@ class DocumentProcessor:
             logger.error(f"❌ Failed to load variables from {self.vars_file}: {e}")
             return {}
     
+    def resolve_hierarchy_parent(self, category_key: str) -> Optional[str]:
+        """
+        Resolve parent page ID from hierarchy configuration
+        
+        Args:
+            category_key: The category key from confluence_hierarchy.categories
+            
+        Returns:
+            Parent page ID or None if not found
+        """
+        try:
+            hierarchy = self.variables.get('confluence_hierarchy', {})
+            
+            if not hierarchy:
+                logger.warning("⚠️  No confluence_hierarchy found in variables")
+                logger.warning("💡 Add confluence_hierarchy section to your vars file for hierarchical page management")
+                return None
+            
+            # Check if it's a direct reference to root
+            if category_key == 'root':
+                root_page_id = hierarchy.get('root', {}).get('pageId')
+                if root_page_id:
+                    logger.info(f"🔗 Resolved root category to page ID: {root_page_id}")
+                else:
+                    logger.error(f"❌ Root page ID not configured in hierarchy")
+                return root_page_id
+            
+            # Look up category in hierarchy
+            categories = hierarchy.get('categories', {})
+            category = categories.get(category_key)
+            
+            if not category:
+                logger.error(f"❌ Category '{category_key}' not found in hierarchy")
+                logger.error(f"💡 Available categories: {list(categories.keys())}")
+                return None
+            
+            # Resolve parent reference
+            parent_ref = category.get('parent')
+            if parent_ref == 'root':
+                root_page_id = hierarchy.get('root', {}).get('pageId')
+                if root_page_id:
+                    logger.info(f"🔗 Resolved category '{category_key}' -> root page ID: {root_page_id}")
+                else:
+                    logger.error(f"❌ Root page ID not configured for category '{category_key}'")
+                return root_page_id
+            elif parent_ref in categories:
+                # For nested categories, you could implement recursive resolution here
+                # For now, just handle root-level categories
+                logger.warning(f"⚠️  Nested category resolution not implemented for '{parent_ref}'")
+                logger.warning(f"💡 Falling back to root page for category '{category_key}'")
+                return hierarchy.get('root', {}).get('pageId')
+            else:
+                logger.error(f"❌ Unknown parent reference '{parent_ref}' for category '{category_key}'")
+                logger.error(f"💡 Parent reference should be 'root' or another category name")
+                return None
+                
+        except Exception as e:
+            logger.error(f"❌ Failed to resolve hierarchy parent for '{category_key}': {e}")
+            return None
+    
     def find_documentation_files(self) -> List[Path]:
         """Find all .md and .j2 files in the docs directory"""
         files = []
@@ -429,6 +547,16 @@ class DocumentProcessor:
             if not confluence_config:
                 logger.info(f"⏭️  Skipping {file_path} - no Confluence configuration")
                 return None
+            
+            # Resolve hierarchy-based parent page ID
+            category = confluence_config.get('category')
+            if category:
+                resolved_parent_id = self.resolve_hierarchy_parent(category)
+                if resolved_parent_id:
+                    confluence_config['parentPageId'] = resolved_parent_id
+                    logger.info(f"🔗 Resolved category '{category}' to parent page ID: {resolved_parent_id}")
+                else:
+                    logger.warning(f"⚠️  Could not resolve parent for category '{category}'")
             
             # Load additional variables if specified
             vars_file = frontmatter.get('varsFile')

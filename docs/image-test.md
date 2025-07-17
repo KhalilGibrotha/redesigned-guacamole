@@ -1,8 +1,8 @@
 ---
 confluence:
-  space_key: "DOCS"
+  space: "AH"
   title: "Image Test Documentation"
-  parent_page_id: ""
+  category: "testing"  # Uses hierarchy: testing -> root
 ---
 
 # Image Test Documentation
