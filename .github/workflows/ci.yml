@@ -704,10 +704,29 @@ jobs:
           path: ./reports
         continue-on-error: true
 
-      - name: � Checkout Code (for scripts)
+      - name: 📋 Check Downloaded Artifacts
+        run: |
+          echo "🔍 Checking downloaded artifacts..."
+          if [ -d "./reports" ]; then
+            echo "✅ Reports directory exists"
+            echo "📁 Contents:"
+            ls -la ./reports/ || echo "Directory is empty"
+            
+            echo ""
+            echo "📊 Artifact breakdown:"
+            find ./reports -type f -name "*.sarif" | wc -l | xargs echo "SARIF files:"
+            find ./reports -type f -name "*.log" | wc -l | xargs echo "Log files:"
+            find ./reports -type f | wc -l | xargs echo "Total files:"
+          else
+            echo "❌ No reports directory found"
+            echo "Creating empty reports directory for script compatibility..."
+            mkdir -p ./reports
+          fi
+
+      - name: 📥 Checkout Code (for scripts)
         uses: actions/checkout@v4
 
-      - name: � Set up Python
+      - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
@@ -720,28 +739,21 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: � Ensure reports directory exists and check contents
+      - name: 📝 Generate Summary from All Reports
         run: |
-          echo "🔍 Checking reports directory..."
-          if [ ! -d "./reports" ]; then
-            echo "⚠️ Creating missing reports directory"
-            mkdir -p ./reports
+          echo "📊 Generating comprehensive report summary..."
+          if [ -d "./reports" ] && [ "$(find ./reports -type f | wc -l)" -gt 0 ]; then
+            echo "✅ Found artifacts to process"
+            python scripts/generate_sarif_summary.py
+          else
+            echo "⚠️ No artifacts found to process"
+            echo "## 📊 Comprehensive Report Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### ⚠️ No Artifacts Available" >> $GITHUB_STEP_SUMMARY
+            echo "- No artifacts were generated or downloaded for analysis" >> $GITHUB_STEP_SUMMARY
+            echo "- This may be normal if no linting issues were found" >> $GITHUB_STEP_SUMMARY
+            echo "- Check individual job logs for detailed information" >> $GITHUB_STEP_SUMMARY
           fi
-          
-          echo "📁 Reports directory contents:"
-          ls -la ./reports/ || echo "Reports directory is empty"
-          
-          echo "🔍 Looking for SARIF files:"
-          find ./reports -name "*.sarif" -type f 2>/dev/null || echo "No SARIF files found"
-          
-          echo "📊 Artifact subdirectories:"
-          if [ -d "./reports" ]; then
-            find ./reports -type d -mindepth 1 2>/dev/null || echo "No artifact subdirectories found"
-          fi
-
-      - name: �📝 Generate Summary from All Reports
-        run: python scripts/generate_sarif_summary.py
-        continue-on-error: true
 
       - name: 📊 Execution Summary
         if: always()
