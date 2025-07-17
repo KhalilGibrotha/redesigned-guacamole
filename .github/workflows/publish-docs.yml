@@ -22,6 +22,24 @@ on:
       CONFLUENCE_API_TOKEN:
         required: true
 
+  # Add manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: 'Target environment for publishing'
+        required: false
+        type: choice
+        options:
+          - production
+          - staging
+          - development
+        default: 'production'
+      dry_run:
+        description: 'Perform a dry run without actual publishing'
+        required: false
+        type: boolean
+        default: true
+
 jobs:
   publish-confluence:
     name: 🚀 Publish to Confluence
@@ -110,13 +128,19 @@ jobs:
             commit_sha: "${{ github.sha }}"
           EOF
 
-      - name: 📝 Process Documentation
+      - name: 📝 Process AAP Documentation
         run: |
-          echo "📝 Processing documentation for publishing..."
+          echo "📝 Processing AAP documentation templates..."
           
-          # Run the documentation processing playbook
-          if [[ -f "playbooks/publish_confluence.yml" ]]; then
-            echo "✅ Found Confluence publishing playbook"
+          # Run the AAP documentation processing playbook
+          if [[ -f "playbooks/publish_aap_docs.yml" ]]; then
+            echo "✅ Found AAP documentation playbook"
+            ansible-playbook -i inventory/hosts playbooks/publish_aap_docs.yml \
+              -e @confluence_config.yml \
+              -e dry_run=${{ inputs.dry_run }} \
+              -v
+          elif [[ -f "playbooks/publish_confluence.yml" ]]; then
+            echo "✅ Found general Confluence publishing playbook"
             ansible-playbook -i inventory/hosts playbooks/publish_confluence.yml \
               -e @confluence_config.yml \
               -e dry_run=${{ inputs.dry_run }} \

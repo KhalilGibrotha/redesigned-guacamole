@@ -637,6 +637,39 @@ jobs:
           echo "❌ Ansible-lint found issues."
           exit 1 # Explicitly fail the job if the linting step failed
 
+  # Debug job to show publish conditions
+  debug-publish-conditions:
+    name: 🔍 Debug Publish Conditions
+    needs: [super-linter, security, ansible-syntax-check, detect-changes]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Show publish job conditions
+        run: |
+          echo "📊 Publish Job Condition Analysis:"
+          echo "=================================="
+          echo "Event name: ${{ github.event_name }}"
+          echo "Branch ref: ${{ github.ref }}"
+          echo "Is main branch: ${{ github.ref == 'refs/heads/main' }}"
+          echo "Is release branch: ${{ startsWith(github.ref, 'refs/heads/release/') }}"
+          echo "Is hotfix branch: ${{ startsWith(github.ref, 'refs/heads/hotfix/') }}"
+          echo "Ansible syntax check result: ${{ needs.ansible-syntax-check.result }}"
+          echo "Docs changed: ${{ needs.detect-changes.outputs.docs-changed }}"
+          echo "Full scan input: ${{ inputs.full_scan }}"
+          echo ""
+          echo "🎯 Conditions for publish job:"
+          echo "1. Event is push: ${{ github.event_name == 'push' }}"
+          echo "2. On main/release/hotfix: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') }}"
+          echo "3. Ansible check success: ${{ needs.ansible-syntax-check.result == 'success' }}"
+          echo "4. Docs changed OR full scan: ${{ needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true }}"
+          echo ""
+          echo "📋 Overall condition result:"
+          if [[ "${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) && needs.ansible-syntax-check.result == 'success' && (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true) }}" == "true" ]]; then
+            echo "✅ Publish job SHOULD run"
+          else
+            echo "❌ Publish job will be SKIPPED"
+          fi
+
   # Publish job - only runs on main/release/hotfix branches and when docs change
   publish:
     name: 🚀 Publish to Confluence
