@@ -5,15 +5,15 @@
     -#}
 
     {%- if items is not defined or items is none or items | length == 0 -%}
-        {{- '' -}}
+        MISSING VALUES MAKE ALEX SAD
     {%- elif items is string -%}
         {{- items -}}
     {%- elif items is iterable and items is not string -%}
-        {%- set item_list = items | list -%}
-        {%- if item_list | length == 1 -%}
-            {{- item_list[0] -}}
+        {%- set items = items | list -%}
+        {%- if items | length == 1 -%}
+            {{- items[0] -}}
         {%- else -%}
-            {{- item_list[:-1] | join(', ') ~ ', and ' ~ item_list[-1] -}}
+            {{- items[:-1] | join(', ') ~ ', and ' ~ items[-1] -}}
         {%- endif -%}
     {%- else -%}
         MISSING VALUES MAKE ALEX SAD
