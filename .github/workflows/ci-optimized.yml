@@ -547,14 +547,13 @@ jobs:
           echo "❌ Ansible-lint found issues."
           exit 1 # Explicitly fail the job if the linting step failed
 
-  # Publish job - only runs on main/release/hotfix branches and when docs change
+  # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
     name: 🚀 Publish to Confluence
-    needs: [super-linter, security, ansible-syntax-check, detect-changes]
+    needs: [detect-changes]
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      needs.ansible-syntax-check.result == 'success' &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true)
 
     # Using local workflow instead of external dependency for better reliability.
@@ -572,12 +571,15 @@ jobs:
   # Comprehensive report - always runs to provide summary
   comprehensive-report:
     name: 📊 Generate Comprehensive Report
-    # This job runs after all checks are complete
-    needs: [super-linter, security, ansible-syntax-check, detect-changes]
+    # This job runs after all checks are complete, including publish which now runs in parallel
+    needs: [super-linter, security, ansible-syntax-check, detect-changes, publish]
     if: always() # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
-      - name: 📥 Download all artifacts
+      - name: � Checkout Code (for scripts)
+        uses: actions/checkout@v4
+
+      - name: �📥 Download all artifacts
         uses: actions/download-artifact@v4
         with:
           # Download all artifacts into a 'reports' directory
@@ -589,17 +591,6 @@ jobs:
         with:
           python-version: '3.x'
           cache: 'pip'
-
-      - name: 📦 Cache Python Dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: 🔧 Checkout Code (for scripts)
-        uses: actions/checkout@v4
 
       - name: 📦 Install Dependencies
         run: |
