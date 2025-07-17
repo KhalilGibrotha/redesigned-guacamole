@@ -53,7 +53,15 @@ jobs:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
         with:
+          repository: KhalilGibrotha/redesigned-guacamole
           fetch-depth: 0
+          path: redesigned-guacamole
+
+      - name: 📥 Checkout Calling Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: calling-repo
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -64,8 +72,8 @@ jobs:
       - name: 📦 Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
+          if [ -f redesigned-guacamole/requirements.txt ]; then
+            pip install -r redesigned-guacamole/requirements.txt
           else
             # Install required packages for Confluence publishing
             pip install jinja2 pyyaml requests markdown beautifulsoup4
@@ -141,21 +149,33 @@ jobs:
         run: |
           echo "📝 Processing AAP documentation templates..."
           
+          # Copy macros from our repository to the calling repository to ensure templates work
+          if [ -d "redesigned-guacamole/docs/macros" ]; then
+            echo "📋 Copying macros from redesigned-guacamole to calling repository..."
+            cp -r redesigned-guacamole/docs/macros calling-repo/docs/
+          fi
+          
+          # Also copy the main macros.j2 file if it exists
+          if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
+            echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
+            cp redesigned-guacamole/docs/macros.j2 calling-repo/docs/
+          fi
+          
           # Make the script executable
-          chmod +x scripts/confluence_publisher.py
+          chmod +x redesigned-guacamole/scripts/confluence_publisher.py
           
           # Run the Python-based Confluence publisher
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "🧪 Running in DRY RUN mode"
-            python3 scripts/confluence_publisher.py \
+            python3 redesigned-guacamole/scripts/confluence_publisher.py \
               --dry-run \
-              --docs-dir docs \
-              --vars-file docs/vars.yaml
+              --docs-dir calling-repo/docs \
+              --vars-file calling-repo/docs/vars.yaml
           else
             echo "🚀 Running in LIVE mode"
-            python3 scripts/confluence_publisher.py \
-              --docs-dir docs \
-              --vars-file docs/vars.yaml \
+            python3 redesigned-guacamole/scripts/confluence_publisher.py \
+              --docs-dir calling-repo/docs \
+              --vars-file calling-repo/docs/vars.yaml \
               --confluence-url "${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" \
               --confluence-user "${{ secrets.CONFLUENCE_USER || 'not-configured' }}" \
               --confluence-token "${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
