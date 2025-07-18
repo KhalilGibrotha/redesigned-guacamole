@@ -79,6 +79,9 @@ jobs:
         run: |
           echo "Current repository: ${{ github.repository }}"
           echo "Expected repository: KhalilGibrotha/redesigned-guacamole"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Ref name: ${{ github.ref_name }}"
 
           if [[ "${{ github.repository }}" != "KhalilGibrotha/redesigned-guacamole" ]]; then
             echo "external-call=true" >> $GITHUB_OUTPUT
@@ -609,8 +612,8 @@ jobs:
     name: 🚀 Publish to Confluence
     needs: [detect-changes]
     if: >
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
+      (github.event_name == 'push' || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') &&
+      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || needs.detect-changes.outputs.external-call == 'true') &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
     # Using the workflow from our repository to ensure script availability
