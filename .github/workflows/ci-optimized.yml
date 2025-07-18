@@ -142,15 +142,16 @@ jobs:
         if: steps.context.outputs.external-call != 'true'
         run: |
           echo "🏠 Internal call - using actual change detection"
-          echo "docs-changed=${{ steps.changes.outputs.docs }}" >> $GITHUB_OUTPUT
-          echo "ansible-changed=${{ steps.changes.outputs.ansible }}" >> $GITHUB_OUTPUT
-          echo "python-changed=${{ steps.changes.outputs.python }}" >> $GITHUB_OUTPUT
-          echo "workflows-changed=${{ steps.changes.outputs.workflows }}" >> $GITHUB_OUTPUT
-          echo "any-code-changed=${{ steps.changes.outputs.code }}" >> $GITHUB_OUTPUT
+          echo "docs-changed=${{ steps.changes.outputs.docs || 'false' }}" >> $GITHUB_OUTPUT
+          echo "ansible-changed=${{ steps.changes.outputs.ansible || 'false' }}" >> $GITHUB_OUTPUT
+          echo "python-changed=${{ steps.changes.outputs.python || 'false' }}" >> $GITHUB_OUTPUT
+          echo "workflows-changed=${{ steps.changes.outputs.workflows || 'false' }}" >> $GITHUB_OUTPUT
+          echo "any-code-changed=${{ steps.changes.outputs.code || 'false' }}" >> $GITHUB_OUTPUT
 
       - name: 🔄 Finalize Change Detection
         id: final
         run: |
+          # Use outputs from the step that actually ran
           if [[ "${{ steps.context.outputs.external-call }}" == "true" ]]; then
             echo "docs-changed=${{ steps.external.outputs.docs-changed }}" >> $GITHUB_OUTPUT
             echo "ansible-changed=${{ steps.external.outputs.ansible-changed }}" >> $GITHUB_OUTPUT
