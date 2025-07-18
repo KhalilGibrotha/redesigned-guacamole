@@ -2,6 +2,30 @@
 name: 🚀 CI/CD Pipeline
 
 on:
+  # Manual trigger - allows running from GitHub UI
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full codebase scan (not just changed files)'
+        required: false
+        type: boolean
+        default: true
+      target_environment:
+        description: 'Target environment for publishing'
+        required: false
+        type: choice
+        options:
+          - 'production'
+          - 'staging'
+          - 'development'
+        default: 'production'
+      dry_run:
+        description: 'Dry run mode (no actual publishing)'
+        required: false
+        type: boolean
+        default: false
+
+  # Remote trigger - allows being called by other workflows
   workflow_call:
     inputs:
       full_scan:
@@ -14,6 +38,16 @@ on:
         required: false
         type: string
         default: ''
+      target_environment:
+        description: 'Target environment for publishing'
+        required: false
+        type: string
+        default: 'production'
+      dry_run:
+        description: 'Dry run mode (no actual publishing)'
+        required: false
+        type: boolean
+        default: false
     secrets:
       CONFLUENCE_URL:
         required: false
@@ -28,11 +62,11 @@ jobs:
     name: 🔍 Detect File Changes
     runs-on: ubuntu-latest
     outputs:
-      docs-changed: ${{ steps.changes.outputs.docs }}
-      ansible-changed: ${{ steps.changes.outputs.ansible }}
-      python-changed: ${{ steps.changes.outputs.python }}
-      workflows-changed: ${{ steps.changes.outputs.workflows }}
-      any-code-changed: ${{ steps.changes.outputs.code }}
+      docs-changed: ${{ steps.final.outputs.docs-changed }}
+      ansible-changed: ${{ steps.final.outputs.ansible-changed }}
+      python-changed: ${{ steps.final.outputs.python-changed }}
+      workflows-changed: ${{ steps.final.outputs.workflows-changed }}
+      any-code-changed: ${{ steps.final.outputs.any-code-changed }}
       external-call: ${{ steps.context.outputs.external-call }}
     steps:
       - name: 📥 Checkout Code
@@ -45,7 +79,7 @@ jobs:
         run: |
           echo "Current repository: ${{ github.repository }}"
           echo "Expected repository: KhalilGibrotha/redesigned-guacamole"
-          
+
           if [[ "${{ github.repository }}" != "KhalilGibrotha/redesigned-guacamole" ]]; then
             echo "external-call=true" >> $GITHUB_OUTPUT
             echo "🔄 External repository call detected - will assume docs changed"
@@ -54,40 +88,82 @@ jobs:
             echo "🏠 Internal repository call - will detect actual changes"
           fi
 
-      - name: 🔍 Detect Changed Files
-        uses: dorny/paths-filter@v3
+      - name: 🔍 Detect Changes
+        uses: dorny/paths-filter@v2
+        if: steps.context.outputs.external-call != 'true'
         id: changes
         with:
           filters: |
             docs:
               - 'docs/**'
+              - 'templates/**'
+              - 'vars/**'
               - '*.md'
-              - 'README*'
             ansible:
               - 'playbooks/**'
-              - 'roles/**'
               - 'inventory/**'
-              - 'site.yml'
-              - 'playbook*.yml'
-              - 'playbook*.yaml'
-              - '.ansible-lint'
-              - 'ansible.cfg'
+              - '*.yml'
+              - '*.yaml'
             python:
               - '**/*.py'
-              - 'requirements*.txt'
-              - 'pyproject.toml'
-              - '.flake8'
-              - '.pylintrc'
+              - 'requirements.txt'
             workflows:
-              - '.github/workflows/**'
-              - '.github/super-linter*'
+              - '.github/**'
             code:
               - '**/*.py'
               - '**/*.yml'
               - '**/*.yaml'
-              - '**/*.sh'
-              - '**/*.json'
-              - '.github/workflows/**'
+              - '**/*.j2'
+              - '**/*.md'
+
+      - name: 🔄 Set Default Outputs
+        id: defaults
+        if: steps.context.outputs.external-call != 'true' && steps.changes.outcome != 'success'
+        run: |
+          echo "docs=false" >> $GITHUB_OUTPUT
+          echo "ansible=false" >> $GITHUB_OUTPUT
+          echo "python=false" >> $GITHUB_OUTPUT
+          echo "workflows=false" >> $GITHUB_OUTPUT
+          echo "code=false" >> $GITHUB_OUTPUT
+
+      - name: 🔄 Set External Changes
+        id: external
+        if: steps.context.outputs.external-call == 'true'
+        run: |
+          echo "🔄 External call detected - assuming all changes"
+          echo "docs-changed=true" >> $GITHUB_OUTPUT
+          echo "ansible-changed=true" >> $GITHUB_OUTPUT
+          echo "python-changed=true" >> $GITHUB_OUTPUT
+          echo "workflows-changed=true" >> $GITHUB_OUTPUT
+          echo "any-code-changed=true" >> $GITHUB_OUTPUT
+
+      - name: 🔄 Set Internal Changes
+        id: internal
+        if: steps.context.outputs.external-call != 'true'
+        run: |
+          echo "🏠 Internal call - using actual change detection"
+          echo "docs-changed=${{ steps.changes.outputs.docs }}" >> $GITHUB_OUTPUT
+          echo "ansible-changed=${{ steps.changes.outputs.ansible }}" >> $GITHUB_OUTPUT
+          echo "python-changed=${{ steps.changes.outputs.python }}" >> $GITHUB_OUTPUT
+          echo "workflows-changed=${{ steps.changes.outputs.workflows }}" >> $GITHUB_OUTPUT
+          echo "any-code-changed=${{ steps.changes.outputs.code }}" >> $GITHUB_OUTPUT
+
+      - name: 🔄 Finalize Change Detection
+        id: final
+        run: |
+          if [[ "${{ steps.context.outputs.external-call }}" == "true" ]]; then
+            echo "docs-changed=${{ steps.external.outputs.docs-changed }}" >> $GITHUB_OUTPUT
+            echo "ansible-changed=${{ steps.external.outputs.ansible-changed }}" >> $GITHUB_OUTPUT
+            echo "python-changed=${{ steps.external.outputs.python-changed }}" >> $GITHUB_OUTPUT
+            echo "workflows-changed=${{ steps.external.outputs.workflows-changed }}" >> $GITHUB_OUTPUT
+            echo "any-code-changed=${{ steps.external.outputs.any-code-changed }}" >> $GITHUB_OUTPUT
+          else
+            echo "docs-changed=${{ steps.internal.outputs.docs-changed }}" >> $GITHUB_OUTPUT
+            echo "ansible-changed=${{ steps.internal.outputs.ansible-changed }}" >> $GITHUB_OUTPUT
+            echo "python-changed=${{ steps.internal.outputs.python-changed }}" >> $GITHUB_OUTPUT
+            echo "workflows-changed=${{ steps.internal.outputs.workflows-changed }}" >> $GITHUB_OUTPUT
+            echo "any-code-changed=${{ steps.internal.outputs.any-code-changed }}" >> $GITHUB_OUTPUT
+          fi
 
   super-linter:
     name: 🔍 Super Linter
@@ -157,16 +233,17 @@ jobs:
         id: detect-files
         run: |
           echo "🔍 Detecting file types for intelligent validation..."
-          
+
           # Check for different file types and set outputs (with proper quoting)
           yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*" | wc -l)
-          ansible_files=$(find . -type f \( -path "./playbooks/*" -o -path "./roles/*" -o -name "site.yml" -o -name "playbook*.yml" -o -name "playbook*.yaml" \) | wc -l)
+          ansible_files=$(find . -type f \( -path "./playbooks/*" -o -path "./roles/*" \
+            -o -name "site.yml" -o -name "playbook*.yml" -o -name "playbook*.yaml" \) | wc -l)
           python_files=$(find . -type f -name "*.py" ! -path "./.git/*" ! -path "./.venv/*" ! -path "./venv/*" | wc -l)
           markdown_files=$(find . -type f -name "*.md" ! -path "./.git/*" | wc -l)
           shell_files=$(find . -type f -name "*.sh" ! -path "./.git/*" | wc -l)
           json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" | wc -l)
           github_actions_files=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | wc -l)
-          
+
           # Set outputs
           echo "yaml_files=$yaml_files" >> $GITHUB_OUTPUT
           echo "ansible_files=$ansible_files" >> $GITHUB_OUTPUT
@@ -175,7 +252,7 @@ jobs:
           echo "shell_files=$shell_files" >> $GITHUB_OUTPUT
           echo "json_files=$json_files" >> $GITHUB_OUTPUT
           echo "github_actions_files=$github_actions_files" >> $GITHUB_OUTPUT
-          
+
           # Output summary
           echo "📊 File detection summary:"
           echo "  - YAML files: $yaml_files"
@@ -190,7 +267,7 @@ jobs:
         id: generate-config
         run: |
           echo "⚙️ Generating dynamic Super Linter configuration..."
-          
+
           # Set boolean values based on file detection
           yaml_validation=$([ "${{ steps.detect-files.outputs.yaml_files }}" -gt 0 ] && echo "true" || echo "false")
           ansible_validation=$([ "${{ steps.detect-files.outputs.ansible_files }}" -gt 0 ] && echo "true" || echo "false")
@@ -199,34 +276,35 @@ jobs:
           shell_validation=$([ "${{ steps.detect-files.outputs.shell_files }}" -gt 0 ] && echo "true" || echo "false")
           json_validation=$([ "${{ steps.detect-files.outputs.json_files }}" -gt 0 ] && echo "true" || echo "false")
           github_actions_validation=$([ "${{ steps.detect-files.outputs.github_actions_files }}" -gt 0 ] && echo "true" || echo "false")
-          
+
           # Set validate all codebase based on input or event type
-          if [[ "${{ inputs.full_scan }}" == "true" ]] || [[ "${{ github.event_name }}" == "schedule" ]] || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          if [[ "${{ inputs.full_scan }}" == "true" ]] || [[ "${{ github.event_name }}" == "schedule" ]] \
+            || [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             validate_all_codebase="true"
           else
             validate_all_codebase="false"
           fi
-          
+
           # Create the dynamic configuration file
           cat > .github/super-linter-dynamic.env << 'ENVEOF'
           # Super Linter Dynamic Configuration
           # Generated by CI workflow based on runtime conditions
-          
+
           ##########################
           # Branch and Git Settings
           ##########################
-          
+
           # Default branch for comparison (dynamically set)
           DEFAULT_BRANCH=BRANCH_PLACEHOLDER
-          
+
           # Validate all files vs changed files only
           VALIDATE_ALL_CODEBASE=VALIDATE_ALL_PLACEHOLDER
-          
+
           ##########################
           # Intelligent Validation Toggles
           # (Based on file presence detection)
           ##########################
-          
+
           # Enable validation only if files of that type exist
           VALIDATE_YAML=YAML_PLACEHOLDER
           VALIDATE_ANSIBLE=ANSIBLE_PLACEHOLDER
@@ -236,52 +314,52 @@ jobs:
           VALIDATE_JSON=JSON_PLACEHOLDER
           VALIDATE_SHELL_SHFMT=SHELL_PLACEHOLDER
           VALIDATE_GITHUB_ACTIONS=GITHUB_ACTIONS_PLACEHOLDER
-          
+
           ##########################
           # Auto-fix Configuration
           ##########################
-          
+
           # Enable auto-fixing for supported linters (only if files exist)
           FIX_YAML=FIX_YAML_PLACEHOLDER
           FIX_MARKDOWN=FIX_MARKDOWN_PLACEHOLDER
           FIX_JSON=FIX_JSON_PLACEHOLDER
           FIX_SHELL_SHFMT=FIX_SHELL_PLACEHOLDER
-          
+
           ##########################
           # Performance Settings
           ##########################
-          
+
           # Multi-threading for faster execution
           PARALLEL=true
           SLIM_IMAGE=true
           FAIL_FAST=false
-          
+
           ##########################
           # Output Configuration
           ##########################
-          
+
           # Detailed output for CI analysis
           OUTPUT_FORMAT=tap
           OUTPUT_DETAILS=detailed
           CREATE_LOG_FILE=true
-          
+
           ##########################
           # File Filtering
           ##########################
-          
+
           # Filter settings
           USE_FIND_ALGORITHM=false
           IGNORE_GITIGNORED_FILES=true
-          
+
           ##########################
           # Suppression
           ##########################
-          
+
           # Suppress certain outputs for cleaner logs
           SUPPRESS_POSSUM=true
           SUPPRESS_FILE_TYPE_WARN=true
           ENVEOF
-          
+
           # Replace placeholders with actual values
           sed -i "s/BRANCH_PLACEHOLDER/${{ steps.config.outputs.default_branch }}/g" .github/super-linter-dynamic.env
           sed -i "s/VALIDATE_ALL_PLACEHOLDER/${validate_all_codebase}/g" .github/super-linter-dynamic.env
@@ -297,7 +375,7 @@ jobs:
           sed -i "s/FIX_MARKDOWN_PLACEHOLDER/${markdown_validation}/g" .github/super-linter-dynamic.env
           sed -i "s/FIX_JSON_PLACEHOLDER/${json_validation}/g" .github/super-linter-dynamic.env
           sed -i "s/FIX_SHELL_PLACEHOLDER/${shell_validation}/g" .github/super-linter-dynamic.env
-          
+
           echo "✅ Dynamic configuration generated with intelligent validation"
           echo "📋 Configuration preview:"
           head -20 .github/super-linter-dynamic.env
@@ -315,7 +393,7 @@ jobs:
         env:
           # Use dynamically generated configuration
           ENV_FILE: .github/super-linter-dynamic.env
-          
+
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -551,7 +629,7 @@ jobs:
     name: 📊 Generate Comprehensive Report
     # This job runs after all checks are complete, including publish which now runs in parallel
     needs: [super-linter, security, detect-changes, publish]
-    if: always() # Always run to report on success or failure
+    if: always()  # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
       - name: � Checkout Code (for scripts)
@@ -584,15 +662,15 @@ jobs:
           import os
           import glob
           import sys
-          
+
           def parse_sarif(file_path):
               if not os.path.exists(file_path):
                   return '| N/A | No report found | This scan may have failed to produce a report. | N/A |\n', 0
-          
+
               report_md = ''
               results = {}
               total_issues = 0
-              
+
               try:
                   with open(file_path, 'r', encoding='utf-8') as f:
                       sarif_data = json.load(f)
@@ -606,36 +684,36 @@ jobs:
                               results[key] = results.get(key, 0) + 1
               except (json.JSONDecodeError, KeyError, TypeError) as e:
                   return f'| ERROR | PARSE_ERROR | Failed to parse SARIF file: {str(e)} | N/A |\n', 0
-              
+
               if not results:
                   report_md += '| ✅ | None | No issues found! | 0 |\n'
               else:
                   for (level, rule, msg), count in sorted(results.items()):
                       msg_escaped = msg.replace('|', '\\|').replace('\n', ' ').replace('\r', '').replace('`', '\\`')
                       report_md += f'| {level} | \`{rule}\` | {msg_escaped} | {count} |\n'
-              
+
               return report_md, total_issues
-          
+
           # Main execution
           summary_file = os.getenv('GITHUB_STEP_SUMMARY')
           if not summary_file:
               print('ERROR: GITHUB_STEP_SUMMARY environment variable not set', file=sys.stderr)
               sys.exit(1)
-          
+
           reports_dir = './reports'
           overall_total = 0
-          
+
           # Dynamically discover all SARIF reports
           all_reports = {}
           for p in glob.glob(os.path.join(reports_dir, '**', '*.sarif'), recursive=True):
               name = os.path.basename(os.path.dirname(p)).replace('-', ' ').replace('_', ' ').title()
               if name:
                   all_reports[name] = p
-          
+
           print(f'Processing {len(all_reports)} report types...')
           print(f'Reports directory: {reports_dir}')
           print(f'Summary will be written to: {summary_file}')
-          
+
           # Check if reports directory exists
           if not os.path.exists(reports_dir):
               print(f'WARNING: Reports directory {reports_dir} does not exist')
@@ -650,11 +728,11 @@ jobs:
                   f.write('**This is often normal** - it means no security or linting issues were detected!\n\n')
               print('✅ Summary generated with no reports found message')
               sys.exit(0)
-          
+
           # Check if directory is empty
           all_files = glob.glob(os.path.join(reports_dir, '**', '*'), recursive=True)
           report_files = [f for f in all_files if f.endswith('.sarif')]
-          
+
           if not report_files:
               print(f'INFO: Reports directory exists but contains no SARIF files')
               print(f'Found {len(all_files)} total files in reports directory')
@@ -668,28 +746,28 @@ jobs:
                       f.write('(These may be log files or other artifacts)\n\n')
               print('✅ Summary generated with no issues found message')
               sys.exit(0)
-          
+
           # Process each report
           with open(summary_file, 'a') as f:
               f.write('## 📊 Security & Quality Reports Summary\n\n')
-          
+
           for tool_name, report_path in all_reports.items():
               print(f'Processing {tool_name} report: {report_path}')
-              
+
               with open(summary_file, 'a') as f:
                   f.write(f'### {tool_name} Report\n')
                   f.write('| Severity | Rule ID | Description | Total |\n')
                   f.write('|----------|---------|-------------|-------|\n')
-              
+
               report_content, issue_count = parse_sarif(report_path)
               overall_total += issue_count
-              
+
               with open(summary_file, 'a') as f:
                   f.write(report_content)
                   f.write('\n')
-              
+
               print(f'  - Found {issue_count} issues in {tool_name}')
-          
+
           # Final summary
           with open(summary_file, 'a') as f:
               f.write('\n---\n\n')
@@ -699,7 +777,7 @@ jobs:
               else:
                   f.write(f'### 📊 Total Issues Found: {overall_total}\n\n')
                   f.write('Please review the individual reports above for detailed information.\n')
-          
+
           print(f'✅ Summary generation complete. Total issues across all tools: {overall_total}')
           "
 

@@ -174,9 +174,52 @@ runs:
     - name: 🔍 Run Super Linter
       id: super-linter
       uses: super-linter/super-linter@v5
-      with:
-        env-file: .github/super-linter-dynamic.env
-        github-token: ${{ inputs.github-token }}
+      env:
+        # Load configuration from dynamic env file
+        DEFAULT_BRANCH: ${{ inputs.default-branch }}
+        VALIDATE_ALL_CODEBASE: ${{ inputs.full-scan }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        # Dynamic validation settings
+        VALIDATE_YAML: ${{ steps.detect-files.outputs.yaml_files > 0 }}
+        VALIDATE_ANSIBLE: ${{ steps.detect-files.outputs.ansible_files > 0 }}
+        VALIDATE_MARKDOWN: ${{ steps.detect-files.outputs.markdown_files > 0 }}
+        VALIDATE_PYTHON: ${{ steps.detect-files.outputs.python_files > 0 }}
+        VALIDATE_BASH: ${{ steps.detect-files.outputs.shell_files > 0 }}
+        VALIDATE_JSON: ${{ steps.detect-files.outputs.json_files > 0 }}
+        VALIDATE_GITHUB_ACTIONS: ${{ steps.detect-files.outputs.github_actions_files > 0 }}
+        # Performance settings
+        PARALLEL: true
+        SLIM_IMAGE: true
+        FAIL_FAST: false
+        OUTPUT_FORMAT: tap
+        CREATE_LOG_FILE: true
+        SUPPRESS_POSSUM: true
+
+    - name: 📊 Analyze Super Linter Results
+      id: rule-analysis
+      if: always()
+      shell: bash
+      run: |
+        echo "📊 Analyzing Super Linter results..."
+        
+        # Check if Super Linter failed
+        if [[ "${{ steps.super-linter.outcome }}" == "failure" ]]; then
+          echo "violations_found=true" >> $GITHUB_OUTPUT
+          echo "❌ Super Linter found violations"
+          
+          # Try to count violations from log files
+          total_violations=0
+          if [ -f "super-linter.log" ]; then
+            total_violations=$(grep -c "ERROR\|WARN" super-linter.log 2>/dev/null || echo "0")
+          fi
+          echo "total_violations=$total_violations" >> $GITHUB_OUTPUT
+          echo "🔢 Total violations found: $total_violations"
+          
+        else
+          echo "violations_found=false" >> $GITHUB_OUTPUT
+          echo "total_violations=0" >> $GITHUB_OUTPUT
+          echo "✅ Super Linter passed successfully"
+        fi
 
     - name: 📤 Upload Dynamic Configuration (Debug)
       if: always()
