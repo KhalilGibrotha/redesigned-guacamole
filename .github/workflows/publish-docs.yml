@@ -44,7 +44,7 @@ jobs:
   publish-confluence:
     name: 🚀 Publish to Confluence
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       actions: read
@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "Current repository: ${{ github.repository }}"
           echo "Target repository: KhalilGibrotha/redesigned-guacamole"
-          
+
           if [[ "${{ github.repository }}" == "KhalilGibrotha/redesigned-guacamole" ]]; then
             echo "same-repo=true" >> $GITHUB_OUTPUT
             echo "🏠 Running within redesigned-guacamole - optimized checkout"
@@ -104,83 +104,83 @@ jobs:
       - name: 🔍 Validate Configuration
         run: |
           echo "🔍 Validating Confluence configuration..."
-          
+
           # Check if we're in dry-run mode
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "🧪 Running in DRY RUN mode - secrets validation relaxed"
-            
+
             # Check if secrets are available (but don't fail if missing)
             if [[ -n "${{ secrets.CONFLUENCE_URL }}" ]]; then
               echo "✅ CONFLUENCE_URL is configured"
             else
               echo "⚠️ CONFLUENCE_URL is not configured (OK for dry run)"
             fi
-            
+
             if [[ -n "${{ secrets.CONFLUENCE_USER }}" ]]; then
               echo "✅ CONFLUENCE_USER is configured"
             else
               echo "⚠️ CONFLUENCE_USER is not configured (OK for dry run)"
             fi
-            
+
             if [[ -n "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
               echo "✅ CONFLUENCE_API_TOKEN is configured"
             else
               echo "⚠️ CONFLUENCE_API_TOKEN is not configured (OK for dry run)"
             fi
-            
+
             echo "🧪 Dry run mode: proceeding with available configuration"
           else
             echo "🚀 Running in LIVE mode - all secrets required"
-            
+
             # Check if required secrets are provided for live run
             if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]]; then
               echo "❌ CONFLUENCE_URL secret is required for live publishing"
               exit 1
             fi
-            
+
             if [[ -z "${{ secrets.CONFLUENCE_USER }}" ]]; then
               echo "❌ CONFLUENCE_USER secret is required for live publishing"
               exit 1
             fi
-            
+
             if [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
               echo "❌ CONFLUENCE_API_TOKEN secret is required for live publishing"
               exit 1
             fi
-            
+
             echo "✅ All required secrets are configured for live publishing"
           fi
 
       - name: 🔧 Prepare Publishing Environment
         run: |
           echo "🔧 Preparing publishing environment..."
-          
+
           # Create output directory
           mkdir -p output/confluence
-          
+
           # Set environment variables (with defaults for missing secrets)
           echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" >> $GITHUB_ENV
           echo "CONFLUENCE_USER=${{ secrets.CONFLUENCE_USER || 'not-configured' }}" >> $GITHUB_ENV
           echo "CONFLUENCE_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}" >> $GITHUB_ENV
           echo "DRY_RUN=${{ inputs.dry_run }}" >> $GITHUB_ENV
           echo "TARGET_ENV=${{ inputs.target_environment }}" >> $GITHUB_ENV
-          
+
           echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
 
       - name: 📝 Process AAP Documentation
         run: |
           echo "📝 Processing AAP documentation templates..."
-          
+
           # Ensure docs directory exists in calling repo
           mkdir -p calling-repo/docs
-          
+
           # Copy macros from scripts repository to content repository (only if different repos)
           if [[ "${{ steps.context.outputs.same-repo }}" != "true" ]]; then
             if [ -d "redesigned-guacamole/docs/macros" ]; then
               echo "📋 Copying macros from redesigned-guacamole to calling repository..."
               cp -r redesigned-guacamole/docs/macros calling-repo/docs/
             fi
-            
+
             # Also copy the main macros.j2 file if it exists
             if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
               echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
@@ -189,10 +189,10 @@ jobs:
           else
             echo "🏠 Same repository - macros already available, no copying needed"
           fi
-          
+
           # Make the script executable
           chmod +x redesigned-guacamole/scripts/confluence_publisher.py
-          
+
           # Run the Python-based Confluence publisher
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "🧪 Running in DRY RUN mode"
@@ -214,11 +214,11 @@ jobs:
         if: always()
         run: |
           echo "📊 Generating publishing report..."
-          
+
           # Create a summary report
           cat > output/confluence/publishing_report.md << EOF
           # 📚 Confluence Publishing Report
-          
+
           ## 📋 Publishing Details
           - **Target Environment**: ${{ inputs.target_environment }}
           - **Dry Run**: ${{ inputs.dry_run }}
@@ -226,15 +226,15 @@ jobs:
           - **Git Reference**: ${{ github.ref_name }}
           - **Commit SHA**: ${{ github.sha }}
           - **Workflow Run**: ${{ github.run_number }}
-          
+
           ## 🔗 Links
           - **Repository**: ${{ github.server_url }}/${{ github.repository }}
           - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          
+
           ## 📈 Status
           ${{ inputs.dry_run == true && '🧪 **DRY RUN** - No actual changes were made' || '✅ **LIVE RUN** - Documentation was published to Confluence' }}
           EOF
-          
+
           echo "✅ Publishing report generated"
           cat output/confluence/publishing_report.md
 
@@ -259,7 +259,7 @@ jobs:
           echo "- **Git Reference**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "### 🧪 Dry Run Results" >> $GITHUB_STEP_SUMMARY
             echo "- No actual changes were made to Confluence" >> $GITHUB_STEP_SUMMARY
