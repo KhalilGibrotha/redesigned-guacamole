@@ -50,18 +50,40 @@ jobs:
       actions: read
 
     steps:
-      - name: 📥 Checkout Code
+      - name: � Detect Repository Context
+        id: context
+        run: |
+          echo "Current repository: ${{ github.repository }}"
+          echo "Target repository: KhalilGibrotha/redesigned-guacamole"
+          
+          if [[ "${{ github.repository }}" == "KhalilGibrotha/redesigned-guacamole" ]]; then
+            echo "same-repo=true" >> $GITHUB_OUTPUT
+            echo "🏠 Running within redesigned-guacamole - optimized checkout"
+          else
+            echo "same-repo=false" >> $GITHUB_OUTPUT
+            echo "🔄 External repository call - need separate checkouts"
+          fi
+
+      - name: �📥 Checkout Code (Scripts Repository)
         uses: actions/checkout@v4
         with:
           repository: KhalilGibrotha/redesigned-guacamole
           fetch-depth: 0
           path: redesigned-guacamole
 
-      - name: 📥 Checkout Calling Repository
+      - name: 📥 Checkout Calling Repository (Content)
+        if: steps.context.outputs.same-repo != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           path: calling-repo
+
+      - name: 🔗 Create Content Symlink (Same Repository)
+        if: steps.context.outputs.same-repo == 'true'
+        run: |
+          # When running in the same repo, create a symlink to avoid duplication
+          ln -s redesigned-guacamole calling-repo
+          echo "✅ Created symlink: calling-repo -> redesigned-guacamole"
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -149,16 +171,23 @@ jobs:
         run: |
           echo "📝 Processing AAP documentation templates..."
           
-          # Copy macros from our repository to the calling repository to ensure templates work
-          if [ -d "redesigned-guacamole/docs/macros" ]; then
-            echo "📋 Copying macros from redesigned-guacamole to calling repository..."
-            cp -r redesigned-guacamole/docs/macros calling-repo/docs/
-          fi
+          # Ensure docs directory exists in calling repo
+          mkdir -p calling-repo/docs
           
-          # Also copy the main macros.j2 file if it exists
-          if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
-            echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
-            cp redesigned-guacamole/docs/macros.j2 calling-repo/docs/
+          # Copy macros from scripts repository to content repository (only if different repos)
+          if [[ "${{ steps.context.outputs.same-repo }}" != "true" ]]; then
+            if [ -d "redesigned-guacamole/docs/macros" ]; then
+              echo "📋 Copying macros from redesigned-guacamole to calling repository..."
+              cp -r redesigned-guacamole/docs/macros calling-repo/docs/
+            fi
+            
+            # Also copy the main macros.j2 file if it exists
+            if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
+              echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
+              cp redesigned-guacamole/docs/macros.j2 calling-repo/docs/
+            fi
+          else
+            echo "🏠 Same repository - macros already available, no copying needed"
           fi
           
           # Make the script executable
