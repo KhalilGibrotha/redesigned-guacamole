@@ -33,11 +33,26 @@ jobs:
       python-changed: ${{ steps.changes.outputs.python }}
       workflows-changed: ${{ steps.changes.outputs.workflows }}
       any-code-changed: ${{ steps.changes.outputs.code }}
+      external-call: ${{ steps.context.outputs.external-call }}
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: 🔍 Check Repository Context
+        id: context
+        run: |
+          echo "Current repository: ${{ github.repository }}"
+          echo "Expected repository: KhalilGibrotha/redesigned-guacamole"
+          
+          if [[ "${{ github.repository }}" != "KhalilGibrotha/redesigned-guacamole" ]]; then
+            echo "external-call=true" >> $GITHUB_OUTPUT
+            echo "🔄 External repository call detected - will assume docs changed"
+          else
+            echo "external-call=false" >> $GITHUB_OUTPUT
+            echo "🏠 Internal repository call - will detect actual changes"
+          fi
 
       - name: 🔍 Detect Changed Files
         uses: dorny/paths-filter@v3
@@ -517,7 +532,7 @@ jobs:
     if: >
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true)
+      (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
     # Using the workflow from our repository to ensure script availability
     uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/publish-docs.yml@main
@@ -694,6 +709,8 @@ jobs:
           echo "## 🚀 Workflow Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **External call**: ${{ needs.detect-changes.outputs.external-call }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}" >> $GITHUB_STEP_SUMMARY
