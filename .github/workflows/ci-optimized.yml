@@ -619,8 +619,8 @@ jobs:
     # Using the workflow from our repository to ensure script availability
     uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/publish-docs.yml@main
     with:
-      target_environment: 'production'
-      dry_run: false
+      target_environment: ${{ inputs.target_environment || 'production' }}
+      dry_run: ${{ inputs.dry_run || false }}
 
     # Pass the required secrets to the reusable workflow.
     secrets:
