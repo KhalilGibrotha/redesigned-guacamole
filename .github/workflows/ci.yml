@@ -620,7 +620,7 @@ jobs:
     # 💡 1. The 'uses' key now calls your reusable workflow.
     # The runs-on and steps are removed.
     # Make sure to use the correct branch name or tag (e.g., @main).
-    uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@develop
+    uses: KhalilGibrotha/bug-free-fiesta/.github/workflows/publish-docs.yml@main
 
     # 💡 2. Pass the required secrets to the reusable workflow.
     secrets:
