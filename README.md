@@ -147,7 +147,7 @@ permissions:
 
 jobs:
   ci-cd-pipeline:
-    uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    uses: YOUR_USERNAME/YOUR_REPOSITORY/.github/workflows/ci-optimized.yml@main
     with:
       full_scan: ${{ inputs.full_scan || true }}
       branch_name: ${{ github.ref_name }}
@@ -332,8 +332,8 @@ If you want to contribute to this repository or run components locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/KhalilGibrotha/redesigned-guacamole.git
-cd redesigned-guacamole
+git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
 
 # Install dependencies
 pip install -r requirements.txt
@@ -355,8 +355,8 @@ yamllint .
 ## �� Support
 
 - 📖 Check the [examples](docs/) in this repository
-- 🐛 [Open an issue](https://github.com/KhalilGibrotha/redesigned-guacamole/issues) for bugs
-- 💡 [Request features](https://github.com/KhalilGibrotha/redesigned-guacamole/discussions) via discussions
+- 🐛 [Open an issue](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues) for bugs
+- 💡 [Request features](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/discussions) via discussions
 - 📚 Review workflow logs in GitHub Actions for detailed debugging
 
 ## 📄 License

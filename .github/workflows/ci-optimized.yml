@@ -78,14 +78,15 @@ jobs:
         id: context
         run: |
           echo "Current repository: ${{ github.repository }}"
-          echo "Expected repository: KhalilGibrotha/redesigned-guacamole"
           echo "Event name: ${{ github.event_name }}"
           echo "Ref: ${{ github.ref }}"
           echo "Ref name: ${{ github.ref_name }}"
 
-          if [[ "${{ github.repository }}" != "KhalilGibrotha/redesigned-guacamole" ]]; then
+          # Detect external calls via workflow_call event
+          # When called externally via workflow_call, we assume all changes for simplicity
+          if [[ "${{ github.event_name }}" == "workflow_call" ]]; then
             echo "external-call=true" >> $GITHUB_OUTPUT
-            echo "🔄 External repository call detected - will assume docs changed"
+            echo "🔄 External workflow call detected (workflow_call event) - will assume docs changed"
           else
             echo "external-call=false" >> $GITHUB_OUTPUT
             echo "🏠 Internal repository call - will detect actual changes"
@@ -180,7 +181,7 @@ jobs:
           echo "- **Full scan input**: ${{ inputs.full_scan }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Publishing will run if:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Event is 'push/workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'push' || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_STEP_SUMMARY
+          echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_STEP_SUMMARY
           echo "2. Branch is main/release/hotfix OR external call ✅: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || steps.context.outputs.external-call == 'true' }}" >> $GITHUB_STEP_SUMMARY
           echo "3. Docs changed OR full_scan OR external call ✅: ${{ steps.final.outputs.docs-changed == 'true' || inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}" >> $GITHUB_STEP_SUMMARY
 
@@ -493,7 +494,7 @@ jobs:
           fi
 
       - name: 💾 Commit Auto-fixes
-        if: steps.autofix-analysis.outputs.autofix_needed == 'true'
+        if: steps.autofix-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -525,6 +526,20 @@ jobs:
           git push origin ${{ github.ref_name }}
 
           echo "✅ Auto-fixes committed and pushed!"
+
+      - name: ⚠️ Auto-fix Skipped (External Call)
+        if: steps.autofix-analysis.outputs.autofix_needed == 'true' && github.event_name == 'workflow_call'
+        run: |
+          echo "⚠️ Auto-fixes detected but skipped for external workflow calls"
+          echo "🔍 Found ${{ steps.autofix-analysis.outputs.total_fixes }} potential fixes:"
+          echo "  - YAML fixes: ${{ steps.autofix-analysis.outputs.yaml_fixes }}"
+          echo "  - Ansible fixes: ${{ steps.autofix-analysis.outputs.ansible_fixes }}"
+          echo "  - Python fixes: ${{ steps.autofix-analysis.outputs.python_fixes }}"
+          echo "  - Shell fixes: ${{ steps.autofix-analysis.outputs.shell_fixes }}"
+          echo "  - Markdown fixes: ${{ steps.autofix-analysis.outputs.markdown_fixes }}"
+          echo "  - JSON fixes: ${{ steps.autofix-analysis.outputs.json_fixes }}"
+          echo ""
+          echo "💡 To apply these fixes, run the workflow directly on the target repository"
 
       - name: 📤 Upload Super Linter Logs
         if: always()
@@ -627,12 +642,12 @@ jobs:
     name: 🚀 Publish to Confluence
     needs: [detect-changes]
     if: >
-      (github.event_name == 'push' || github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') &&
+      (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') &&
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || needs.detect-changes.outputs.external-call == 'true') &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
-    # Use remote repository to ensure script availability when called externally
-    uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/publish-docs.yml@main
+    # Use current repository to ensure script availability
+    uses: ${{ github.repository }}/.github/workflows/publish-docs.yml@main
     with:
       target_environment: ${{ inputs.target_environment || 'production' }}
       dry_run: ${{ inputs.dry_run || false }}

@@ -59,20 +59,22 @@ jobs:
         id: context
         run: |
           echo "Current repository: ${{ github.repository }}"
-          echo "Target repository: KhalilGibrotha/redesigned-guacamole"
+          echo "Original repository: ${{ github.repository }}"
 
-          if [[ "${{ github.repository }}" == "KhalilGibrotha/redesigned-guacamole" ]]; then
-            echo "same-repo=true" >> $GITHUB_OUTPUT
-            echo "🏠 Running within redesigned-guacamole - optimized checkout"
-          else
+          # For workflow_call, determine if we need to check out both repos
+          if [[ "${{ github.event_name }}" == "workflow_call" ]]; then
+            # When called externally, we always need to checkout the target (this) repo for scripts
             echo "same-repo=false" >> $GITHUB_OUTPUT
-            echo "🔄 External repository call - need separate checkouts"
+            echo "🔄 External workflow call - need separate checkouts"
+          else
+            echo "same-repo=true" >> $GITHUB_OUTPUT
+            echo "🏠 Running within same repository - optimized checkout"
           fi
 
       - name: �📥 Checkout Code (Scripts Repository)
         uses: actions/checkout@v4
         with:
-          repository: KhalilGibrotha/redesigned-guacamole
+          repository: ${{ github.repository }}
           fetch-depth: 0
           path: redesigned-guacamole
 
