@@ -646,8 +646,8 @@ jobs:
       (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || needs.detect-changes.outputs.external-call == 'true') &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
-    # Use current repository to ensure script availability
-    uses: organization/repo-name/.github/workflows/publish-docs.yml@main
+    # Use explicit repository reference for external calls
+    uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/publish-docs.yml@main
     with:
       target_environment: ${{ inputs.target_environment || 'production' }}
       dry_run: ${{ inputs.dry_run || false }}
