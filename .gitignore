@@ -98,3 +98,9 @@ docs/_build/
 # Allow CI/CD workflow files and configurations
 !.github/**
 confluence_test.code-workspace
+
+# Cache and runtime files
+page_id_cache.json
+runtime.yml
+*.log
+*.tmp

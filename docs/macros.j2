@@ -1,0 +1,19 @@
+{%- macro oxford_comma_list(items) -%}
+    {%- if items is not defined or items is none or items | length == 0 -%}
+        MISSING VALUES MAKE ALEX SAD
+    {%- elif items is string -%}
+        {{- items -}}
+    {%- elif items is iterable and items is not string -%}
+        {%- set items = items | list -%}
+        {%- if items | length == 1 -%}
+            {{- items[0] -}}
+        {%- elif items | length == 2 -%}
+            {{- items[0] ~ ' and ' ~ items[1] -}}
+        {%- else -%}
+            {{- items[:-1] | join(', ') ~ ', and ' ~ items[-1] -}}
+        {%- endif -%}
+    {%- else -%}
+        MISSING VALUES MAKE ALEX SAD
+    {%- endif -%}
+{%- endmacro -%}
+

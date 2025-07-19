@@ -1,0 +1,42 @@
+# .shfmt configuration for shell script formatting
+# shfmt is used by Super Linter for shell script formatting
+# https://github.com/mvdan/sh
+
+# Indentation style and size
+# -i 2: Use 2 spaces for indentation
+# -ci: Indent switch cases
+# -sr: Redirect operators will be followed by a space
+# -kp: Keep column alignment paddings
+# -fn: Function opening braces are placed on the same line as the function name
+
+# Common shfmt flags (can be overridden in CI):
+# -i 2        # indent with 2 spaces
+# -ci         # indent switch cases  
+# -sr         # redirect operators followed by space
+# -kp         # keep column alignment paddings
+# -fn         # function opening braces on same line
+# -bn         # binary operators may start a line
+# -ln bash    # language variant (bash, posix, mksh)
+# -d          # print diff instead of rewriting files
+# -l          # list files that would be reformatted
+# -w          # write result to file instead of stdout
+
+# Example usage:
+# shfmt -i 2 -ci -sr -kp -fn -ln bash -w script.sh
+
+# For CI usage, typically:
+# shfmt -i 2 -ci -sr -kp -fn -ln bash -d *.sh
+
+# Note: shfmt doesn't use a configuration file by default
+# These settings need to be passed as command line arguments
+# This file serves as documentation for the project's shell formatting standards
+
+# Project shell formatting standards:
+# - 2 space indentation
+# - Switch case indentation
+# - Space after redirect operators  
+# - Keep alignment padding
+# - Function braces on same line
+# - Binary operators can start lines
+# - Target bash language variant
+# - Write changes to files during formatting

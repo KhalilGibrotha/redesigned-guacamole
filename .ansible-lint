@@ -14,11 +14,16 @@ enable_list:
   - meta-runtime
   - no-same-owner
 
-rulesdir:
-  - ./custom_rules
+# Custom rules directory (only if exists in calling repository)
+# rulesdir:
+#   - ./custom_rules
 
 # Exclude specific patterns
 exclude_paths:
   - .git/
   - .github/
-  - ci-cd-templates/
+  - node_modules/
+  - venv/
+  - .venv/
+  - __pycache__/
+  - '*.egg-info/'

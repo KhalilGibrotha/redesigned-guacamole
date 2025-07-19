@@ -1,0 +1,230 @@
+# GitHub Actions Workflow Linting Configuration
+# This file documents best practices and rules for GitHub Actions workflows
+
+#######################################
+# General Workflow Best Practices    #
+#######################################
+
+# 1. Use explicit action versions (not @latest or @main)
+#    ✅ uses: actions/checkout@v4
+#    ❌ uses: actions/checkout@latest
+
+# 2. Pin action versions using commit SHA for security-critical workflows
+#    ✅ uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v4.1.1
+#    ❌ uses: actions/checkout@v4
+
+# 3. Use semantic job and step names
+#    ✅ name: 🚀 Deploy to Production
+#    ❌ name: deploy
+
+# 4. Include timeout-minutes for long-running jobs
+#    timeout-minutes: 30
+
+# 5. Use appropriate runner types
+#    - ubuntu-latest for most cases
+#    - windows-latest for Windows-specific tasks
+#    - macos-latest for macOS-specific tasks
+
+#######################################
+# Security Best Practices            #
+#######################################
+
+# 1. Use minimal permissions
+# permissions:
+#   contents: read
+#   pull-requests: write
+
+# 2. Validate inputs in reusable workflows
+# inputs:
+#   environment:
+#     description: 'Target environment'
+#     required: true
+#     type: string
+
+# 3. Use environment protection rules for sensitive deployments
+
+# 4. Avoid exposing secrets in logs
+#    ✅ run: echo "Token is configured"
+#    ❌ run: echo "Token: ${{ secrets.TOKEN }}"
+
+# 5. Use GITHUB_TOKEN when possible instead of PATs
+
+#######################################
+# Performance Optimization           #
+#######################################
+
+# 1. Use caching for dependencies
+# - name: Cache dependencies
+#   uses: actions/cache@v3
+#   with:
+#     path: ~/.cache/pip
+#     key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+
+# 2. Use concurrency controls to cancel outdated runs
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
+
+# 3. Use conditional job execution
+# if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+# 4. Optimize checkout depth
+# - uses: actions/checkout@v4
+#   with:
+#     fetch-depth: 0  # Full history for analysis
+#     fetch-depth: 1  # Shallow clone for build
+
+#######################################
+# Workflow Structure Standards       #
+#######################################
+
+# 1. Consistent workflow file naming
+#    - ci.yml (Continuous Integration)
+#    - cd.yml (Continuous Deployment)  
+#    - release.yml (Release workflows)
+#    - pr.yml (Pull Request workflows)
+
+# 2. Use workflow_call for reusable workflows
+# on:
+#   workflow_call:
+#     inputs:
+#       environment:
+#         required: true
+#         type: string
+
+# 3. Use strategy matrix for multi-version testing
+# strategy:
+#   matrix:
+#     python-version: [3.8, 3.9, 3.10, 3.11, 3.12]
+#     os: [ubuntu-latest, windows-latest, macos-latest]
+
+# 4. Proper error handling and status reporting
+# continue-on-error: false
+# fail-fast: false
+
+#######################################
+# Environment Variable Standards     #
+#######################################
+
+# 1. Use UPPER_CASE for environment variables
+# env:
+#   NODE_ENV: production
+#   API_URL: ${{ vars.API_URL }}
+
+# 2. Group related environment variables
+# env:
+#   # Database Configuration
+#   DB_HOST: ${{ secrets.DB_HOST }}
+#   DB_PORT: ${{ vars.DB_PORT }}
+#   
+#   # API Configuration  
+#   API_KEY: ${{ secrets.API_KEY }}
+#   API_VERSION: v1
+
+# 3. Use vars for non-sensitive configuration
+# ${{ vars.ENVIRONMENT }}   # ✅ Non-sensitive
+# ${{ secrets.API_KEY }}    # ✅ Sensitive
+
+#######################################
+# Action Version Management          #
+#######################################
+
+# Recommended action versions (update regularly):
+# actions/checkout@v4
+# actions/setup-node@v4
+# actions/setup-python@v4
+# actions/cache@v3
+# actions/upload-artifact@v3
+# actions/download-artifact@v3
+# github/codeql-action/init@v2
+# github/codeql-action/analyze@v2
+
+#######################################
+# Conditional Logic Patterns         #
+#######################################
+
+# 1. Branch-based conditions
+# if: github.ref == 'refs/heads/main'
+# if: startsWith(github.ref, 'refs/heads/release/')
+
+# 2. Event-based conditions  
+# if: github.event_name == 'pull_request'
+# if: github.event_name == 'push'
+
+# 3. File change conditions (with dorny/paths-filter)
+# if: steps.changes.outputs.src == 'true'
+
+# 4. Combined conditions
+# if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+#######################################
+# Output and Artifact Management     #
+#######################################
+
+# 1. Consistent artifact naming
+# - name: Upload test results
+#   uses: actions/upload-artifact@v3
+#   with:
+#     name: test-results-${{ matrix.python-version }}
+#     path: test-results/
+
+# 2. Set job outputs properly
+# outputs:
+#   version: ${{ steps.version.outputs.version }}
+#   changed: ${{ steps.changes.outputs.any }}
+
+# 3. Use retention periods appropriately
+#     retention-days: 30  # Test artifacts
+#     retention-days: 90  # Release artifacts
+
+#######################################
+# Debugging and Troubleshooting      #
+#######################################
+
+# 1. Enable debug logging when needed
+# env:
+#   ACTIONS_STEP_DEBUG: true
+#   ACTIONS_RUNNER_DEBUG: true
+
+# 2. Add context information to failures
+# - name: Debug information
+#   if: failure()
+#   run: |
+#     echo "Runner OS: ${{ runner.os }}"
+#     echo "Event: ${{ github.event_name }}"
+#     echo "Ref: ${{ github.ref }}"
+
+# 3. Use appropriate shell for cross-platform compatibility
+#   shell: bash  # Works on all platforms
+#   shell: pwsh  # PowerShell Core (cross-platform)
+
+#######################################
+# Documentation Requirements         #
+#######################################
+
+# 1. Include workflow description
+# name: 🚀 CI/CD Pipeline
+# on:
+#   push:
+#     branches: [main, develop]
+#   pull_request:
+#     branches: [main]
+
+# 2. Document complex workflows in README
+# 3. Use meaningful commit messages for workflow changes
+# 4. Include workflow status badges in README
+
+#######################################
+# Common Anti-Patterns to Avoid      #
+#######################################
+
+# ❌ Using latest tags for actions
+# ❌ Hardcoding sensitive values
+# ❌ Not using concurrency controls
+# ❌ Overly complex workflows (split into multiple files)
+# ❌ Not handling failure cases
+# ❌ Missing timeout configurations
+# ❌ Using deprecated actions
+# ❌ Not validating inputs
+# ❌ Exposing secrets in logs
+# ❌ Running unnecessary jobs on every push

@@ -1,424 +1,363 @@
-# Confluence Documentation Automation
+# � Comprehensive CI/CD Pipeline with Documentation Publishing
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ansible Lint](https://img.shields.io/badge/ansible--lint-passing-brightgreen)](https://ansible-lint.readthedocs.io/)
-[![YAML Lint](https://img.shields.io/badge/yamllint-passing-brightgreen)](https://yamllint.readthedocs.io/)
-[![Dynamic Discovery](https://img.shields.io/badge/Discovery-Dynamic-blue)](./scripts/discover_docs_enhanced.py)
+[![License: MIT](https://img.shields.io/badge/Licens### Detai1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+5. **📊 Comprehensive Report**: Generates detailed execution summary
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
 
-An enterprise-grade Ansible automation solution for **dynamic documentation discovery, processing, and publishing** to Atlassian Confluence. Features zero-maintenance template discovery, hierarchy-preserving publishing, and complete workflow automation.
+## 📁 Repository Dependencies
 
-Because manually maintaining documentation workflows is about as fun as debugging YAML at 2 a.m., this project does the heavy lifting for you with **fully automated dynamic discovery**! 🚀
+### What Your Repository Needs to Provide
 
-## ✨ Key Features
+The CI/CD pipeline is designed to work with **minimal dependencies** from your repository. Here's what you need:
 
-- 🎯 **Dynamic Discovery**: Automatically finds and processes all documentation templates - **zero maintenance required!**
-- 📁 **Hierarchy Preservation**: Maintains folder structure in Confluence for organized documentation
-- 🚀 **One-Command Workflow**: Complete documentation generation and publishing with `make run-full`
-- 🔄 **Auto-Adaptation**: New templates are automatically discovered and processed
-- 🤖 **GitHub Actions Ready**: Advanced CI/CD workflow for automatic publishing ✅
-- 🔄 **Dual Workflow Support**: Local Ansible development + GitHub Actions production publishing
-- 🔍 **Enterprise Testing**: Comprehensive validation with yamllint, ansible-lint ✅
-- 🛡️ **Enterprise Security**: Built-in security scanning and credential protection ✅
-- 📝 **Smart Templates**: Jinja2-based with variable substitution and shared macros ✅
-- 🔧 **Multi-Platform CI/CD**: Ready-to-use configurations for GitLab, GitHub, Azure DevOps, Jenkins, Bitbucket, and TeamCity ⚠️ *Work in Progress*
-- 📊 **Quality Gates**: Production-ready linting standards and validation ✅
-- 🔍 **Comprehensive Testing**: Multi-platform validation with yamllint, ansible-lint ✅
-- 📊 **Quality Assurance**: Production-ready standards and automated validation ✅
-- 🖥️ **Cross-Platform Support**: RHEL, Ubuntu, macOS, and more ✅
-- 📚 **Modular Design**: Reusable components for maintenance and debugging ✅
-
-## 🚀 Quick Start
-
-### **The Modern Way (Recommended)**
-```bash
-# 1. Install dependencies (automatic OS detection)
-make install-tools
-
-# 2. Complete workflow in one command
-make run-full
+#### For Basic CI/CD (Always Required):
 ```
-**That's it!** Your documentation is discovered, processed, and published automatically! 🎉
-
-### **What Just Happened?**
-1. ✅ **Dynamic Discovery**: All templates in `docs/automation_hub/` were found automatically
-2. ✅ **Template Processing**: Jinja2 templates rendered with your variables
-3. ✅ **HTML Generation**: Markdown converted to Confluence-ready HTML
-4. ✅ **Publishing**: Pages created/updated in Confluence with proper hierarchy
-
-## 📁 Project Structure
-
-```
-docs/
-├── automation_hub/              # 🎯 Primary documentation (auto-discovered)
-│   ├── automation_hub.j2        # Main parent page
-│   ├── platform_governance.j2   # Child pages (automatically discovered)
-│   ├── platform_runbook.j2      # Add any .j2 file here and it's
-│   ├── operator_runbook.j2       # automatically included! 
-│   └── ...                      # No manual configuration needed!
-scripts/
-├── discover_docs_enhanced.py    # 🔍 Dynamic discovery engine
-playbooks/
-├── automation_hub_publishing.yml # 📤 Primary publishing workflow
-vars/
-├── vars.yml                     # 🔧 Your variables
-└── aap.yml                      # 🤖 AAP-specific variables
+your-repo/
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml        # Your workflow that calls our pipeline
+└── [your code files]        # Python, YAML, Ansible, etc.
 ```
 
-## 🎯 Core Workflows
-
-### **Primary Workflow**
-```bash
-make run-full                    # Complete automation ✅
+#### For Documentation Publishing (Optional):
+```
+your-repo/
+└── docs/
+    ├── vars.yaml            # Variables and Confluence hierarchy config
+    ├── *.j2                 # Jinja2 template files with YAML headers
+    ├── *.md                 # Markdown files with YAML headers
+    └── images/              # Images referenced in your documentation
+        ├── diagram.png
+        └── screenshot.jpg
 ```
 
-### **Individual Steps**
-```bash
-make convert-templates-dynamic   # Discover and process templates
-make convert-markdown           # Convert to HTML
-make run-publish               # Publish to Confluence
-```
+### What We Automatically Provide
 
-These options install available tools through system package managers and provide guidance on what functionality is available without PyPI access.
-
-### Basic Usage
-
-1. **Configure your environment**:
-   ```bash
-   # Copy the example configuration
-   cp vars/vars.yml.example vars/vars.yml
-   
-   # Edit with your actual Confluence details
-   # SECURITY: Never commit real credentials!
-   # Consider using ansible-vault: ansible-vault encrypt vars/vars.yml
-   nano vars/vars.yml
-   ```
-
-2. **Create your documentation templates**:
-   ```bash
-   # Templates are in docs/ directory
-   # Edit docs/main.md.j2 and other templates
-   ```
-
-3. **Run the automation**:
-   ```bash
-   # Test run (no actual publishing)
-   ansible-playbook playbook.yml --check
-
-   # Publish to Confluence
-   ansible-playbook playbook.yml
-   ```
-
-## 📊 Project Status
-
-### ✅ **Fully Tested & Production Ready**
-- Core Ansible automation (playbook.yml)
-- YAML and Ansible linting (yamllint, ansible-lint)
-- Security scanning and credential protection
-- Cross-platform installation (RHEL, Ubuntu, macOS)
-- Template processing and Confluence publishing
-- Local development workflow
-
-### ⚠️ **Work in Progress (Experimental)**
-- **Molecule Testing**: Configuration exists but requires additional validation
-- **CI/CD Templates**: Provided as examples, need platform-specific testing
-- **Advanced Quality Gates**: May require customization for your environment
-
-### 🎯 **Recommended Usage**
-For production use, rely on the ✅ tested features. The ⚠️ experimental features can be used as starting points but should be thoroughly tested in your environment before production deployment.
-
-## Project Structure
+**No need to copy these to your repository** - our pipeline automatically handles:
 
 ```
-confluence-automation/
-├── ci-cd-templates/         # Multi-platform CI/CD configurations
-│   ├── github-actions.yml  # GitHub Actions basic workflow ⚠️
-│   ├── github-actions-confluence.yml # GitHub Actions Confluence publisher ✅
-│   ├── gitlab-ci.yml       # GitLab CI/CD pipeline ⚠️
-│   ├── azure-pipelines.yml # Azure DevOps pipeline ⚠️
-│   ├── Jenkinsfile         # Jenkins pipeline ⚠️
-│   ├── bitbucket-pipelines.yml # Bitbucket Pipelines ⚠️
-│   └── teamcity-config.txt # TeamCity configuration ⚠️
-├── .yamllint               # YAML linting configuration ✅
-├── .pre-commit-config.yaml # Pre-commit hooks ✅
-├── molecule/               # Molecule test scenarios ⚠️ WIP
-│   ├── default/           # Basic functionality tests ⚠️
-│   ├── playbook-test/     # Full playbook testing ⚠️
-│   └── syntax-check/      # Syntax validation ⚠️
-├── docs/                  # Documentation and guides
-│   ├── main.md.j2        # Main page template
-│   ├── platform_governance.md.j2
-│   ├── platform_runbook.md.j2
-│   ├── operator_runbook.md.j2
-│   ├── training_enablement.md.j2
-│   ├── GITHUB_ACTIONS_ASSESSMENT.md ✅ # GitHub Actions vs Ansible analysis
-│   └── GITHUB_ACTIONS_SETUP.md ✅      # Complete GitHub Actions setup guide
-├── playbooks/             # Modular Ansible playbooks ✅
-│   ├── main.yml          # Main orchestrator playbook
-│   ├── 01-validate-environment.yml
-│   ├── 02-convert-templates.yml  
-│   ├── 03-convert-html.yml
-│   ├── 04-publish-confluence.yml
-│   ├── cleanup.yml
-│   └── README.md         # Playbook usage guide
-├── vars/                  # Variable definitions
-│   ├── vars.yml          # Main variables (encrypted)
-│   └── vars.yml.example  # Template for configuration
-├── playbook.yml           # Legacy/wrapper playbook ✅
-├── Makefile              # Automation commands ✅
-└── README.md             # This file
+redesigned-guacamole/
+├── scripts/
+│   ├── confluence_publisher.py     # ✅ Documentation publishing script
+│   └── generate_sarif_summary.py   # ✅ Embedded in workflow
+├── docs/
+│   ├── macros.j2                   # ✅ Jinja2 macros for templates
+│   └── macros/                     # ✅ Additional macro files
+├── .github/workflows/
+│   ├── ci-optimized.yml            # ✅ Main CI/CD pipeline
+│   ├── publish-docs.yml            # ✅ Documentation publishing
+│   └── notifications.yml           # ✅ Failure notifications
+└── requirements.txt                # ✅ Python dependencies
 ```
 
-## Development Workflow
+### Documentation Template Example
 
-### Daily Development
-```bash
-make help                      # See all available commands
-make check-deps               # Verify dependencies
-make discover-enhanced        # View discovery results
-make debug-conversion         # Troubleshoot issues
-```
+Your `.j2` files should follow this structure:
 
-## 🎯 Adding New Documentation
-
-### **Zero-Maintenance Approach**
-1. Create new `.j2` file in `docs/automation_hub/`
-2. Run `make run-full`
-3. **That's it!** New template is automatically discovered and published
-
-### **Template Example**
 ```jinja2
-{% from 'macros.j2' import page_header, auto_generated_notice %}
-{{ page_header(title="My New Section") }}
-{{ auto_generated_notice() }}
+---
+# Metadata for Confluence Publishing
+varsFile: "vars/aap.yml"
+project_status: "In Review"
 
-# My New Section
+# Confluence Metadata
+confluence:
+  title: "My Document Title"
+  space: "MYSPACE"
+  category: "operations"  # Uses hierarchy from vars.yaml
+  imageFolder: "docs/images"
+---
 
-## Overview
-This documentation for {{ project_name }} is automatically discovered and published.
+{% import './docs/macros/macros.j2' as macros %}
 
-## Environment Details
-- Environment: {{ env }}
-- Database: {{ database_url }}
-- Monitoring: {{ monitoring_tool }}
+# {{ organization_name }} Documentation
+
+This document uses variables from vars.yaml like {{ organization_name }} 
+and macros provided by our pipeline.
+
+{{ macros.info_box("This is an info box from our macro library") }}
 ```
 
-## 📋 Available Commands
+### Key Benefits:
 
-### **🔧 Development & Validation**
-- `make lint` - Run all linting checks
-- `make test` - Ansible syntax validation
-- `make security-check` - Security validation
-- `make validate-templates` - Template structure check
+- ✅ **Zero Infrastructure Dependencies**: No need to copy our scripts or templates
+- ✅ **Automatic Updates**: Pipeline improvements benefit all repositories immediately
+- ✅ **Minimal Setup**: Only need your content and configuration
+- ✅ **Centralized Maintenance**: All pipeline logic maintained in one place
 
-### **🛠️ Installation & Setup**
-- `make install-tools` - Install required dependencies
-- `make check-deps` - Check what's installed
-- `make check-os` - Display OS compatibility
+## 📋 Available Workflowstion Flow:
 
-### **📚 Documentation Workflow (Primary)**
-- `make run-full` - **Complete dynamic workflow** ✅
-- `make convert-templates-dynamic` - **Dynamic template conversion** ✅
-- `make convert-markdown` - Convert markdown to HTML
-- `make discover-enhanced` - Show discovery results
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+5. **📊 Comprehensive Report**: Generates detailed execution summary
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failureslow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
+[![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
 
-### **🧹 Maintenance**
-- `make clean` - Remove temporary files
-- `make verify-html` - Verify HTML generation
-- `make debug-conversion` - Debug conversion issues
+A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automated code quality checks, security scanning, and documentation publishing to Confluence for any repository.
 
-## 🔧 Prerequisites
+## 🎯 Purpose
 
-### **System Requirements**
-- **Ansible**: 2.9+ (for template processing)
-- **Python**: 3.8+ (for scripts and Ansible)
-- **Pandoc**: Latest (for HTML conversion)
-- **jq**: Latest (for JSON processing)
+This repository provides **reusable workflows** that any other repository can call to:
+- � **Intelligent Code Analysis**: Dynamic Super Linter with auto-fix capabilities
+- 🛡️ **Security Scanning**: DevSkim, Trivy vulnerability scanning, and secret detection
+- 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting (integrated with Super Linter)
+- � **Documentation Publishing**: Process and publish documentation to Confluence
+- 🚨 **Failure Notifications**: Automatic GitHub issue creation for CI/CD failures
+- 📊 **Comprehensive Reporting**: SARIF output and detailed execution summaries
 
-### **Automatic Installation**
-```bash
-make install-tools              # Detects OS and installs everything
-```
+## 🚀 Quick Start for Remote Repositories
 
-### **Manual Installation**
-```bash
-# RHEL/CentOS/Fedora
-make install-rhel-dnf-only
+### 1. Add CI/CD Pipeline to Your Repository
 
-# Ubuntu/Debian
-make install-ubuntu-apt-only
+Create `.github/workflows/ci-cd.yml` in your repository:
 
-# Verify installation
-make check-deps
-```
-
-## ⚙️ Configuration
-
-### **Required Variables** (`vars/vars.yml`)
 ```yaml
-project_name: "Your Project"
-env: "Production"
-confluence_url: "https://your-domain.atlassian.net"
-confluence_space: "YOUR_SPACE"
-confluence_auth: "base64_encoded_credentials"
-database_url: "https://your-database.com"
-monitoring_tool: "Your Monitor"
+name: � CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+      - 'release/**'
+      - 'hotfix/**'
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full codebase scan'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  packages: read
+  statuses: write
+  security-events: write
+  actions: read
+
+jobs:
+  ci-cd-pipeline:
+    uses: KhalilGibrotha/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    with:
+      full_scan: ${{ inputs.full_scan || true }}
+      branch_name: ${{ github.ref_name }}
+    secrets:
+      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+      CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 ```
 
-### **Confluence Setup**
-1. Create Confluence space
-2. Generate API token
-3. Encode credentials: `echo "user@domain.com:api_token" | base64`
-4. Add to `vars/vars.yml`
+### 2. Set Up Repository Secrets
 
-## 🔍 How It Works
+In your repository settings → Secrets and variables → Actions, add:
+- `CONFLUENCE_URL`: Your Confluence base URL (e.g., `https://company.atlassian.net`)
+- `CONFLUENCE_USER`: Your Confluence username/email
+- `CONFLUENCE_API_TOKEN`: Your Confluence API token
 
-### **Dynamic Discovery Process**
-1. **Scan**: `discover_docs_enhanced.py` scans `docs/automation_hub/`
-2. **Analyze**: Determines file types and relationships
-3. **Structure**: Creates JSON structure for processing
-4. **Process**: Templates rendered with variable substitution
-5. **Convert**: Markdown converted to Confluence-ready HTML
-6. **Publish**: Pages created/updated with proper hierarchy
+### 3. Configure Your Repository Structure
 
-### **Template Processing**
-- **Engine**: Ansible template module
-- **Variables**: Full access to `vars/vars.yml` and `vars/aap.yml`
-- **Features**: Conditionals, loops, includes, macros
-- **Output**: Clean, formatted markdown
+The pipeline works with various project types and will automatically detect and validate:
 
-### **Publishing**
-- **Hierarchy**: Parent-child relationships preserved
-- **Updates**: Intelligent page update detection
-- **Versioning**: Confluence version management
-- **Validation**: Success verification
+```
+your-repo/
+├── docs/                     # Documentation files (if any)
+│   ├── *.md                 # Markdown files
+│   ├── *.j2                 # Jinja2 templates
+│   └── vars.yaml            # Template variables
+├── playbooks/               # Ansible playbooks (if any)
+├── roles/                   # Ansible roles (if any)
+├── **/*.py                  # Python files
+├── **/*.yml                 # YAML files
+├── **/*.yaml                # YAML files
+├── **/*.sh                  # Shell scripts
+└── .github/
+    └── workflows/
+        └── ci-cd.yml        # Your CI/CD workflow
+```
 
-## 🚨 Troubleshooting
+## 🔄 Workflow Execution Flow
 
-### **Common Issues**
+Here's how the complete workflow executes:
 
-**"No templates found"**
+```mermaid
+graph TD
+    A[Push/PR Event] --> B[test-workflow.yml]
+    B --> C[ci-optimized.yml]
+    C --> D[detect-changes]
+    D --> E[super-linter]
+    D --> F[security]
+    E --> G[publish]
+    F --> G
+    G --> H[comprehensive-report]
+    C --> I[notifications.yml]
+    I --> J[GitHub Issue Creation]
+    
+    style A fill:#e1f5fe
+    style C fill:#f3e5f5
+    style G fill:#e8f5e8
+    style I fill:#fff3e0
+    style J fill:#ffebee
+```
+
+### Detailed Execution Flow:
+
+1. **� Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🎭 Ansible Syntax Check**: Validates Ansible playbooks and roles (if present)
+5. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+6. **📊 Comprehensive Report**: Generates detailed execution summary
+7. **🚨 Failure Notifications**: Creates GitHub issues for any failures
+
+## 📋 Available Workflows
+
+### 1. Main CI/CD Pipeline (`ci-optimized.yml`)
+
+**Purpose**: Complete CI/CD pipeline with code quality, security, and documentation publishing
+
+**Triggers**: Called by remote repositories via `workflow_call`
+
+**Inputs**:
+- `full_scan` (boolean): Run full codebase scan vs. changed files only (default: true)
+- `branch_name` (string): Branch name to checkout (default: '')
+
+**Secrets**:
+- `CONFLUENCE_URL`: Confluence base URL (optional)
+- `CONFLUENCE_USER`: Confluence username (optional)
+- `CONFLUENCE_API_TOKEN`: Confluence API token (optional)
+
+**Jobs**:
+- `detect-changes`: Analyzes file changes for optimized execution
+- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
+- `security`: DevSkim, Trivy, and secret detection
+- `publish`: Documentation publishing to Confluence
+- `comprehensive-report`: Detailed execution summary
+
+### 2. Documentation Publishing (`publish-docs.yml`)
+
+**Purpose**: Standalone documentation publishing workflow
+
+**Inputs**:
+- `dry_run` (boolean): Run without actual publishing (default: false)
+- `target_environment` (string): Target environment (default: 'production')
+
+**Secrets**:
+- `CONFLUENCE_URL`: Confluence base URL
+- `CONFLUENCE_USER`: Confluence username
+- `CONFLUENCE_API_TOKEN`: Confluence API token
+
+### 3. Failure Notifications (`notifications.yml`)
+
+**Purpose**: Automatically create GitHub issues when CI/CD pipeline fails
+
+**Triggers**: Runs after "🚀 CI/CD Pipeline" workflow completion
+- Only triggers on failure or non-success status
+- Prevents duplicate issues for the same failure type
+- Provides detailed troubleshooting information
+```
+
+## 📝 File Format Examples
+
+### Markdown File with Frontmatter
+
+```markdown
+---
+confluence:
+  space_key: "DOCS"
+  title: "Getting Started Guide"
+  parent_page_id: "789012"
+---
+
+# Getting Started
+
+Welcome to our documentation...
+```
+
+### Jinja2 Template
+
+```jinja2
+---
+confluence:
+  space_key: "DOCS"
+  title: "{{ project_name }} Deployment Guide"
+  parent_page_id: "345678"
+---
+
+# {{ project_name }} Deployment Guide
+
+Environment: {{ environment }}
+Version: {{ version }}
+
+## Prerequisites
+
+...
+```
+
+## 🔧 Available Workflows
+
+### 1. Documentation Publishing (`publish-docs.yml`)
+
+**Purpose**: Process and publish documentation to Confluence
+
+**Inputs**:
+- `dry_run` (boolean): Run without actual publishing (default: false)
+- `target_environment` (string): Target environment (default: 'production')
+
+**Secrets**:
+- `CONFLUENCE_URL`: Confluence base URL
+- `CONFLUENCE_USER`: Confluence username
+- `CONFLUENCE_API_TOKEN`: Confluence API token
+
+### 2. CI/CD Pipeline (`ci-optimized.yml`)
+
+**Purpose**: Comprehensive CI/CD pipeline with linting, security, and documentation publishing
+
+**Inputs**:
+- `full_scan` (boolean): Run full codebase scan (default: true)
+- `branch_name` (string): Branch to checkout
+
+## 🛠️ Local Development
+
+If you want to contribute to this repository or run components locally:
+
 ```bash
-ls -la docs/automation_hub/*.j2  # Verify templates exist
-make validate-templates         # Check structure
+# Clone the repository
+git clone https://github.com/KhalilGibrotha/redesigned-guacamole.git
+cd redesigned-guacamole
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Test the documentation publisher locally
+python scripts/confluence_publisher.py 
+  --dry-run 
+  --docs-dir docs 
+  --vars-file docs/vars.yaml
+
+# Run local linting
+python -m py_compile scripts/*.py
+yamllint .
+# Note: ansible-lint is now handled by Super Linter in CI/CD
 ```
 
-**"Rendering failed"**
-```bash
-make debug-conversion          # Comprehensive debugging
-ansible-playbook --syntax-check playbook.yml  # Check syntax
-```
+## 📋 Requirements
 
-**"Publishing failed"**
-```bash
-# Check Confluence credentials
-grep confluence vars/vars.yml
-# Verify connectivity
-curl -H "Authorization: Basic $CONFLUENCE_AUTH" $CONFLUENCE_URL/rest/api/space
-```
+## �� Support
 
-### **Debug Commands**
-```bash
-make debug-conversion          # Complete debugging workflow
-make test-pandoc              # Test HTML conversion
-make discover-enhanced        # Show what was discovered
-make verify-html             # Verify generated files
-```
-
-## 📚 Documentation
-
-### **Comprehensive Guides**
-- [`DOCUMENTATION_WORKFLOW.md`](./DOCUMENTATION_WORKFLOW.md) - Complete workflow guide
-- [`RELEASE_NOTES.md`](./RELEASE_NOTES.md) - Version 2.0 features and improvements
-- [`MAKEFILE_CLEANUP_SUMMARY.md`](./MAKEFILE_CLEANUP_SUMMARY.md) - Technical implementation details
-
-### **Quick Reference**
-```bash
-make help                     # All available commands
-make run-full                # Primary workflow
-make debug-conversion        # When things go wrong
-```
-
-## 🎯 Migration from Legacy
-
-### **From Manual to Dynamic**
-**Old Way:**
-```bash
-# Manual template list maintenance
-vim Makefile                 # Update template lists
-make convert-templates       # Static processing
-make convert-markdown
-ansible-playbook playbooks/04-publish-confluence.yml
-```
-
-**New Way:**
-```bash
-# Zero maintenance
-make run-full               # Everything automated!
-```
-
-### **Backward Compatibility**
-- ✅ All existing templates work unchanged
-- ✅ Legacy workflows still available
-- ✅ Gradual migration supported
-- ✅ No breaking changes
-
-## 💡 Best Practices
-
-### **Template Development**
-- Use shared macros from `macros.j2`
-- Include auto-generated notices
-- Test with `make convert-templates-dynamic`
-- Use descriptive filenames
-
-### **Variable Management**
-- Keep secrets in encrypted `vars/vars.yml`
-- Use environment-specific files
-- Document new variables in templates
-
-### **Workflow Integration**
-- Use `make run-full` for complete automation
-- Verify with `make verify-html` before publishing
-- Test changes in development environment first
-
-## 🏆 Success Metrics
-
-### **Before Dynamic Discovery**
-- ❌ Manual template list maintenance
-- ❌ Multi-step error-prone process
-- ❌ New templates required Makefile updates
-
-### **After Dynamic Discovery**
-- ✅ Zero-maintenance automation
-- ✅ One-command complete workflow
-- ✅ Automatic new template integration
-- ✅ 80% reduction in setup time
-
-## 🔮 Roadmap
-
-### **Planned Enhancements**
-- 📁 Nested folder hierarchy support
-- 🔄 Multi-repository documentation aggregation
-- 📊 Publishing analytics and metrics
-- 🎨 Custom styling and themes
-
-### **Integration Opportunities**
-- CI/CD pipeline integration
-- Git hook automation
-- Notification systems
-- Change tracking
-
-## 📞 Support
-
-### **Self-Service**
-1. Run `make help` for available commands
-2. Use `make debug-conversion` for troubleshooting
-3. Check documentation in this repository
-4. Review generated files in `~/tmp/`
-
-### **Getting Help**
-- Check comprehensive guides in [`DOCUMENTATION_WORKFLOW.md`](./DOCUMENTATION_WORKFLOW.md)
-- Review troubleshooting section above
-- Examine playbook logs for detailed errors
+- 📖 Check the [examples](docs/) in this repository
+- 🐛 [Open an issue](https://github.com/KhalilGibrotha/redesigned-guacamole/issues) for bugs
+- 💡 [Request features](https://github.com/KhalilGibrotha/redesigned-guacamole/discussions) via discussions
+- 📚 Review workflow logs in GitHub Actions for detailed debugging
 
 ## 📄 License
 
@@ -426,88 +365,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-<<<<<<< HEAD
 **Maintained by**: [Khalil Gibrotha](https://github.com/KhalilGibrotha)  
 **Created**: January 2025  
 **License**: MIT
 
-## 🚀 Deployment Options
-
-### Option 1: GitHub Actions (Recommended for Production)
-
-The project includes a comprehensive GitHub Actions workflow that automates the entire publishing process with enterprise-grade features:
-
-**✅ Advantages:**
-- 🤖 **Automatic Publishing**: Triggers on every commit to main
-- 🔐 **Enterprise Security**: GitHub secrets management, no credential exposure  
-- 📊 **Full Audit Trail**: Complete history of all publishing activities
-- 🚀 **Zero Infrastructure**: No Ansible control nodes required
-- 🔄 **Advanced Features**: Change detection, dry runs, environment-specific deployments
-- 📈 **Better Performance**: Parallel processing, smart caching, faster execution
-
-**Quick Setup:**
-```bash
-# 1. Copy the workflow
-mkdir -p .github/workflows
-cp ci-cd-templates/github-actions-confluence.yml .github/workflows/confluence-publish.yml
-
-# 2. Configure secrets in GitHub repository settings:
-#    - CONFLUENCE_URL
-#    - CONFLUENCE_USERNAME  
-#    - CONFLUENCE_API_TOKEN
-#    - CONFLUENCE_SPACE
-
-# 3. Commit and push - automatic publishing begins!
-git add .github/workflows/confluence-publish.yml
-git commit -m "Add GitHub Actions Confluence publishing"
-git push origin main
-```
-
-📚 **Complete Setup Guide**: [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)
-
-### Option 2: Local Ansible (Recommended for Development)
-
-Perfect for local development, testing, and environments where GitHub Actions cannot be used:
-
-**✅ Advantages:**
-- 🛠️ **Local Testing**: Test changes before committing
-- 🔧 **Full Control**: Complete control over execution environment
-- 🏢 **Corporate Networks**: Works in air-gapped or restricted environments
-- 📦 **No Dependencies**: Just Ansible and standard tools
-
-**Usage:**
-```bash
-# Development workflow
-make run-validate    # Validate environment and templates
-make run-templates   # Convert templates to markdown  
-make run-html        # Convert markdown to HTML
-make run-publish     # Publish to Confluence
-make run-cleanup     # Clean up temporary files
-
-# Or run everything at once
-make run-full        # Complete end-to-end workflow
-```
-
-### Hybrid Approach (Best of Both Worlds)
-
-Use both methods for maximum flexibility:
-
-- **Development**: Local Ansible for testing and iteration
-- **Production**: GitHub Actions for reliable, automatic publishing
-- **Fallback**: Ansible available if GitHub Actions has issues
-
-```bash
-# Local development and testing
-make run-full
-
-# Commit changes - GitHub Actions handles production publishing automatically
-git add . && git commit -m "Update documentation" && git push
-```
-
-**🎯 Assessment**: [GitHub Actions can handle ~90% of the workflow](docs/GITHUB_ACTIONS_ASSESSMENT.md) with significant improvements in reliability, security, and automation.
-=======
-**🎉 Ready to automate your documentation? Start with `make run-full`! 🚀**
-
-> **💡 Pro Tip**: The entire workflow is now just one command: `make run-full`. Everything else is automatic! 🎯
->>>>>>> ac5ebea51ca19bef2af1c03cbe2fec0d779e8cab
->>>>>>> main
+**🚀 Ready to add comprehensive CI/CD to your repository? Start with the Quick Start guide above! 🎯**

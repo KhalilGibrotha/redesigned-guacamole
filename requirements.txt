@@ -1,6 +1,13 @@
-ansible-core>=2.12
-ansible-lint
+# Python dependencies for Confluence publishing
+jinja2
+pyyaml
+requests
+markdown
+beautifulsoup4
+
+# Development and linting tools
 yamllint
 frontmatter
 mdit_py_plugins.admon
 entrypoints==0.4
+numpy
