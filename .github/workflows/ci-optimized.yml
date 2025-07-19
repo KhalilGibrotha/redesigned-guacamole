@@ -182,7 +182,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Publishing will run if:" >> $GITHUB_STEP_SUMMARY
           echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_STEP_SUMMARY
-          echo "2. Branch is main/release/hotfix OR external call ✅: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || steps.context.outputs.external-call == 'true' }}" >> $GITHUB_STEP_SUMMARY
+          echo "2. External call OR branch is main/release/hotfix ✅: ${{ steps.context.outputs.external-call == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') }}" >> $GITHUB_STEP_SUMMARY
           echo "3. Docs changed OR full_scan OR external call ✅: ${{ steps.final.outputs.docs-changed == 'true' || inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}" >> $GITHUB_STEP_SUMMARY
 
   super-linter:
@@ -643,7 +643,7 @@ jobs:
     needs: [detect-changes]
     if: >
       (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') &&
-      (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') || needs.detect-changes.outputs.external-call == 'true') &&
+      (needs.detect-changes.outputs.external-call == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
     # Use current repository to ensure script availability
