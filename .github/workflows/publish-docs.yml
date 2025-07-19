@@ -14,6 +14,11 @@ on:
         required: false
         type: boolean
         default: false
+      full_scan:
+        description: 'Force publishing regardless of file changes'
+        required: false
+        type: boolean
+        default: false
     secrets:
       CONFLUENCE_URL:
         required: false
@@ -146,6 +151,10 @@ jobs:
           echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
 
       - name: 📝 Process AAP Documentation
+        env:
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
         run: |
           echo "📝 Processing AAP documentation templates..."
           
@@ -176,9 +185,9 @@ jobs:
             python3 redesigned-guacamole/scripts/confluence_publisher.py \
               --docs-dir calling-repo/docs \
               --vars-file calling-repo/docs/vars.yaml \
-              --confluence-url "${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" \
-              --confluence-user "${{ secrets.CONFLUENCE_USER || 'not-configured' }}" \
-              --confluence-token "${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
+              --confluence-url "${CONFLUENCE_URL:-https://your-confluence.atlassian.net}" \
+              --confluence-user "${CONFLUENCE_USER:-not-configured}" \
+              --confluence-token "${CONFLUENCE_API_TOKEN:-not-configured}"
           fi
 
       - name: 📊 Generate Publishing Report

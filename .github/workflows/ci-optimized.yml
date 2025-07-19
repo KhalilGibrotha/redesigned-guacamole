@@ -74,6 +74,20 @@ jobs:
               - '**/*.json'
               - '.github/workflows/**'
 
+      - name: 📊 Debug Publishing Conditions
+        run: |
+          echo "## 🔍 Publishing Condition Debug" >> $GITHUB_STEP_SUMMARY
+          echo "- **Event name**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch reference**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch name**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Docs changed**: ${{ steps.changes.outputs.docs }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Full scan input**: ${{ inputs.full_scan }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Publishing will run if:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Event is 'push' ✅: ${{ github.event_name == 'push' }}" >> $GITHUB_STEP_SUMMARY
+          echo "2. Branch is main/release/hotfix ✅: ${{ github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') }}" >> $GITHUB_STEP_SUMMARY
+          echo "3. Docs changed OR full_scan ✅: ${{ steps.changes.outputs.docs == 'true' || inputs.full_scan == true }}" >> $GITHUB_STEP_SUMMARY
+
   super-linter:
     name: 🔍 Super Linter
     runs-on: ubuntu-latest
@@ -524,6 +538,7 @@ jobs:
     with:
       target_environment: 'production'
       dry_run: false
+      full_scan: ${{ inputs.full_scan }}
 
     # Pass the required secrets to the reusable workflow.
     secrets:
