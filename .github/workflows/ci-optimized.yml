@@ -647,7 +647,7 @@ jobs:
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
     # Use current repository to ensure script availability
-    uses: ${{ github.repository }}/.github/workflows/publish-docs.yml@main
+    uses: organization/repo-name/.github/workflows/publish-docs.yml@main
     with:
       target_environment: ${{ inputs.target_environment || 'production' }}
       dry_run: ${{ inputs.dry_run || false }}
