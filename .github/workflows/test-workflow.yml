@@ -37,7 +37,7 @@ permissions:
 
 jobs:
   ci-cd-pipeline:
-    uses: ./.github/workflows/ci-optimized.yml
+    uses: ./.github/workflows/ci-optimized.yml@main
     with:
       branch_name: ${{ github.ref_name }}
     secrets:
