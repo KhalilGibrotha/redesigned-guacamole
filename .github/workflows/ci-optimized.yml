@@ -641,12 +641,6 @@ jobs:
   # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
     name: 🚀 Publish to Confluence
-    needs: [detect-changes, super-linter, security]
-    if: >
-      always() &&
-      (github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch') &&
-      (needs.detect-changes.outputs.external-call == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
-      (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
     # Use relative path for better compatibility with external calls
     uses: ./.github/workflows/publish-docs.yml
