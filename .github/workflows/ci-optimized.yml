@@ -33,6 +33,11 @@ on:
         required: false
         type: boolean
         default: false
+      branch_name:
+        description: 'Branch name to checkout'
+        required: false
+        type: string
+        default: ''
       target_environment:
         description: 'Target environment for publishing'
         required: false
@@ -68,6 +73,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.branch_name || github.ref }}
 
       - name: 🔍 Check Repository Context
         id: context
@@ -198,6 +204,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.branch_name || github.ref }}
 
       - name: 🔧 Configure Environment
         id: config
@@ -509,6 +516,8 @@ jobs:
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch_name || github.ref }}
 
       - name: 🔍 Run DevSkim Scanner
         uses: microsoft/DevSkim-Action@v1
@@ -598,6 +607,8 @@ jobs:
     steps:
       - name: � Checkout Code (for scripts)
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch_name || github.ref }}
 
       - name: �📥 Download all artifacts
         uses: actions/download-artifact@v4
