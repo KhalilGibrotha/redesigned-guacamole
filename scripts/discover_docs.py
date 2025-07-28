@@ -9,6 +9,79 @@ import os
 import sys
 
 
+def _create_section_info(main_page_name, main_page_file, item_path):
+    """Create initial section info structure."""
+    return {
+        "main_page": f"{main_page_name}.j2",
+        "main_page_path": main_page_file,
+        "folder": item_path,
+        "title": main_page_name.replace("_", " ").title(),
+        "children": [],
+        "nested_sections": {},
+    }
+
+
+def _process_child_template(child_item, child_path, main_page_name):
+    """Process a direct child template file."""
+    if child_item not in [f"{main_page_name}.j2", "macros.j2"]:
+        title = child_item.replace(".j2", "").replace("_", " ").title()
+        return {"file": child_item, "title": title, "path": child_path, "type": "template"}
+    return None
+
+
+def _process_nested_folder(child_item, child_path):
+    """Process a nested folder and its templates."""
+    nested_name = child_item
+    nested_main_file = os.path.join(child_path, f"{nested_name}.j2")
+
+    nested_info = {
+        "folder": child_path,
+        "title": nested_name.replace("_", " ").title(),
+        "children": [],
+        "type": "nested_section",
+    }
+
+    child_entry = None
+    if os.path.exists(nested_main_file):
+        nested_info["main_page"] = f"{nested_name}.j2"
+        nested_info["main_page_path"] = nested_main_file
+        child_entry = {
+            "file": f"{nested_name}.j2",
+            "title": nested_info["title"],
+            "path": nested_main_file,
+            "type": "nested_section",
+            "folder": child_path,
+        }
+
+    # Find child templates in nested folder
+    for nested_child in os.listdir(child_path):
+        nested_child_path = os.path.join(child_path, nested_child)
+        if (
+            os.path.isfile(nested_child_path)
+            and nested_child.endswith(".j2")
+            and nested_child not in [f"{nested_name}.j2", "macros.j2"]
+        ):
+            title = nested_child.replace(".j2", "").replace("_", " ").title()
+            nested_info["children"].append(
+                {
+                    "file": nested_child,
+                    "title": title,
+                    "path": nested_child_path,
+                    "type": "template",
+                    "parent_section": nested_name,
+                }
+            )
+
+    return nested_info, child_entry
+
+
+def _sort_section_children(section_info):
+    """Sort all children in the section by title."""
+    section_info["children"].sort(key=lambda x: x["title"])
+    for nested_section in section_info["nested_sections"].values():
+        nested_section["children"].sort(key=lambda x: x["title"])
+
+
 def discover_documentation_structure(docs_path="docs", max_depth=3):
     """
     Discover the documentation structure dynamically with nested folder support.
@@ -22,7 +95,6 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
     """
     structure = {}
 
-    # Find all subdirectories in docs/
     if not os.path.exists(docs_path):
         return structure
 
@@ -32,84 +104,24 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
             main_page_name = item
             main_page_file = os.path.join(item_path, f"{main_page_name}.j2")
 
-            # Check if main page exists
             if os.path.exists(main_page_file):
-                section_info = {
-                    "main_page": f"{main_page_name}.j2",
-                    "main_page_path": main_page_file,
-                    "folder": item_path,
-                    "title": main_page_name.replace("_", " ").title(),
-                    "children": [],
-                    "nested_sections": {},
-                }
+                section_info = _create_section_info(main_page_name, main_page_file, item_path)
 
-                # Find direct child templates and nested folders
                 for child_item in os.listdir(item_path):
                     child_path = os.path.join(item_path, child_item)
 
                     if os.path.isfile(child_path) and child_item.endswith(".j2"):
-                        # Direct child template
-                        if child_item not in [f"{main_page_name}.j2", "macros.j2"]:
-                            title = child_item.replace(".j2", "").replace("_", " ").title()
-                            section_info["children"].append(
-                                {"file": child_item, "title": title, "path": child_path, "type": "template"}
-                            )
+                        child_entry = _process_child_template(child_item, child_path, main_page_name)
+                        if child_entry:
+                            section_info["children"].append(child_entry)
 
                     elif os.path.isdir(child_path):
-                        # Nested folder - check if it has its own main template
-                        nested_name = child_item
-                        nested_main_file = os.path.join(child_path, f"{nested_name}.j2")
+                        nested_info, child_entry = _process_nested_folder(child_item, child_path)
+                        if child_entry:
+                            section_info["children"].append(child_entry)
+                        section_info["nested_sections"][child_item] = nested_info
 
-                        nested_info = {
-                            "folder": child_path,
-                            "title": nested_name.replace("_", " ").title(),
-                            "children": [],
-                            "type": "nested_section",
-                        }
-
-                        if os.path.exists(nested_main_file):
-                            # Has main template - this is a sub-section
-                            nested_info["main_page"] = f"{nested_name}.j2"
-                            nested_info["main_page_path"] = nested_main_file
-
-                            # Add to main children as a section
-                            section_info["children"].append(
-                                {
-                                    "file": f"{nested_name}.j2",
-                                    "title": nested_info["title"],
-                                    "path": nested_main_file,
-                                    "type": "nested_section",
-                                    "folder": child_path,
-                                }
-                            )
-
-                        # Find child templates in nested folder
-                        for nested_child in os.listdir(child_path):
-                            nested_child_path = os.path.join(child_path, nested_child)
-                            if (
-                                os.path.isfile(nested_child_path)
-                                and nested_child.endswith(".j2")
-                                and nested_child not in [f"{nested_name}.j2", "macros.j2"]
-                            ):
-
-                                title = nested_child.replace(".j2", "").replace("_", " ").title()
-                                nested_info["children"].append(
-                                    {
-                                        "file": nested_child,
-                                        "title": title,
-                                        "path": nested_child_path,
-                                        "type": "template",
-                                        "parent_section": nested_name,
-                                    }
-                                )
-
-                        section_info["nested_sections"][nested_name] = nested_info
-
-                # Sort children by title
-                section_info["children"].sort(key=lambda x: x["title"])
-                for nested_section in section_info["nested_sections"].values():
-                    nested_section["children"].sort(key=lambda x: x["title"])
-
+                _sort_section_children(section_info)
                 structure[main_page_name] = section_info
 
     return structure
