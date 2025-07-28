@@ -80,7 +80,7 @@
 
 # 1. Consistent workflow file naming
 #    - ci.yml (Continuous Integration)
-#    - cd.yml (Continuous Deployment)  
+#    - cd.yml (Continuous Deployment)
 #    - release.yml (Release workflows)
 #    - pr.yml (Pull Request workflows)
 
@@ -116,8 +116,8 @@
 #   # Database Configuration
 #   DB_HOST: ${{ secrets.DB_HOST }}
 #   DB_PORT: ${{ vars.DB_PORT }}
-#   
-#   # API Configuration  
+#
+#   # API Configuration
 #   API_KEY: ${{ secrets.API_KEY }}
 #   API_VERSION: v1
 
@@ -147,7 +147,7 @@
 # if: github.ref == 'refs/heads/main'
 # if: startsWith(github.ref, 'refs/heads/release/')
 
-# 2. Event-based conditions  
+# 2. Event-based conditions
 # if: github.event_name == 'pull_request'
 # if: github.event_name == 'push'
 

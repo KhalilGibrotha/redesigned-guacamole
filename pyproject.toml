@@ -143,11 +143,11 @@ files = ["scripts", "tests"]
 exclude = [
     "build/",
     "dist/",
-    "\.venv/",
-    "\.git/",
+    "\\.venv/",
+    "\\.git/",
     "__pycache__/",
-    "\.pytest_cache/",
-    "\.mypy_cache/"
+    "\\.pytest_cache/",
+    "\\.mypy_cache/"
 ]
 
 # Per-module options
@@ -273,3 +273,4 @@ tests = [
     "B323",  # Test for use of unverified context
     "B324",  # Test for hashlib use
     "B325",  # Test for use of tempnam
+]
