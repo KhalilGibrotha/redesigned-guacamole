@@ -14,19 +14,8 @@ on:
         description: 'Target environment for publishing'
         required: false
         type: choice
-        option      - name: 🔍 Enhanced Super Linter Analysis
-        if: always()
-        id: enhanced-analysis
-        run: |
-          echo "::group::🔍 Enhanced Super Linter Analysis"
-
-          # Run comprehensive analysis that includes autofix detection
-          echo "🚀 Running enhanced code quality analysis..."
-          python3 scripts/enhanced_linter_analysis.py
-
-          echo "✅ Enhanced analysis completed"
-          echo "::endgroup::"
-        working-directory: ${{ github.workspace }}- 'production'
+        options:
+          - 'production'
           - 'staging'
           - 'development'
         default: 'production'
