@@ -55,7 +55,7 @@ jobs:
       actions: read
 
     steps:
-      - name: � Detect Repository Context
+      - name: Detect Repository Context
         id: context
         run: |
           echo "Current repository: ${{ github.repository }}"
@@ -71,21 +71,21 @@ jobs:
             echo "🏠 Running within same repository - optimized checkout"
           fi
 
-      - name: �📥 Checkout Code (Scripts Repository)
+      - name: Checkout Code (Scripts Repository)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
           fetch-depth: 0
           path: redesigned-guacamole
 
-      - name: 📥 Checkout Calling Repository (Content)
+      - name: Checkout Calling Repository (Content)
         if: steps.context.outputs.same-repo != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           path: calling-repo
 
-      - name: 🔗 Create Content Symlink (Same Repository)
+      - name: Create Content Symlink (Same Repository)
         if: steps.context.outputs.same-repo == 'true'
         run: |
           # When running in the same repo, create a symlink to avoid duplication
