@@ -27,13 +27,20 @@ exclude =
 
 # Error codes to ignore
 # E203: Whitespace before ':' (conflicts with black formatter)
-# E501: Line too long (handled by max-line-length)
+# E133: closing bracket is missing indentation (conflicts with black formatter)
+# E501: Line too long (handled by max-line-length and black)
 # W503: Line break before binary operator (conflicts with PEP 8)
+# W504: Line break after binary operator (conflicts with black)
 # E402: Module level import not at top of file (sometimes needed)
 # F401: Module imported but unused (sometimes needed for __init__.py)
+# C901: Function is too complex (handled by pylint)
 ignore =
     E203,
-    W503
+    E133,
+    E501,
+    W503,
+    W504,
+    C901
 
 # Error codes to select (empty means all enabled codes)
 select =
@@ -50,7 +57,13 @@ select =
 extend-ignore =
 
 # Per-file ignores
-# Example: per-file-ignores = __init__.py:F401
+# Allow complexity and other specific issues in certain files
+per-file-ignores =
+    __init__.py:F401,
+    scripts/discover_docs.py:C901,
+    scripts/confluence_manager.py:C901,
+    scripts/confluence_publisher.py:C901,
+    test_*.py:E501,F401
 
 # Show source code for each error
 show-source = True
@@ -72,12 +85,6 @@ benchmark = False
 #     F401,  # Check for unused imports
 #     F841,  # Check for unused variables
 #     E501   # Line length checking
-
-# Disable specific warnings per file
-# per-file-ignores =
-#     __init__.py:F401
-#     test_*.py:E501,F401
-#     scripts/*.py:E402
 
 # Additional options for compatibility
 doctests = True

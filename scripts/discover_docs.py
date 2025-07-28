@@ -34,7 +34,7 @@ def _process_nested_folder(child_item, child_path):
     nested_name = child_item
     nested_main_file = os.path.join(child_path, f"{nested_name}.j2")
 
-    nested_info = {
+    nested_section_info = {
         "folder": child_path,
         "title": nested_name.replace("_", " ").title(),
         "children": [],
@@ -43,11 +43,11 @@ def _process_nested_folder(child_item, child_path):
 
     child_entry = None
     if os.path.exists(nested_main_file):
-        nested_info["main_page"] = f"{nested_name}.j2"
-        nested_info["main_page_path"] = nested_main_file
+        nested_section_info["main_page"] = f"{nested_name}.j2"
+        nested_section_info["main_page_path"] = nested_main_file
         child_entry = {
             "file": f"{nested_name}.j2",
-            "title": nested_info["title"],
+            "title": nested_section_info["title"],
             "path": nested_main_file,
             "type": "nested_section",
             "folder": child_path,
@@ -62,7 +62,7 @@ def _process_nested_folder(child_item, child_path):
             and nested_child not in [f"{nested_name}.j2", "macros.j2"]
         ):
             title = nested_child.replace(".j2", "").replace("_", " ").title()
-            nested_info["children"].append(
+            nested_section_info["children"].append(
                 {
                     "file": nested_child,
                     "title": title,
@@ -72,7 +72,7 @@ def _process_nested_folder(child_item, child_path):
                 }
             )
 
-    return nested_info, child_entry
+    return nested_section_info, child_entry
 
 
 def _sort_section_children(section_info):
@@ -116,10 +116,10 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
                             section_info["children"].append(child_entry)
 
                     elif os.path.isdir(child_path):
-                        nested_info, child_entry = _process_nested_folder(child_item, child_path)
+                        nested_section_info, child_entry = _process_nested_folder(child_item, child_path)
                         if child_entry:
                             section_info["children"].append(child_entry)
-                        section_info["nested_sections"][child_item] = nested_info
+                        section_info["nested_sections"][child_item] = nested_section_info
 
                 _sort_section_children(section_info)
                 structure[main_page_name] = section_info

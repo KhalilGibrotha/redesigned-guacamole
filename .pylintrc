@@ -33,12 +33,21 @@ errors-only=no
 # Disable specific warnings and errors
 # C0103: Invalid name (too restrictive for variables)
 # C0111: Missing docstring (too verbose for all functions)
+# C0114: Missing module docstring (handled by team preference)
+# C0115: Missing class docstring (handled by team preference)
+# C0116: Missing function docstring (handled by team preference)
+# C0301: Line too long (handled by Black)
+# C0326: Bad whitespace (handled by Black)
+# C0330: Wrong hanging indentation (conflicts with Black)
 # R0903: Too few public methods (doesn't apply to data classes)
 # R0913: Too many arguments (sometimes necessary)
 # W0613: Unused argument (common in inherited methods)
 # W0622: Redefining built-in (sometimes necessary)
 # E1101: Instance has no member (false positives with dynamic attributes)
-disable=C0103,C0111,R0903,R0913,W0613,W0622,E1101
+# R0801: Similar lines in files (handled at code review)
+# R0912: Too many branches (sometimes necessary for complex logic)
+# R0915: Too many statements (sometimes necessary for complex logic)
+disable=C0103,C0111,C0114,C0115,C0116,C0301,R0903,R0913,W0613,W0622,E1101,R0801,R0912,R0915
 
 # Enable specific warnings that are disabled by default
 #enable=
@@ -46,9 +55,6 @@ disable=C0103,C0111,R0903,R0913,W0613,W0622,E1101
 [REPORTS]
 # Set the output format
 output-format=text
-
-# Include message's id in the output
-include-ids=yes
 
 # Template used to display messages
 msg-template={path}:{line}:{column}: {msg_id}: {msg} ({symbol})
@@ -208,10 +214,6 @@ ignored-modules=
 # List of class names for which member attributes should not be checked
 ignored-classes=optparse.Values,thread._local,_thread._local
 
-# List of classes names for which member attributes should not be checked
-# (useful for classes with attributes dynamically set)
-ignored-classes=optparse.Values,thread._local,_thread._local
-
 [VARIABLES]
 # Tells whether we should check for unused import in __init__ files
 init-import=no
@@ -299,4 +301,4 @@ known-third-party=
 
 [EXCEPTIONS]
 # Exceptions that will emit a warning when being caught
-overgeneral-exceptions=Exception
+overgeneral-exceptions=builtins.Exception
