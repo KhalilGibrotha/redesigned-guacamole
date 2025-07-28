@@ -98,6 +98,8 @@ The configurations work seamlessly with pre-commit hooks for automated checking.
 - `pyproject.toml` - Added comprehensive tool configurations
 - `.pylintrc` - Enhanced disable list for Black compatibility
 - `.vscode/settings.json` - Added VS Code Python extension configuration
+- `.editorconfig` - Fixed conflicts and duplicate sections for consistency
+- `.ecrc` - Added EditorConfig checker configuration to exclude build artifacts
 - All Python files - Formatted with Black and isort
 
 ### 3. Enhanced `.pylintrc` Configuration
@@ -112,7 +114,26 @@ Key additions:
 - **C0326,C0330**: Whitespace/indentation warnings (conflicts with Black)
 - **R0801,R0912,R0915**: Complexity warnings (handled at code review)
 
-### 4. New `.vscode/settings.json` Configuration
+### 4. Fixed `.editorconfig` Configuration
+Resolved conflicts and inconsistencies:
+- **Fixed Python line length**: Changed from 88 to 120 characters (consistent with Black)
+- **Removed duplicate sections**: Eliminated duplicate `[*.{yml,yaml}]` and PowerShell sections
+- **Consistent YAML settings**: Unified Ansible and YAML file configurations
+- **Proper section ordering**: Reorganized sections to prevent conflicts
+
+### 5. Added `.ecrc` Configuration
+EditorConfig checker configuration to reduce false positives:
+```json
+{
+  "Exclude": [
+    "\\.git", "\\.pytest_cache", "\\.mypy_cache", "\\.venv", "venv",
+    "build", "dist", "node_modules", "__pycache__", "\\.tox",
+    "coverage", "htmlcov", "\\.coverage", "page_id_cache\\.json", "tmp"
+  ]
+}
+```
+
+### 6. Enhanced `.vscode/settings.json` Configuration
 Added VS Code workspace settings for seamless Python development:
 ```json
 {

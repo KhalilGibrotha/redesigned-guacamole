@@ -1,0 +1,36 @@
+{
+  "Version": "2.1.0",
+  "Verbose": false,
+  "Debug": false,
+  "IgnoreDefaults": false,
+  "SpacesAftertabs": false,
+  "NoColor": false,
+  "Exclude": [
+    "\\.git",
+    "\\.pytest_cache",
+    "\\.mypy_cache",
+    "\\.venv",
+    "venv",
+    "build",
+    "dist",
+    "node_modules",
+    "__pycache__",
+    "\\.tox",
+    "coverage",
+    "htmlcov",
+    "\\.coverage",
+    "page_id_cache\\.json",
+    "tmp"
+  ],
+  "AllowedContentTypes": [
+    "application/ecmascript",
+    "application/json",
+    "application/x-ndjson",
+    "application/xml",
+    "text/html",
+    "text/plain",
+    "text/css",
+    "text/x-shellscript"
+  ],
+  "PassedFiles": []
+}
