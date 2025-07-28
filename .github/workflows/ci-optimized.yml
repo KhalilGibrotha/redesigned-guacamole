@@ -15,7 +15,19 @@ on:
         required: false
         type: choice
         options:
-          - 'production'
+        - name: 🔍 Enhanced Super Linter Analysis
+        if: always()
+        id: enhanced-analysis
+        run: |
+          echo "::group::🔍 Enhanced Super Linter Analysis"
+
+          # Run comprehensive analysis that includes autofix detection
+          echo "🚀 Running enhanced code quality analysis..."
+          python3 scripts/enhanced_linter_analysis.py
+
+          echo "✅ Enhanced analysis completed"
+          echo "::endgroup::"
+        working-directory: ${{ github.workspace }}oduction'
           - 'staging'
           - 'development'
         default: 'production'
@@ -418,84 +430,22 @@ jobs:
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 📊 Analyze Auto-fixes Applied
+      - name: � Enhanced Super Linter Analysis
         if: always()
-        id: autofix-analysis
+        id: enhanced-analysis
         run: |
-          echo "🔍 Analyzing auto-fixes applied by Super Linter..."
+          echo "::group::🔍 Enhanced Super Linter Analysis"
 
-          # Initialize counters
-          total_fixes=0
-          yaml_fixes=0
-          ansible_fixes=0
-          python_fixes=0
-          shell_fixes=0
-          markdown_fixes=0
-          json_fixes=0
+          # Run comprehensive analysis that includes autofix detection
+          echo "� Running enhanced code quality analysis..."
+          python3 scripts/enhanced_linter_analysis.py
 
-          # Function to count fixes in git diff
-          count_file_changes() {
-            local file_pattern="$1"
-            local category="$2"
-
-            if git diff --name-only | grep -E "$file_pattern" > /dev/null 2>&1; then
-              local changed_files=$(git diff --name-only | grep -E "$file_pattern" | wc -l)
-              local total_changes=$(git diff --numstat | grep -E "$file_pattern" | awk '{sum += $1 + $2} END {print sum+0}')
-
-              echo "📝 $category fixes: $changed_files files, $total_changes changes"
-              return $total_changes
-            else
-              echo "📝 $category fixes: 0 files, 0 changes"
-              return 0
-            fi
-          }
-
-          # Check if there are any changes from auto-fix
-          if git diff --quiet; then
-            echo "✅ No auto-fixes were needed - code already compliant!"
-            echo "autofix_needed=false" >> $GITHUB_OUTPUT
-            echo "total_fixes=0" >> $GITHUB_OUTPUT
-          else
-            echo "🔧 Auto-fixes were applied!"
-            echo "autofix_needed=true" >> $GITHUB_OUTPUT
-
-            # Count fixes by category
-            count_file_changes "\\.ya?ml$" "YAML"; yaml_fixes=$?
-            count_file_changes "\\.py$" "Python"; python_fixes=$?
-            count_file_changes "\\.sh$" "Shell/Bash"; shell_fixes=$?
-            count_file_changes "\\.md$" "Markdown"; markdown_fixes=$?
-            count_file_changes "\\.json$" "JSON"; json_fixes=$?
-
-            # Special handling for Ansible (subset of YAML)
-            if git diff --name-only | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" > /dev/null 2>&1; then
-              ansible_fixes=$(git diff --numstat | grep -E "(playbook|tasks|handlers|vars).*\\.ya?ml$|site\\.ya?ml$" | awk '{sum += $1 + $2} END {print sum+0}')
-              echo "📝 Ansible fixes: $ansible_fixes changes"
-            fi
-
-            total_fixes=$((yaml_fixes + python_fixes + shell_fixes + markdown_fixes + json_fixes))
-
-            # Output for next steps
-            echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
-            echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
-            echo "ansible_fixes=$ansible_fixes" >> $GITHUB_OUTPUT
-            echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
-            echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
-            echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
-            echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
-
-            # Show detailed diff summary
-            echo ""
-            echo "📋 Detailed changes by file:"
-            git diff --name-status | while read status file; do
-              if [ "$status" = "M" ]; then
-                changes=$(git diff --numstat "$file" | awk '{print $1 + $2}')
-                echo "  📄 $file: $changes changes"
-              fi
-            done
-          fi
+          echo "✅ Enhanced analysis completed"
+          echo "::endgroup::"
+        working-directory: ${{ github.workspace }}
 
       - name: 💾 Commit Auto-fixes
-        if: steps.autofix-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
+        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -507,18 +457,18 @@ jobs:
           git add .
 
           # Create detailed commit message
-          commit_msg="🤖 Auto-fix: Applied ${{ steps.autofix-analysis.outputs.total_fixes }} linting fixes
+          commit_msg="🤖 Auto-fix: Applied ${{ steps.enhanced-analysis.outputs.total_fixes }} linting fixes
 
           Auto-fixes applied by Super Linter:
-          - YAML fixes: ${{ steps.autofix-analysis.outputs.yaml_fixes }}
-          - Ansible fixes: ${{ steps.autofix-analysis.outputs.ansible_fixes }}
-          - Python fixes: ${{ steps.autofix-analysis.outputs.python_fixes }}
-          - Shell fixes: ${{ steps.autofix-analysis.outputs.shell_fixes }}
-          - Markdown fixes: ${{ steps.autofix-analysis.outputs.markdown_fixes }}
-          - JSON fixes: ${{ steps.autofix-analysis.outputs.json_fixes }}
+          - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}
+          - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}
+          - Python fixes: ${{ steps.enhanced-analysis.outputs.python_fixes }}
+          - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}
+          - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}
+          - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}
 
           Automated by: ${{ github.workflow }} #${{ github.run_number }}
-          Triggered by: ${{ github.event_name }} on ${{ github.ref_name }}"
+          Health Score: ${{ steps.enhanced-analysis.outputs.overall_health_score }}/100"
 
           # Commit changes
           git commit -m "$commit_msg"
@@ -529,16 +479,16 @@ jobs:
           echo "✅ Auto-fixes committed and pushed!"
 
       - name: ⚠️ Auto-fix Skipped (External Call)
-        if: steps.autofix-analysis.outputs.autofix_needed == 'true' && github.event_name == 'workflow_call'
+        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name == 'workflow_call'
         run: |
           echo "⚠️ Auto-fixes detected but skipped for external workflow calls"
-          echo "🔍 Found ${{ steps.autofix-analysis.outputs.total_fixes }} potential fixes:"
-          echo "  - YAML fixes: ${{ steps.autofix-analysis.outputs.yaml_fixes }}"
-          echo "  - Ansible fixes: ${{ steps.autofix-analysis.outputs.ansible_fixes }}"
-          echo "  - Python fixes: ${{ steps.autofix-analysis.outputs.python_fixes }}"
-          echo "  - Shell fixes: ${{ steps.autofix-analysis.outputs.shell_fixes }}"
-          echo "  - Markdown fixes: ${{ steps.autofix-analysis.outputs.markdown_fixes }}"
-          echo "  - JSON fixes: ${{ steps.autofix-analysis.outputs.json_fixes }}"
+          echo "🔍 Found ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes:"
+          echo "  - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}"
+          echo "  - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}"
+          echo "  - Python fixes: ${{ steps.enhanced-analysis.outputs.python_fixes }}"
+          echo "  - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}"
+          echo "  - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}"
+          echo "  - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}"
           echo ""
           echo "💡 To apply these fixes, run the workflow directly on the target repository"
 
@@ -686,7 +636,8 @@ jobs:
             pip install -r requirements.txt
           fi
 
-      - name: 📝 Generate Summary from All Reports
+      - name: 📝 Generate SARIF Security Reports Summary
+        if: always()
         run: |
           python3 -c "
           import json

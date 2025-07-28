@@ -97,9 +97,11 @@ The configurations work seamlessly with pre-commit hooks for automated checking.
 - `.flake8` - Updated ignore patterns and per-file rules
 - `pyproject.toml` - Added comprehensive tool configurations
 - `.pylintrc` - Enhanced disable list for Black compatibility
-- `.vscode/settings.json` - Added VS Code Python extension configuration
+- `.vscode/settings.json` - Added VS Code Python and Markdown extension configuration
 - `.editorconfig` - Fixed conflicts and duplicate sections for consistency
 - `.ecrc` - Added EditorConfig checker configuration to exclude build artifacts
+- `.markdownlint.json` - Optimized for your documentation style (emojis, long lines, HTML)
+- `.github/workflows/.markdownlint.json` - Workflow-specific markdown linting
 - All Python files - Formatted with Black and isort
 
 ### 3. Enhanced `.pylintrc` Configuration
@@ -133,7 +135,20 @@ EditorConfig checker configuration to reduce false positives:
 }
 ```
 
-### 6. Enhanced `.vscode/settings.json` Configuration
+### 7. Optimized Markdown Linting Configuration
+Enhanced `.markdownlint.json` for your documentation style:
+
+**Key optimizations for your patterns:**
+- **Line length**: 180 characters (matches your technical documentation)
+- **HTML elements**: Allowed `<details>`, `<summary>`, `<br>`, `<img>`, etc.
+- **Multiple H1s**: Disabled MD025 for template files
+- **Code blocks**: Flexible language requirements (MD040 disabled)
+- **Link checking**: Disabled complex link validation (MD051-053)
+- **Emoji support**: No restrictions on emoji usage in headers/content
+
+**Workflow-specific config**: Separate `.github/workflows/.markdownlint.json` with stricter limits for workflow documentation (140 chars)
+
+### 8. Enhanced `.vscode/settings.json` Configuration
 Added VS Code workspace settings for seamless Python development:
 ```json
 {
@@ -152,12 +167,20 @@ Added VS Code workspace settings for seamless Python development:
         "editor.rulers": [120],
         "editor.tabSize": 4,
         "editor.insertSpaces": true
+    },
+    "[markdown]": {
+        "editor.wordWrap": "bounded",
+        "editor.wordWrapColumn": 180,
+        "editor.rulers": [180],
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": false
     }
 }
 ```
 
 ## IDE Integration
-- **Format on Save**: Automatically applies Black formatting when saving files
+- **Python Files**: Black formatting on save, import organization, 120-character ruler
+- **Markdown Files**: 180-character word wrap, visual ruler, no auto-formatting
 - **Import Organization**: Automatically sorts imports with isort on save
-- **Visual Line Length**: Shows 120-character ruler in editor
-- **Consistent Indentation**: Enforces 4-space indentation
+- **Consistent Indentation**: 4-space for Python, 2-space for Markdown
