@@ -1,6 +1,6 @@
-# � Comprehensive CI/CD Pipeline with Documentation Publishing
+# Comprehensive CI/CD Pipeline with Documentation Publishing
 
-[![License: MIT](https://img.shields.io/badge/Licens### Detai1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
@@ -88,7 +88,7 @@ and macros provided by our pipeline.
 - ✅ **Minimal Setup**: Only need your content and configuration
 - ✅ **Centralized Maintenance**: All pipeline logic maintained in one place
 
-## 📋 Available Workflowstion Flow:
+## 📋 Workflows:
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)

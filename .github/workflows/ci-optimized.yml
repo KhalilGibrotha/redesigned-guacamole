@@ -646,7 +646,8 @@ jobs:
       (needs.detect-changes.outputs.external-call == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/')) &&
       (needs.detect-changes.outputs.docs-changed == 'true' || inputs.full_scan == true || needs.detect-changes.outputs.external-call == 'true')
 
-    # Use current repository to ensure script availability
+
+    # Use relative path for better compatibility with external calls
     uses: ./.github/workflows/publish-docs.yml
     with:
       target_environment: ${{ inputs.target_environment || 'production' }}
