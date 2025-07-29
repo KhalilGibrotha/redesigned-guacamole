@@ -267,10 +267,10 @@ jobs:
           yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*" | wc -l)
           ansible_files=$(find . -type f \( -path "./playbooks/*" -o -path "./roles/*" \
             -o -name "site.yml" -o -name "playbook*.yml" -o -name "playbook*.yaml" \) | wc -l)
-          python_files=$(find . -type f -name "*.py" ! -path "./.git/*" ! -path "./.venv/*" ! -path "./venv/*" | wc -l)
+          python_files=$(find . -type f -name "*.py" ! -path "./.git/*" ! -path "./.venv/*" ! -path "./venv/*" ! -path "./.mypy_cache/*" ! -path "./__pycache__/*" | wc -l)
           markdown_files=$(find . -type f -name "*.md" ! -path "./.git/*" | wc -l)
           shell_files=$(find . -type f -name "*.sh" ! -path "./.git/*" | wc -l)
-          json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" | wc -l)
+          json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" ! -path "./.mypy_cache/*" ! -path "./.pytest_cache/*" ! -path "./.venv/*" ! -path "./venv/*" ! -path "./.tox/*" ! -path "./__pycache__/*" | wc -l)
           github_actions_files=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null |
             wc -l)
 
@@ -528,12 +528,12 @@ jobs:
           # Python auto-fixes with Black and isort
           echo "🐍 Applying Python auto-fixes..."
           if command -v black >/dev/null 2>&1; then
-            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --check --quiet 2>/dev/null; then
+            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --check --quiet 2>/dev/null; then
               echo "  ✅ Python files already formatted correctly"
             else
               echo "  � Formatting Python files with Black..."
-              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
-              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black
+              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
+              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black
               python_fixes=$((python_fixes + python_black_count))
               total_fixes=$((total_fixes + python_black_count))
               echo "    Applied $python_black_count Black formatting fixes"
@@ -542,8 +542,8 @@ jobs:
 
           if command -v isort >/dev/null 2>&1; then
             echo "  🔧 Sorting Python imports with isort..."
-            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
-            find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort
+            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
+            find . -name "*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort
             python_fixes=$((python_fixes + python_isort_count))
             total_fixes=$((total_fixes + python_isort_count))
             echo "    Applied $python_isort_count import sorting fixes"
@@ -584,7 +584,21 @@ jobs:
           # JSON auto-fixes
           echo "📋 Applying JSON auto-fixes..."
           json_count=0
-          for file in $(find . -name "*.json" | grep -v ".git" | grep -v "node_modules" | grep -v "package-lock.json"); do
+          for file in $(find . -name "*.json" \
+            -not -path "./.git/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.mypy_cache/*" \
+            -not -path "./.pytest_cache/*" \
+            -not -path "./.venv/*" \
+            -not -path "./venv/*" \
+            -not -path "./.tox/*" \
+            -not -path "./__pycache__/*" \
+            -not -name "package-lock.json" \
+            -not -name "*.tmp"); do
+            # Skip if file is not writable
+            if [ ! -w "$file" ]; then
+              continue
+            fi
             if python3 -m json.tool "$file" > "${file}.tmp" 2>/dev/null; then
               if ! diff -q "$file" "${file}.tmp" >/dev/null 2>&1; then
                 mv "${file}.tmp" "$file"
