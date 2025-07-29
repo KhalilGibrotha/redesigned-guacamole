@@ -456,11 +456,18 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"autofix_needed={autofix_needed}\n")
               f.write(f"total_fixes={results['total_fixes']}\n")
+              f.write(f"total_issues={results['total_issues']}\n")
+              f.write(f"shell_issues={results['shell_issues']}\n")
               f.write(f"shell_fixes={results['shell_fixes']}\n")
+              f.write(f"yaml_issues={results['yaml_issues']}\n")
               f.write(f"yaml_fixes={results['yaml_fixes']}\n")
+              f.write(f"ansible_issues={results['ansible_issues']}\n")
               f.write(f"ansible_fixes={results['ansible_fixes']}\n")
+              f.write(f"python_issues={results['python_issues']}\n")
               f.write(f"python_fixes={results['python_fixes']}\n")
+              f.write(f"markdown_issues={results['markdown_issues']}\n")
               f.write(f"markdown_fixes={results['markdown_fixes']}\n")
+              f.write(f"json_issues={results['json_issues']}\n")
               f.write(f"json_fixes={results['json_fixes']}\n")
               f.write(f"overall_health_score={results['overall_health_score']}\n")
 
@@ -470,6 +477,37 @@ jobs:
           echo "✅ Enhanced analysis completed"
           echo "::endgroup::"
         working-directory: ${{ github.workspace }}
+
+      - name: 📊 Enhanced Analysis Summary
+        if: always()
+        run: |
+          {
+            echo "## 🔍 Enhanced Super Linter Analysis Results"
+            echo ""
+            echo "### 📋 Code Quality Analysis"
+            echo "- **🐚 Shell script issues**: ${{ steps.enhanced-analysis.outputs.shell_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.shell_fixes || '0' }})"
+            echo "- **📄 YAML issues**: ${{ steps.enhanced-analysis.outputs.yaml_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.yaml_fixes || '0' }})"
+            echo "- **🎭 Ansible issues**: ${{ steps.enhanced-analysis.outputs.ansible_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.ansible_fixes || '0' }})"
+            echo "- **🐍 Python issues**: ${{ steps.enhanced-analysis.outputs.python_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.python_fixes || '0' }})"
+            echo "- **📝 Markdown issues**: ${{ steps.enhanced-analysis.outputs.markdown_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.markdown_fixes || '0' }})"
+            echo "- **📋 JSON issues**: ${{ steps.enhanced-analysis.outputs.json_issues || '0' }} (auto-fixable: ${{ steps.enhanced-analysis.outputs.json_fixes || '0' }})"
+            echo ""
+            echo "### 🏥 Overall Health Score"
+            echo "**Score**: ${{ steps.enhanced-analysis.outputs.overall_health_score || 'N/A' }}/100"
+            echo ""
+            echo "### 🤖 Auto-fix Status"
+            if [ "${{ steps.enhanced-analysis.outputs.autofix_needed }}" = "true" ]; then
+              echo "✅ **Auto-fixes available**: ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes detected"
+            else
+              echo "🎉 **No auto-fixes needed**: Code quality is excellent!"
+            fi
+            echo ""
+            echo "### 🔍 Analysis Coverage"
+            echo "- Shell script analysis with ShellCheck integration"
+            echo "- Multi-language linting with Super Linter"
+            echo "- Auto-fixable issue detection and classification"
+            echo "- Health score calculation based on issue severity"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 💾 Commit Auto-fixes
         if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
