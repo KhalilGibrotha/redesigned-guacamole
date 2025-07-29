@@ -1,0 +1,63 @@
+{
+  "threshold": 15,
+  "minLines": 5,
+  "minTokens": 50,
+  "reporters": ["console", "json"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/.git/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.tox/**",
+    "**/build/**",
+    "**/dist/**",
+    "**/*.min.js",
+    "**/*.min.css",
+    "**/package-lock.json",
+    "**/yarn.lock",
+    "**/.coverage",
+    "**/coverage/**",
+    "**/htmlcov/**"
+  ],
+  "format": [
+    "javascript",
+    "typescript",
+    "python",
+    "yaml",
+    "json",
+    "markdown",
+    "shell",
+    "dockerfile"
+  ],
+  "blame": true,
+  "absolute": true,
+  "gitignore": true,
+  "silent": false,
+  "verbose": false,
+  "debug": false,
+  "output": "./jscpd-report",
+  "formatsExts": {
+    "javascript": ["js", "jsx"],
+    "typescript": ["ts", "tsx"],
+    "python": ["py"],
+    "yaml": ["yml", "yaml"],
+    "json": ["json"],
+    "markdown": ["md", "markdown"],
+    "shell": ["sh", "bash"],
+    "dockerfile": ["Dockerfile", "dockerfile"]
+  },
+  "excludePattern": [
+    "test/**",
+    "tests/**",
+    "spec/**",
+    "specs/**",
+    "*.test.*",
+    "*.spec.*",
+    "*test*",
+    "example*",
+    "sample*",
+    "demo*"
+  ]
+}

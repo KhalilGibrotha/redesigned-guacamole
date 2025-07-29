@@ -1,0 +1,73 @@
+# GitLeaks Configuration for Secret Detection
+# Documentation: https://github.com/zricethezav/gitleaks
+
+title = "GitLeaks Configuration for Super Linter"
+
+# Global settings
+[extend]
+# Use default rules and extend with custom patterns
+useDefault = true
+
+# Custom rules for additional secret detection
+[[rules]]
+id = "custom-api-key"
+description = "Custom API Key Pattern"
+regex = '''(?i)(api[_-]?key|apikey)['"]*\s*[:=]\s*['"][a-zA-Z0-9]{20,}['"]'''
+secretGroup = 4
+
+[[rules]]
+id = "custom-token"
+description = "Custom Token Pattern"
+regex = '''(?i)(token|access[_-]?token)['"]*\s*[:=]\s*['"][a-zA-Z0-9]{20,}['"]'''
+secretGroup = 4
+
+[[rules]]
+id = "custom-password"
+description = "Custom Password Pattern"
+regex = '''(?i)(password|passwd|pwd)['"]*\s*[:=]\s*['"][^'"]{8,}['"]'''
+secretGroup = 4
+
+# Allowlist patterns to reduce false positives
+[allowlist]
+description = "Global allowlist for false positives"
+regexes = [
+    '''example\.com''',
+    '''localhost''',
+    '''127\.0\.0\.1''',
+    '''0\.0\.0\.0''',
+    '''YOUR_.*_HERE''',
+    '''REPLACE_.*''',
+    '''CHANGE_.*''',
+    '''PLACEHOLDER.*''',
+    '''<.*>''',
+    '''\{\{.*\}\}''',  # Jinja2 templates
+    '''\$\{.*\}''',    # Environment variable substitution
+]
+
+# File and path exclusions
+paths = [
+    '''\.git/''',
+    '''node_modules/''',
+    '''\.venv/''',
+    '''venv/''',
+    '''__pycache__/''',
+    '''\.pytest_cache/''',
+    '''\.tox/''',
+    '''build/''',
+    '''dist/''',
+    '''\.min\.js$''',
+    '''\.min\.css$''',
+    '''package-lock\.json$''',
+    '''yarn\.lock$''',
+]
+
+# Stop words to reduce false positives
+stopwords = [
+    "example",
+    "test",
+    "demo",
+    "placeholder",
+    "sample",
+    "default",
+    "dummy",
+]
