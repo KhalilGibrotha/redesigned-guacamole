@@ -15,7 +15,7 @@ echo ""
 
 for scenario in "${test_scenarios[@]}"; do
     echo "📋 Scenario: $scenario"
-    
+
     if [[ "$scenario" == *"exists"* ]]; then
         # Simulate when requirements.txt exists
         echo "  ✅ Found redesigned-guacamole/requirements.txt"
