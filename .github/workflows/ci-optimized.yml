@@ -324,16 +324,6 @@ jobs:
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
           VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan == true }}
 
-          # Enable validation ONLY for file types that exist (no false values)
-          VALIDATE_YAML: ${{ steps.detect-files.outputs.yaml_files > 0 }}
-          VALIDATE_ANSIBLE: ${{ steps.detect-files.outputs.ansible_files > 0 }}
-          VALIDATE_MARKDOWN: ${{ steps.detect-files.outputs.markdown_files > 0 }}
-          VALIDATE_PYTHON: ${{ steps.detect-files.outputs.python_files > 0 }}
-          VALIDATE_BASH: ${{ steps.detect-files.outputs.shell_files > 0 }}
-          VALIDATE_JSON: ${{ steps.detect-files.outputs.json_files > 0 }}
-          VALIDATE_SHELL_SHFMT: ${{ steps.detect-files.outputs.shell_files > 0 }}
-          VALIDATE_GITHUB_ACTIONS: ${{ steps.detect-files.outputs.github_actions_files > 0 }}
-
       - name: � Enhanced Super Linter Analysis
         if: always()
         id: enhanced-analysis
