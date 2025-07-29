@@ -216,6 +216,29 @@ jobs:
     └── [template files]       # .j2 template files
   ```
 
+### Confluence Publishing Auto-Enables Dry Run Mode
+- **Cause**: Missing Confluence secrets in calling repository (this is normal!)
+- **Behavior**: Workflow automatically enables dry-run mode when secrets are missing
+- **Result**: Publishing step runs successfully but doesn't make actual changes
+- **Solution (if you want live publishing)**:
+  1. **Add secrets to your repository**:
+     ```
+     # In your repository settings > Secrets and variables > Actions
+     CONFLUENCE_URL=https://your-confluence.atlassian.net
+     CONFLUENCE_USER=your-username-or-email
+     CONFLUENCE_API_TOKEN=your-confluence-api-token
+     ```
+  2. **Ensure calling workflow passes secrets**:
+     ```yaml
+     jobs:
+       ci-cd:
+         uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+         secrets:
+           CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+           CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+           CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+     ```
+
 ### Auto-fixes Applied But Not Committed
 - **Cause**: Running in read-only mode (remote call without write permissions)
 - **Effect**: Auto-fixes are applied to detect issues but changes aren't committed
