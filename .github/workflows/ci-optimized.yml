@@ -174,20 +174,22 @@ jobs:
 
       - name: 📊 Debug Publishing Conditions
         run: |
-          echo "## 🔍 Publishing Condition Debug" >> $GITHUB_STEP_SUMMARY
-          echo "- **Event name**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch reference**: ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch name**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **External call**: ${{ steps.context.outputs.external-call }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Docs changed**: ${{ steps.final.outputs.docs-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Full scan input**: ${{ inputs.full_scan }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Publishing will run if:" >> $GITHUB_STEP_SUMMARY
-          echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' || github.event_name == 'workflow_dispatch' }}" >> $GITHUB_STEP_SUMMARY
-          echo "2. External call OR branch is main/release/hotfix ✅: ${{ steps.context.outputs.external-call == 'true' || github.ref == 'refs/heads/main' ||
-            startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/hotfix/') }}" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Publishing Condition Debug" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Event name**: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch reference**: ${{ github.ref }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Branch name**: ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **External call**: ${{ steps.context.outputs.external-call }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Docs changed**: ${{ steps.final.outputs.docs-changed }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Full scan input**: ${{ inputs.full_scan }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Publishing will run if:" >> "$GITHUB_STEP_SUMMARY"
+          echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' ||
+            github.event_name == 'workflow_dispatch' }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "2. External call OR branch is main/release/hotfix ✅: ${{ steps.context.outputs.external-call == 'true' ||
+            github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') ||
+            startsWith(github.ref, 'refs/heads/hotfix/') }}" >> "$GITHUB_STEP_SUMMARY"
           echo "3. Docs changed OR full_scan OR external call ✅: ${{ steps.final.outputs.docs-changed == 'true' ||
-            inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}" >> $GITHUB_STEP_SUMMARY
+            inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}" >> "$GITHUB_STEP_SUMMARY"
 
   super-linter:
     name: 🔍 Super Linter
@@ -267,7 +269,8 @@ jobs:
           markdown_files=$(find . -type f -name "*.md" ! -path "./.git/*" | wc -l)
           shell_files=$(find . -type f -name "*.sh" ! -path "./.git/*" | wc -l)
           json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" | wc -l)
-          github_actions_files=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | wc -l)
+          github_actions_files=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null |
+            wc -l)
 
           # Set outputs
           echo "yaml_files=$yaml_files" >> $GITHUB_OUTPUT
@@ -470,7 +473,8 @@ jobs:
           echo "🔒 Checking file permissions..."
 
           # Check for world-writable files
-          if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"; then
+          if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" |
+            xargs ls -la | grep "^-.......rw"; then
             echo "❌ World-writable files found"
             find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"
             exit 1
@@ -481,10 +485,10 @@ jobs:
       - name: 🛡️ Security Summary
         if: always()
         run: |
-          echo "## 🛡️ Security Validation Summary" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **DevSkim scan completed**" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Secret detection completed**" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **File permissions checked**" >> $GITHUB_STEP_SUMMARY
+          echo "## 🛡️ Security Validation Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ **DevSkim scan completed**" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ **Secret detection completed**" >> "$GITHUB_STEP_SUMMARY"
+          echo "✅ **File permissions checked**" >> "$GITHUB_STEP_SUMMARY"
 
   # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
@@ -539,7 +543,7 @@ jobs:
       - name: 📝 Generate SARIF Security Reports Summary
         if: always()
         run: |
-          python3 -c "
+          python3 << 'EOF'
           import json
           import os
           import glob
@@ -572,7 +576,7 @@ jobs:
               else:
                   for (level, rule, msg), count in sorted(results.items()):
                       msg_escaped = msg.replace('|', '\\|').replace('\n', ' ').replace('\r', '').replace('`', '\\`')
-                      report_md += f'| {level} | \`{rule}\` | {msg_escaped} | {count} |\n'
+                      report_md += f'| {level} | \\`{rule}\\` | {msg_escaped} | {count} |\n'
 
               return report_md, total_issues
 
@@ -661,23 +665,27 @@ jobs:
                   f.write('Please review the individual reports above for detailed information.\n')
 
           print(f'✅ Summary generation complete. Total issues across all tools: {overall_total}')
-          "
+          EOF
 
       - name: 📊 Execution Summary
         if: always()
         run: |
-          echo "## 🚀 Workflow Execution Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔍 Change Detection Results" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository**: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **External call**: ${{ needs.detect-changes.outputs.external-call }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Workflow files changed**: ${{ needs.detect-changes.outputs.workflows-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Any code changed**: ${{ needs.detect-changes.outputs.any-code-changed }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 Job Execution Status" >> $GITHUB_STEP_SUMMARY
-          echo "- **Super Linter**: ${{ needs.super-linter.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Security Scan**: ${{ needs.security.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Workflow Execution Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🔍 Change Detection Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Repository**: ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **External call**: ${{ needs.detect-changes.outputs.external-call }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}" >>
+            "$GITHUB_STEP_SUMMARY"
+          echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}" >>
+            "$GITHUB_STEP_SUMMARY"
+          echo "- **Workflow files changed**: ${{ needs.detect-changes.outputs.workflows-changed }}" >>
+            "$GITHUB_STEP_SUMMARY"
+          echo "- **Any code changed**: ${{ needs.detect-changes.outputs.any-code-changed }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📊 Job Execution Status" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Super Linter**: ${{ needs.super-linter.result }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Security Scan**: ${{ needs.security.result }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}" >>
+            "$GITHUB_STEP_SUMMARY"
