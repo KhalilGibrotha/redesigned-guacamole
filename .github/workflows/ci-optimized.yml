@@ -599,7 +599,54 @@ jobs:
           json_fixes=$json_count
           total_fixes=$((total_fixes + json_count))
           echo "  Applied $json_count JSON formatting fixes"
-
+          
+          # Markdown auto-fixes
+          echo "📝 Applying Markdown auto-fixes..."
+          markdown_count=0
+          
+          # Method 1: Basic markdown fixes (trailing whitespace, line endings)
+          for file in $(find . -name "*.md" | grep -v ".git" | grep -v "node_modules"); do
+            original_size=$(wc -c < "$file" 2>/dev/null || echo "0")
+            
+            # Fix trailing whitespace
+            sed -i 's/[[:space:]]*$//' "$file" 2>/dev/null || true
+            
+            # Ensure file ends with newline
+            if [ -s "$file" ] && [ "$(tail -c1 "$file" 2>/dev/null)" != "" ]; then
+              echo "" >> "$file"
+            fi
+            
+            # Fix multiple consecutive empty lines (reduce to max 2)
+            awk '/^$/{if(++n<=2)print;next}{n=0;print}' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file" 2>/dev/null || true
+            
+            new_size=$(wc -c < "$file" 2>/dev/null || echo "0")
+            if [ "$original_size" != "$new_size" ]; then
+              markdown_count=$((markdown_count + 1))
+            fi
+          done
+          
+          # Method 2: Try markdownlint-cli2 auto-fix if available
+          if command -v markdownlint-cli2 >/dev/null 2>&1; then
+            echo "  🔧 Running markdownlint-cli2 auto-fix..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs markdownlint-cli2 --fix --config .markdownlint.json 2>/dev/null || true
+          elif command -v markdownlint >/dev/null 2>&1; then
+            echo "  🔧 Running markdownlint auto-fix..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs markdownlint --fix --config .markdownlint.json 2>/dev/null || true
+          fi
+          
+          # Method 3: Try prettier for markdown if available
+          if command -v prettier >/dev/null 2>&1; then
+            echo "  🔧 Running prettier for markdown..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs prettier --write --parser markdown --prose-wrap preserve 2>/dev/null || true
+          fi
+          
+          markdown_fixes=$markdown_count
+          total_fixes=$((total_fixes + markdown_count))
+          echo "  Applied $markdown_count markdown formatting fixes"
+          
           # Set outputs for the commit step
           echo "autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
@@ -607,10 +654,8 @@ jobs:
           echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
           echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
           echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
-          echo "markdown_fixes=0" >> $GITHUB_OUTPUT
-          echo "ansible_fixes=0" >> $GITHUB_OUTPUT
-
-          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+          echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
+          echo "ansible_fixes=0" >> $GITHUB_OUTPUT          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
 
       - name: 💾 Commit Auto-fixes
         if: steps.apply-fixes.outputs.autofix_needed == 'true'

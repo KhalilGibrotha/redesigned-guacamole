@@ -59,10 +59,35 @@ This file has intentional formatting issues that Black will fix:
 - Missing spaces around operators
 - Parameter spacing issues
 
+### **Test File Added: `test_markdown_autofix.md`**
+```markdown
+# Test Markdown File   
+
+This line has trailing spaces.    
+
+
+Multiple empty lines above will be reduced.
+```
+
+This file has intentional markdown formatting issues:
+- Trailing spaces after headers and lines
+- Multiple consecutive empty lines (3+)
+- Missing final newline
+- Inconsistent spacing in lists and tables
+
 ### **Expected Auto-fix Result**
 ```python
 def badly_formatted_function(x, y):
     return x + y
+```
+
+```markdown
+# Test Markdown File
+
+This line has trailing spaces.
+
+
+Multiple empty lines above will be reduced.
 ```
 
 ## 🚀 **How to Test**
@@ -114,6 +139,14 @@ jobs:
 - **Basic fixes**: Trailing whitespace removal
 - **Future**: Can add more advanced YAML formatting
 
+### **Markdown Files** 📝
+- **Trailing whitespace removal**: Cleans up line endings
+- **Multiple empty line reduction**: Limits to maximum 2 consecutive empty lines
+- **File ending normalization**: Ensures files end with newline
+- **markdownlint auto-fix**: Uses markdownlint-cli2 or markdownlint --fix when available
+- **Prettier formatting**: Uses prettier for consistent markdown formatting when available
+- **Detection**: Compares file sizes before and after fixes
+
 ### **JSON Files** 📋
 - **json.tool**: Proper indentation and structure
 - **Detection**: Compares original vs formatted output
@@ -126,6 +159,9 @@ The workflow expects these tools to be available:
 - ✅ `isort` (Python import sorter)
 - ✅ `shfmt` (Shell formatter)
 - ✅ `python3 -m json.tool` (JSON formatter)
+- ✅ Basic markdown fixes (built-in with sed/awk)
+- 🔄 `markdownlint-cli2` or `markdownlint` (advanced markdown fixes, optional)
+- 🔄 `prettier` (markdown formatting, optional)
 
 ### **Customization**
 Edit the "Apply Auto-fixes" step to:
