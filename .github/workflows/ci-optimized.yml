@@ -234,10 +234,16 @@ jobs:
             echo "ℹ️  Read-only mode - auto-fixes will run but not be committed"
           fi
 
-          # Also check if auto_fix input is enabled
-          auto_fix_enabled="${{ inputs.auto_fix != false }}"
+          # Also check if auto_fix input is enabled (default: true)
+          if [ "${{ inputs.auto_fix }}" = "false" ]; then
+            auto_fix_enabled="false"
+            echo "🔧 Auto-fix explicitly disabled (input: ${{ inputs.auto_fix }})"
+          else
+            auto_fix_enabled="true"
+            echo "🔧 Auto-fix enabled (input: ${{ inputs.auto_fix || 'default true' }})"
+          fi
+          echo "🐛 Setting auto_fix_enabled=$auto_fix_enabled"
           echo "auto_fix_enabled=$auto_fix_enabled" >> $GITHUB_OUTPUT
-          echo "🔧 Auto-fix enabled: $auto_fix_enabled"
 
       - name: �🔧 Configure Environment
         id: config
@@ -543,8 +549,18 @@ jobs:
             echo "- Health score calculation based on issue severity"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: 🐛 Debug Auto-fix Conditions
+        if: always()
+        run: |
+          echo "🐛 Debugging auto-fix step conditions:"
+          echo "  - auto_fix input: '${{ inputs.auto_fix }}'"
+          echo "  - auto_fix_enabled: '${{ steps.check-permissions.outputs.auto_fix_enabled }}'"
+          echo "  - has_write_access: '${{ steps.check-permissions.outputs.has_write_access }}'"
+          echo "  - autofix_needed: '${{ steps.enhanced-analysis.outputs.autofix_needed }}'"
+          echo "  - Condition for auto-fix: always() && steps.check-permissions.outputs.auto_fix_enabled == 'true'"
+
       - name: 🤖 Apply Auto-fixes
-        if: always() && steps.check-permissions.outputs.auto_fix_enabled == 'true'
+        if: steps.check-permissions.outputs.auto_fix_enabled == 'true'
         id: apply-fixes
         run: |
           echo "🤖 Applying auto-fixes to detected issues..."
@@ -716,6 +732,11 @@ jobs:
 
           echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
           echo "📊 Autofix status: $autofix_needed (total_fixes=$total_fixes)"
+
+          # Always show what was checked, even if no fixes needed
+          echo "📋 Auto-fix scan results:"
+          echo "  - Python files checked: $(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | wc -l)"
+          echo "  - JSON files checked: $(find . -name "*.json" -not -path "./.git/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./.pytest_cache/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./.tox/*" -not -path "./__pycache__/*" -not -name "package-lock.json" -not -name "*.tmp" | wc -l)"
 
       - name: 💾 Commit Auto-fixes
         if: steps.apply-fixes.outputs.autofix_needed == 'true' && steps.check-permissions.outputs.has_write_access == 'true'
@@ -891,19 +912,374 @@ jobs:
   # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
     name: 🚀 Publish to Confluence
+    runs-on: ubuntu-latest
 
-    # Use relative path for better compatibility with external calls
-    uses: ./.github/workflows/publish-docs.yml
-    with:
-      target_environment: ${{ inputs.target_environment || 'production' }}
-      dry_run: ${{ inputs.dry_run || false }}
-      full_scan: ${{ inputs.full_scan }}
+    permissions:
+      contents: read
+      actions: read
 
-    # Pass the required secrets to the reusable workflow.
-    secrets:
-      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
-      CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+    steps:
+      - name: 🔍 Detect Repository Context
+        id: context
+        run: |
+          echo "Current repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+
+          # Check if we're in the redesigned-guacamole repo or being called remotely
+          if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
+            echo "🏠 Running within redesigned-guacamole repository"
+            echo "same-repo=true" >> $GITHUB_OUTPUT
+          else
+            echo "🌐 Being called from external repository: ${{ github.repository }}"
+            echo "same-repo=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo "🐛 Debug: same-repo detection result: $([ "${{ github.repository }}" == *"redesigned-guacamole" ] && echo "true" || echo "false")"
+
+      - name: 📥 Checkout Redesigned-Guacamole (Scripts)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/redesigned-guacamole
+          ref: main
+          fetch-depth: 0
+          path: redesigned-guacamole
+
+      - name: � Debug After Redesigned-Guacamole Checkout
+        run: |
+          echo "🐛 After redesigned-guacamole checkout:"
+          echo "  - Working directory: $(pwd)"
+          echo "  - Contents: $(ls -la)"
+          echo "  - Redesigned-guacamole exists: $([ -d redesigned-guacamole ] && echo 'YES' || echo 'NO')"
+          if [ -d redesigned-guacamole ]; then
+            echo "  - Redesigned-guacamole contents: $(ls -la redesigned-guacamole/)"
+            echo "  - Scripts directory exists: $([ -d redesigned-guacamole/scripts ] && echo 'YES' || echo 'NO')"
+            if [ -d redesigned-guacamole/scripts ]; then
+              echo "  - Scripts directory contents: $(ls -la redesigned-guacamole/scripts/)"
+              echo "  - confluence_publisher.py exists: $([ -f redesigned-guacamole/scripts/confluence_publisher.py ] && echo 'YES' || echo 'NO')"
+            fi
+          fi
+
+      - name: �📥 Checkout Calling Repository (Content)
+        if: steps.context.outputs.same-repo != 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: calling-repo
+
+      - name: 🐛 Debug After Calling Repository Checkout
+        if: steps.context.outputs.same-repo != 'true'
+        run: |
+          echo "🐛 After calling repository checkout:"
+          echo "  - Working directory: $(pwd)"
+          echo "  - Contents: $(ls -la)"
+          echo "  - Calling-repo exists: $([ -d calling-repo ] && echo 'YES' || echo 'NO')"
+          if [ -d calling-repo ]; then
+            echo "  - Calling-repo contents: $(ls -la calling-repo/)"
+          fi
+
+      - name: 🔗 Create Content Symlink (Same Repository)
+        if: steps.context.outputs.same-repo == 'true'
+        run: |
+          echo "🐛 Creating symlink for same repository scenario"
+          # When running in the same repo, create a symlink to avoid duplication
+          ln -s redesigned-guacamole calling-repo
+          echo "✅ Created symlink: calling-repo -> redesigned-guacamole"
+          echo "🐛 Symlink verification: $(ls -la calling-repo/)"
+
+      - name: �️ Prevent Python Setup Auto-Detection
+        run: |
+          echo "🛡️ Temporarily moving any requirements.txt files to prevent auto-detection..."
+          # Move any requirements.txt or pyproject.toml in current dir to prevent Python setup from finding them
+          if [ -f requirements.txt ]; then
+            mv requirements.txt requirements.txt.tmp
+            echo "🔄 Moved requirements.txt to requirements.txt.tmp"
+          fi
+          if [ -f pyproject.toml ]; then
+            mv pyproject.toml pyproject.toml.tmp
+            echo "🔄 Moved pyproject.toml to pyproject.toml.tmp"
+          fi
+
+      - name: �🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          # No cache to avoid dependency issues when called remotely
+
+      - name: 🔄 Restore Project Files
+        run: |
+          echo "🔄 Restoring any temporarily moved project files..."
+          if [ -f requirements.txt.tmp ]; then
+            mv requirements.txt.tmp requirements.txt
+            echo "✅ Restored requirements.txt"
+          fi
+          if [ -f pyproject.toml.tmp ]; then
+            mv pyproject.toml.tmp pyproject.toml
+            echo "✅ Restored pyproject.toml"
+          fi
+
+      - name: 📦 Install Dependencies
+        run: |
+          echo "🐛 Debug: Current working directory: $(pwd)"
+          echo "🐛 Debug: Directory contents: $(ls -la)"
+          echo "🐛 Debug: Redesigned-guacamole directory: $(ls -la redesigned-guacamole/ 2>/dev/null || echo 'Not found')"
+          echo "🐛 Debug: Calling-repo directory: $(ls -la calling-repo/ 2>/dev/null || echo 'Not found')"
+
+          python -m pip install --upgrade pip
+
+          echo "📦 Installing dependencies for Confluence publishing..."
+
+          # Try to install from redesigned-guacamole requirements first
+          if [ -f redesigned-guacamole/requirements.txt ]; then
+            echo "✅ Found redesigned-guacamole/requirements.txt, installing..."
+            pip install -r redesigned-guacamole/requirements.txt
+          else
+            echo "⚠️ No redesigned-guacamole/requirements.txt found"
+            echo "🐛 Debug: Checking for requirements.txt in other locations:"
+            find . -name "requirements.txt" -type f 2>/dev/null || echo "No requirements.txt found anywhere"
+          fi
+
+          # Always ensure core publishing dependencies are available
+          echo "🔧 Ensuring core Confluence publishing dependencies..."
+          pip install jinja2 pyyaml requests markdown beautifulsoup4
+
+          echo "✅ Dependency installation complete"
+
+      - name: 🔍 Validate Configuration
+        run: |
+          echo "🔍 Validating Confluence configuration..."
+          echo "🐛 Debug: Checking secret availability..."
+          echo "  - CONFLUENCE_URL available: ${{ secrets.CONFLUENCE_URL != '' }}"
+          echo "  - CONFLUENCE_USER available: ${{ secrets.CONFLUENCE_USER != '' }}"
+          echo "  - CONFLUENCE_API_TOKEN available: ${{ secrets.CONFLUENCE_API_TOKEN != '' }}"
+          echo "  - CONFLUENCE_URL length: ${#CONFLUENCE_URL}"
+          echo "  - CONFLUENCE_USER length: ${#CONFLUENCE_USER}"
+          echo "  - CONFLUENCE_TOKEN length: ${#CONFLUENCE_TOKEN}"
+
+          # Auto-enable dry-run if secrets are missing
+          if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]] || [[ -z "${{ secrets.CONFLUENCE_USER }}" ]] || [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
+            echo "⚠️ Some Confluence secrets are missing - automatically enabling DRY RUN mode"
+            echo "📋 To enable live publishing, add these secrets to your repository:"
+            echo "   - CONFLUENCE_URL: Your Confluence instance URL"
+            echo "   - CONFLUENCE_USER: Your Confluence username/email"
+            echo "   - CONFLUENCE_API_TOKEN: Your Confluence API token"
+            echo ""
+            echo "📝 Example calling workflow:"
+            echo "jobs:"
+            echo "  publish:"
+            echo "    uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main"
+            echo "    secrets:"
+            echo "      CONFLUENCE_URL: \${{ secrets.CONFLUENCE_URL }}"
+            echo "      CONFLUENCE_USER: \${{ secrets.CONFLUENCE_USER }}"
+            echo "      CONFLUENCE_API_TOKEN: \${{ secrets.CONFLUENCE_API_TOKEN }}"
+            echo ""
+            echo "🧪 Proceeding in DRY RUN mode..."
+            forced_dry_run="true"
+          else
+            forced_dry_run="false"
+          fi
+
+          # Check if we're in dry-run mode (either explicitly or forced due to missing secrets)
+          effective_dry_run="${{ inputs.dry_run }}"
+          if [[ "$forced_dry_run" == "true" ]]; then
+            effective_dry_run="true"
+          fi
+
+          if [[ "$effective_dry_run" == "true" ]]; then
+            echo "🧪 Running in DRY RUN mode - secrets validation relaxed"
+            echo "🧪 Dry run mode: proceeding with available configuration"
+          else
+            echo "🚀 Running in LIVE mode - all secrets required"
+
+            # Check if required secrets are provided for live run
+            if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]]; then
+              echo "❌ CONFLUENCE_URL secret is required for live publishing"
+              echo "🐛 Debug: CONFLUENCE_URL is empty or not passed from calling repository"
+              exit 1
+            fi
+
+            if [[ -z "${{ secrets.CONFLUENCE_USER }}" ]]; then
+              echo "❌ CONFLUENCE_USER secret is required for live publishing"
+              echo "🐛 Debug: CONFLUENCE_USER is empty or not passed from calling repository"
+              exit 1
+            fi
+
+            if [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
+              echo "❌ CONFLUENCE_API_TOKEN secret is required for live publishing"
+              echo "🐛 Debug: CONFLUENCE_API_TOKEN is empty or not passed from calling repository"
+              exit 1
+            fi
+
+            echo "✅ All required secrets are configured for live publishing"
+          fi
+
+          # Store the effective dry-run status for later steps
+          echo "EFFECTIVE_DRY_RUN=$effective_dry_run" >> $GITHUB_ENV
+
+      - name: 🔧 Prepare Publishing Environment
+        run: |
+          echo "🔧 Preparing publishing environment..."
+          echo "🐛 Debug: Environment variable preparation..."
+
+          # Create output directory
+          mkdir -p output/confluence
+
+          # Debug: Check what secrets are available
+          echo "🐛 Secret availability check:"
+          echo "  - CONFLUENCE_URL from secrets: ${{ secrets.CONFLUENCE_URL != '' && 'AVAILABLE' || 'MISSING' }}"
+          echo "  - CONFLUENCE_USER from secrets: ${{ secrets.CONFLUENCE_USER != '' && 'AVAILABLE' || 'MISSING' }}"
+          echo "  - CONFLUENCE_API_TOKEN from secrets: ${{ secrets.CONFLUENCE_API_TOKEN != '' && 'AVAILABLE' || 'MISSING' }}"
+
+          # Set environment variables (with defaults for missing secrets)
+          CONFLUENCE_URL_VALUE="${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}"
+          CONFLUENCE_USER_VALUE="${{ secrets.CONFLUENCE_USER || 'not-configured' }}"
+          CONFLUENCE_TOKEN_VALUE="${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
+
+          echo "CONFLUENCE_URL=$CONFLUENCE_URL_VALUE" >> $GITHUB_ENV
+          echo "CONFLUENCE_USER=$CONFLUENCE_USER_VALUE" >> $GITHUB_ENV
+          echo "CONFLUENCE_TOKEN=$CONFLUENCE_TOKEN_VALUE" >> $GITHUB_ENV
+          echo "DRY_RUN=${{ inputs.dry_run }}" >> $GITHUB_ENV
+          echo "TARGET_ENV=${{ inputs.target_environment }}" >> $GITHUB_ENV
+
+          echo "🐛 Environment variables set:"
+          echo "  - CONFLUENCE_URL: ${CONFLUENCE_URL_VALUE:0:30}..."
+          echo "  - CONFLUENCE_USER: ${CONFLUENCE_USER_VALUE:0:10}..."
+          echo "  - CONFLUENCE_TOKEN: ${CONFLUENCE_TOKEN_VALUE:0:10}..."
+
+          echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
+
+      - name: 📝 Process AAP Documentation
+        env:
+          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+          CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+        run: |
+          echo "📝 Processing AAP documentation templates..."
+
+          # Ensure docs directory exists in calling repo
+          mkdir -p calling-repo/docs
+
+          # Copy macros from scripts repository to content repository (only if different repos)
+          if [[ "${{ steps.context.outputs.same-repo }}" != "true" ]]; then
+            if [ -d "redesigned-guacamole/docs/macros" ]; then
+              echo "📋 Copying macros from redesigned-guacamole to calling repository..."
+              cp -r redesigned-guacamole/docs/macros calling-repo/docs/
+            fi
+
+            # Also copy the main macros.j2 file if it exists
+            if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
+              echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
+              cp redesigned-guacamole/docs/macros.j2 calling-repo/docs/
+            fi
+          else
+            echo "🏠 Same repository - macros already available, no copying needed"
+          fi
+
+          # Debug: Check if confluence publisher script exists
+          echo "🐛 Checking confluence publisher script..."
+          echo "  - Current directory: $(pwd)"
+          echo "  - Script path: redesigned-guacamole/scripts/confluence_publisher.py"
+          echo "  - Script exists: $([ -f "redesigned-guacamole/scripts/confluence_publisher.py" ] && echo 'YES' || echo 'NO')"
+          if [ -f "redesigned-guacamole/scripts/confluence_publisher.py" ]; then
+            echo "  - Script permissions: $(ls -la redesigned-guacamole/scripts/confluence_publisher.py)"
+          fi
+
+          # Verify the script exists (no chmod needed for python3 execution)
+          if [ ! -f "redesigned-guacamole/scripts/confluence_publisher.py" ]; then
+            echo "❌ ERROR: confluence_publisher.py not found at expected path"
+            echo "🐛 Available files in scripts directory:"
+            if [ -d "redesigned-guacamole/scripts" ]; then
+              ls -la redesigned-guacamole/scripts/
+            else
+              echo "📁 Scripts directory not found!"
+            fi
+            exit 1
+          else
+            echo "✅ Confluence publisher script found and ready to use"
+          fi
+
+          # Run the Python-based Confluence publisher
+          if [[ "$EFFECTIVE_DRY_RUN" == "true" ]]; then
+            echo "🧪 Running in DRY RUN mode (effective: secrets missing or explicit)"
+            python3 redesigned-guacamole/scripts/confluence_publisher.py \
+              --dry-run \
+              --docs-dir calling-repo/docs \
+              --vars-file calling-repo/docs/vars.yaml
+          else
+            echo "🚀 Running in LIVE mode"
+            python3 redesigned-guacamole/scripts/confluence_publisher.py \
+              --docs-dir calling-repo/docs \
+              --vars-file calling-repo/docs/vars.yaml \
+              --confluence-url "${CONFLUENCE_URL:-https://your-confluence.atlassian.net}" \
+              --confluence-user "${CONFLUENCE_USER:-not-configured}" \
+              --confluence-token "${CONFLUENCE_TOKEN:-not-configured}"
+          fi
+
+      - name: 📊 Generate Publishing Report
+        if: always()
+        run: |
+          echo "📊 Generating publishing report..."
+
+          # Create a summary report
+          cat > output/confluence/publishing_report.md << EOF
+          # 📚 Confluence Publishing Report
+
+          ## 📋 Publishing Details
+          - **Target Environment**: ${{ inputs.target_environment }}
+          - **Dry Run**: ${{ inputs.dry_run }}
+          - **Timestamp**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          - **Git Reference**: ${{ github.ref_name }}
+          - **Commit SHA**: ${{ github.sha }}
+          - **Workflow Run**: ${{ github.run_number }}
+          - **Repository Context**: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'Remote Call' }}
+
+          ## 🔗 Links
+          - **Repository**: ${{ github.server_url }}/${{ github.repository }}
+          - **Workflow Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          ## 📈 Status
+          ${{ inputs.dry_run == true && '🧪 **DRY RUN** - No actual changes were made' || '✅ **LIVE RUN** - Documentation was published to Confluence' }}
+          EOF
+
+          echo "✅ Publishing report generated"
+          cat output/confluence/publishing_report.md
+
+      - name: 📤 Upload Publishing Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: confluence-publishing-report-${{ github.run_id }}
+          path: |
+            output/confluence/
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: 🔔 Publishing Summary
+        if: always()
+        run: |
+          echo "## 📚 Confluence Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Environment**: ${{ inputs.target_environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dry Run**: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Git Reference**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Repository Context**: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'Remote Call' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "$EFFECTIVE_DRY_RUN" == "true" ]]; then
+            echo "### 🧪 Dry Run Results" >> $GITHUB_STEP_SUMMARY
+            echo "- No actual changes were made to Confluence" >> $GITHUB_STEP_SUMMARY
+            echo "- Documentation processing completed successfully" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ inputs.dry_run }}" != "true" ]]; then
+              echo "- **Auto-enabled due to missing Confluence secrets**" >> $GITHUB_STEP_SUMMARY
+              echo "- Add CONFLUENCE_URL, CONFLUENCE_USER, and CONFLUENCE_API_TOKEN secrets for live publishing" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "- Ready for live publishing when secrets are configured" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ✅ Publishing Results" >> $GITHUB_STEP_SUMMARY
+            echo "- Documentation has been published to Confluence" >> $GITHUB_STEP_SUMMARY
+            echo "- Check Confluence space for updated content" >> $GITHUB_STEP_SUMMARY
+          fi
 
   # Comprehensive report - always runs to provide summary
   comprehensive-report:
