@@ -239,7 +239,7 @@ git push origin main
    ./validate-all.sh
    ```
 
-4. **Integrate with git hooks** (optional):
+4. **Integrate with Git hooks** (optional):
    ```bash
    # In .git/hooks/pre-commit
    #!/bin/bash

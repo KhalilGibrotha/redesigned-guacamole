@@ -333,7 +333,7 @@ molecule destroy
 ## Support and Training
 
 ### Resources
-- **Molecule Documentation**: https://molecule.readthedocs.io/
+- **Molecule Documentation**: https://ansible.readthedocs.io/projects/molecule/
 - **Internal Wiki**: Link to team documentation
 - **Training Videos**: Team-specific tutorials
 

@@ -68,7 +68,7 @@ Replace your current autofix analysis step with:
 **Then update all references from `steps.autofix-analysis.outputs.*` to `steps.enhanced-analysis.outputs.*`**
 
 ### **Option 2: Clean Workflow Integration**
-1. **Backup your current workflow**:
+1. **バックアップ your current workflow**:
    ```bash
    cp .github/workflows/ci-optimized.yml .github/workflows/ci-optimized.yml.backup
    ```

@@ -3,7 +3,7 @@
 <a href="https://www.buymeacoffee.com/mstruebing" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>
 
 [![ci](https://github.com/editorconfig-checker/editorconfig-checker/actions/workflows/ci.yml/badge.svg)](https://github.com/editorconfig-checker/editorconfig-checker/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/editorconfig-checker/editorconfig-checker/branch/main/graph/badge.svg)](https://codecov.io/gh/editorconfig-checker/editorconfig-checker)
+[![codecov](https://app.codecov.io/gh/editorconfig-checker/editorconfig-checker/branch/main/graph/badge.svg)](https://app.codecov.io/gh/editorconfig-checker/editorconfig-checker)
 [![Hits-of-Code](https://hitsofcode.com/github/editorconfig-checker/editorconfig-checker?branch=main&label=Hits-of-Code)](https://hitsofcode.com/github/editorconfig-checker/editorconfig-checker/view?branch=main&label=Hits-of-Code)
 [![Go Report Card](https://goreportcard.com/badge/github.com/editorconfig-checker/editorconfig-checker/v3)](https://goreportcard.com/report/github.com/editorconfig-checker/editorconfig-checker/v3)<!-- x-release-please-major -->
 
@@ -137,7 +137,7 @@ USAGE:
         print the version number
 ```
 
-If you run this tool from a repository root it will check all files which are added to the git repository and are text files. If the tool isn't able to determine a file type it will be added to be checked too.
+If you run this tool from a repository root it will check all files which are added to the Git repository and are text files. If the tool isn't able to determine a file type it will be added to be checked too.
 
 If you run this tool from a normal directory it will check all files which are text files. If the tool isn't able to determine a file type it will be added to be checked too.
 
@@ -154,7 +154,7 @@ The following output formats are supported:
   `<file>:<line>:<column>: <type>: <message>`
 - **github-actions**: The format used by GitHub Actions <br/>
   `::error file=<file>,line=<startingLine>,endLine=<endingLine>::<message>`
-- **codeclimate**: The [Code Climate](https://github.com/codeclimate/platform/blob/master/spec/analyzers/SPEC.md#data-types) json format used for [custom quality reports](https://docs.gitlab.com/ee/ci/testing/code_quality.html#implement-a-custom-tool) in GitLab CI
+- **codeclimate**: The [Code Climate](https://github.com/codeclimate/platform/blob/master/spec/analyzers/SPEC.md#data-types) json format used for [custom quality reports](https://docs.gitlab.com/ci/testing/code_quality/#implement-a-custom-tool) in GitLab CI
   ```json
   [
     {
@@ -207,7 +207,7 @@ You can set any of the options under the `"Disable"` section to `true` to disabl
 
 You could also specify command line arguments, and they will get merged with the configuration file. The command line arguments have a higher precedence than the configuration.
 
-You can create a configuration with the `init`-flag. If you specify a `config`-path it will be created there.
+You can create a configuration with the `init`-flag. If you specify a `config`-パス it will be created there.
 
 By default, the allowed_content_types are:
 
@@ -271,7 +271,7 @@ If you want to see which files would be checked without checking them you can pa
 
 Note that while `--dry-run` might output absolute paths, the regular expression you write must match the filenames using relative paths from where editorconfig-checker is used. This becomes especially relevant if you need to anchor your regular expression in order to only match files in the top level your checked directory.
 
-Additionally, paths will be normalized to Unix style before matching against the regex list happens. As a result you don't have to write `[\\/]` to account for Windows and Unix path styles but can just use `/` instead.
+Additionally, paths will be normalized to UNIX style before matching against the regex list happens. As a result you don't have to write `[\\/]` to account for Windows and UNIX path styles but can just use `/` instead.
 
 #### Inline
 
@@ -441,7 +441,7 @@ The [ss-open/ci/recipes project](https://gitlab.com/ss-open/ci/recipes) offers a
 ## Support
 
 If you have any questions, suggestions, need a wrapper for a programming language or just want to chat join #editorconfig-checker on freenode(IRC).
-If you don't have an IRC-client set up you can use the [freenode webchat](https://webchat.freenode.net/?channels=editorconfig-checker).
+If you don't have an IRC-client set up you can use the [freenode webchat](https://irc.com/?channels=editorconfig-checker).
 
 ## Contributing
 

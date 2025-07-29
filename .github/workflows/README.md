@@ -35,7 +35,7 @@ The pipeline generates comprehensive markdown reports including:
 
 - Repository statistics (file counts by type)
 - Quality gate results with status indicators
-- Overall quality score (0-100%)
+- Overall quality score (0-100％)
 - Detailed failure analysis when issues are found
 - Publication status for Confluence deployment
 

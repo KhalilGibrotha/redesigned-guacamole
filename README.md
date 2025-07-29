@@ -1,6 +1,6 @@
 # Comprehensive CI/CD Pipeline with Documentation Publishing
 
-1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
@@ -90,12 +90,12 @@ and macros provided by our pipeline.
 
 ## 📋 Workflows:
 
-1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
-6. **🚨 Failure Notifications**: Creates GitHub issues for any failureslow.svg)](https://opensource.org/licenses/MIT)
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failureslow.svg)](https://opensource.org/license/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
@@ -211,7 +211,7 @@ graph TD
 
 ### Detailed Execution Flow:
 
-1. **� Change Detection**: Analyzes which file types changed (docs, ansible, python, workflows)
+1. **� Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🎭 Ansible Syntax Check**: Validates Ansible playbooks and roles (if present)

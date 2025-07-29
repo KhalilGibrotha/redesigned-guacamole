@@ -237,7 +237,7 @@ Track linting compliance across projects:
 ## Training Resources
 
 1. **Internal Documentation**: This guide
-2. **Ansible Best Practices**: https://docs.ansible.com/ansible/latest/user_guide/playbooks_best_practices.html
+2. **Ansible Best Practices**: https://docs.ansible.com/ansible/latest/tips_tricks/ansible_tips_tricks.html
 3. **YAML Specification**: https://yaml.org/spec/
 4. **Team Workshops**: Monthly code review sessions
 

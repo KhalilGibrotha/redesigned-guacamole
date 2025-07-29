@@ -138,6 +138,6 @@ Then update step references from `autofix-analysis` to `enhanced-analysis`.
 **🔧 Workflow Integration Issue**: There were some YAML formatting issues during integration, but the **core analysis script works perfectly**. You can either:
 1. **Use the script standalone** (works great!)
 2. **Manually integrate** using the simple YAML above
-3. **I can help fix the workflow** in a separate session
+3. **I can help fix the workflow** in a separate セッション
 
-The **analysis functionality is 100% complete and tested** - just choose your integration approach! 🚀
+The **analysis functionality is 100％ complete and tested** - just choose your integration approach! 🚀
