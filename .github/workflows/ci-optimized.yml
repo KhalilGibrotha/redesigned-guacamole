@@ -339,6 +339,17 @@ jobs:
           VALIDATE_GITHUB_ACTIONS=GITHUB_ACTIONS_PLACEHOLDER
 
           ##########################
+          # Configuration Files
+          ##########################
+
+          # yamllint configuration
+          YAML_CONFIG_FILE=.yamllint
+          YAML_ERROR_ON_WARNING=false
+
+          # Ansible configuration
+          ANSIBLE_CONFIG_FILE=.ansible.cfg
+
+          ##########################
           # Auto-fix Configuration
           ##########################
 
@@ -410,15 +421,65 @@ jobs:
           echo "  - Python validation: ${python_validation} (files: ${{ steps.detect-files.outputs.python_files }})"
           echo "  - Shell validation: ${shell_validation} (files: ${{ steps.detect-files.outputs.shell_files }})"
 
+      - name: 🔍 Verify Configuration Files
+        run: |
+          echo "🔍 Verifying Super Linter configuration..."
+          echo "Configuration file contents:"
+          cat .github/super-linter-dynamic.env
+          echo ""
+          echo "🔍 Verifying yamllint configuration:"
+          if [ -f ".yamllint" ]; then
+            echo "✅ .yamllint file exists"
+            echo "📄 .yamllint line-length configuration:"
+            grep -A 10 "line-length:" .yamllint || echo "❌ line-length not found in .yamllint"
+          else
+            echo "❌ .yamllint file not found"
+          fi
+
       - name: 🔍 Run Super Linter
         id: super-linter
         uses: super-linter/super-linter@v5
         env:
-          # Use dynamically generated configuration
-          ENV_FILE: .github/super-linter-dynamic.env
-
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+          # Branch and validation settings
+          DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
+          VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan == true }}
+
+          # Enable validation based on file detection
+          VALIDATE_YAML: ${{ steps.detect-files.outputs.yaml_files > 0 }}
+          VALIDATE_ANSIBLE: ${{ steps.detect-files.outputs.ansible_files > 0 }}
+          VALIDATE_MARKDOWN: ${{ steps.detect-files.outputs.markdown_files > 0 }}
+          VALIDATE_PYTHON: ${{ steps.detect-files.outputs.python_files > 0 }}
+          VALIDATE_BASH: ${{ steps.detect-files.outputs.shell_files > 0 }}
+          VALIDATE_JSON: ${{ steps.detect-files.outputs.json_files > 0 }}
+          VALIDATE_SHELL_SHFMT: ${{ steps.detect-files.outputs.shell_files > 0 }}
+          VALIDATE_GITHUB_ACTIONS: ${{ steps.detect-files.outputs.github_actions_files > 0 }}
+
+          # Configuration file paths - CRITICAL for custom configs
+          YAML_CONFIG_FILE: .yamllint
+          ANSIBLE_CONFIG_FILE: .ansible.cfg
+          
+          # Additional yamllint settings
+          YAMLLINT_CONFIG_FILE: .yamllint
+          YAML_ERROR_ON_WARNING: false
+
+          # Performance and output settings
+          PARALLEL: true
+          SLIM_IMAGE: true
+          FAIL_FAST: false
+          OUTPUT_FORMAT: tap
+          OUTPUT_DETAILS: detailed
+          CREATE_LOG_FILE: true
+          
+          # File filtering
+          USE_FIND_ALGORITHM: false
+          IGNORE_GITIGNORED_FILES: true
+          
+          # Suppress noise
+          SUPPRESS_POSSUM: true
+          SUPPRESS_FILE_TYPE_WARN: true
 
       - name: � Enhanced Super Linter Analysis
         if: always()
