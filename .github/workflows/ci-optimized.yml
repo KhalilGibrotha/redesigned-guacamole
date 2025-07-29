@@ -23,18 +23,9 @@ on:
         description: 'Dry run mode (no actual publishing)'
         required: false
         type: boolean
-        d      - name: ✅ Auto-fix Status
-        if: steps.apply-fixes.outputs.autofix_needed == 'true'
-        run: |
-          echo "🔍 Auto-fixes applied successfully!"
-          echo "📊 Summary of fixes:"
-          echo "  - Shell fixes: ${{ steps.apply-fixes.outputs.shell_fixes }}"
-          echo "  - YAML fixes: ${{ steps.apply-fixes.outputs.yaml_fixes }}"
-          echo "  - Python fixes: ${{ steps.apply-fixes.outputs.python_fixes }}"
-          echo "  - Markdown fixes: ${{ steps.apply-fixes.outputs.markdown_fixes }}"
-          echo "  - JSON fixes: ${{ steps.apply-fixes.outputs.json_fixes }}"
-          echo ""
-          echo "✅ Changes have been committed and pushed back to the branch"  # Remote trigger - allows being called by other workflows
+        default: false
+
+  # Remote trigger - allows being called by other workflows
   workflow_call:
     inputs:
       full_scan:
