@@ -41,6 +41,7 @@ jobs:
     with:
       branch_name: ${{ github.ref_name }}
       full_scan: true
+      auto_fix: true
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
