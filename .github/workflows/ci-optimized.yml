@@ -210,7 +210,7 @@ jobs:
     if: needs.detect-changes.outputs.any-code-changed == 'true' || inputs.full_scan == true
 
     permissions:
-      contents: write  # Required for auto-fix commits
+      contents: read   # Base permission for reading code
       packages: read
       statuses: write
       security-events: write
@@ -222,7 +222,24 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch_name || github.ref }}
 
-      - name: 🔧 Configure Environment
+      - name: � Check Write Permissions
+        id: check-permissions
+        run: |
+          # Try to create a test file to check write permissions
+          if echo "test" > .permission-test 2>/dev/null && rm .permission-test 2>/dev/null; then
+            echo "has_write_access=true" >> $GITHUB_OUTPUT
+            echo "✅ Write permissions available - auto-fixes can be committed"
+          else
+            echo "has_write_access=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  Read-only mode - auto-fixes will run but not be committed"
+          fi
+
+          # Also check if auto_fix input is enabled
+          auto_fix_enabled="${{ inputs.auto_fix != false }}"
+          echo "auto_fix_enabled=$auto_fix_enabled" >> $GITHUB_OUTPUT
+          echo "🔧 Auto-fix enabled: $auto_fix_enabled"
+
+      - name: �🔧 Configure Environment
         id: config
         run: |
           # Dynamic branch detection
@@ -510,6 +527,11 @@ jobs:
             echo "### 🤖 Auto-fix Status"
             if [ "${{ steps.enhanced-analysis.outputs.autofix_needed }}" = "true" ]; then
               echo "✅ **Auto-fixes available**: ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes detected"
+              if [ "${{ steps.check-permissions.outputs.has_write_access }}" = "true" ]; then
+                echo "📝 **Commit mode**: Auto-fixes will be applied and committed"
+              else
+                echo "👀 **Read-only mode**: Auto-fixes will be applied but not committed"
+              fi
             else
               echo "🎉 **No auto-fixes needed**: Code quality is excellent!"
             fi
@@ -522,11 +544,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 🤖 Apply Auto-fixes
-        if: always() && (inputs.auto_fix == true || inputs.auto_fix == null)
+        if: always() && steps.check-permissions.outputs.auto_fix_enabled == 'true'
         id: apply-fixes
         run: |
           echo "🤖 Applying auto-fixes to detected issues..."
           echo "🔍 Auto-fix mode: ${{ inputs.auto_fix || 'true (default)' }}"
+          echo "🔐 Write access: ${{ steps.check-permissions.outputs.has_write_access }}"
 
           # Initialize counters
           total_fixes=0
@@ -695,7 +718,7 @@ jobs:
           echo "📊 Autofix status: $autofix_needed (total_fixes=$total_fixes)"
 
       - name: 💾 Commit Auto-fixes
-        if: steps.apply-fixes.outputs.autofix_needed == 'true'
+        if: steps.apply-fixes.outputs.autofix_needed == 'true' && steps.check-permissions.outputs.has_write_access == 'true'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -733,6 +756,22 @@ jobs:
           git push origin ${{ github.ref_name }}
 
           echo "✅ Auto-fixes committed and pushed!"
+
+      - name: ℹ️ Auto-fix Applied (Read-only Mode)
+        if: steps.apply-fixes.outputs.autofix_needed == 'true' && steps.check-permissions.outputs.has_write_access != 'true'
+        run: |
+          echo "🔧 Auto-fixes were applied but could not be committed (read-only mode)"
+          echo "📋 To enable auto-fix commits in remote workflows:"
+          echo "  1. Grant 'contents: write' permission in the calling workflow"
+          echo "  2. Or run the workflow directly on this repository"
+          echo ""
+          echo "📊 Fixes that would have been applied:"
+          echo "  - Python fixes: ${{ steps.apply-fixes.outputs.python_fixes || '0' }}"
+          echo "  - JSON fixes: ${{ steps.apply-fixes.outputs.json_fixes || '0' }}"
+          echo "  - YAML fixes: ${{ steps.apply-fixes.outputs.yaml_fixes || '0' }}"
+          echo "  - Shell fixes: ${{ steps.apply-fixes.outputs.shell_fixes || '0' }}"
+          echo "  - Markdown fixes: ${{ steps.apply-fixes.outputs.markdown_fixes || '0' }}"
+          echo "  - Total fixes: ${{ steps.apply-fixes.outputs.total_fixes || '0' }}"
 
       - name: ⚠️ Auto-fix Status
         if: steps.enhanced-analysis.outputs.autofix_needed == 'true'
