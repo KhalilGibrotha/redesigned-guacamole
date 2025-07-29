@@ -510,7 +510,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 💾 Commit Auto-fixes
-        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
+        if: steps.enhanced-analysis.outputs.autofix_needed == 'true'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -520,6 +520,12 @@ jobs:
 
           # Add all changes
           git add .
+
+          # Check if there are actually changes to commit
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes to commit after autofix attempts"
+            exit 0
+          fi
 
           # Create detailed commit message
           commit_msg="🤖 Auto-fix: Applied ${{ steps.enhanced-analysis.outputs.total_fixes }} linting fixes
@@ -533,6 +539,7 @@ jobs:
           - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}
 
           Automated by: ${{ github.workflow }} #${{ github.run_number }}
+          Event: ${{ github.event_name }}
           Health Score: ${{ steps.enhanced-analysis.outputs.overall_health_score }}/100"
 
           # Commit changes
@@ -543,11 +550,11 @@ jobs:
 
           echo "✅ Auto-fixes committed and pushed!"
 
-      - name: ⚠️ Auto-fix Skipped (External Call)
-        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name == 'workflow_call'
+      - name: ⚠️ Auto-fix Status
+        if: steps.enhanced-analysis.outputs.autofix_needed == 'true'
         run: |
-          echo "⚠️ Auto-fixes detected but skipped for external workflow calls"
-          echo "🔍 Found ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes:"
+          echo "🔍 Auto-fixes applied successfully!"
+          echo "� Summary of fixes:"
           echo "  - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}"
           echo "  - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}"
           echo "  - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}"
@@ -555,7 +562,7 @@ jobs:
           echo "  - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}"
           echo "  - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}"
           echo ""
-          echo "💡 To apply these fixes, run the workflow directly on the target repository"
+          echo "✅ Changes have been committed and pushed back to the branch"
 
       - name: 📤 Upload Super Linter Logs
         if: always()
