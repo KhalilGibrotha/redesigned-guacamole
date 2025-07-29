@@ -61,9 +61,9 @@ This file has intentional formatting issues that Black will fix:
 
 ### **Test File Added: `test_markdown_autofix.md`**
 ```markdown
-# Test Markdown File   
+# Test Markdown File
 
-This line has trailing spaces.    
+This line has trailing spaces.
 
 
 Multiple empty lines above will be reduced.
