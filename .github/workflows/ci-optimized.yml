@@ -853,14 +853,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          cache: 'pip'
+          # Don't use cache to avoid dependency on calling repo's requirements
 
       - name: 📦 Install Dependencies
         run: |
           python -m pip install --upgrade pip
+          # Only install dependencies if they exist in the calling repository
           if [ -f requirements.txt ]; then
+            echo "Found requirements.txt in calling repository, installing dependencies..."
             pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            echo "Found pyproject.toml in calling repository, installing dependencies..."
+            pip install -e .
+          else
+            echo "No requirements.txt or pyproject.toml found in calling repository"
+            echo "Installing minimal dependencies for workflow functionality..."
           fi
+
+          # Always install tools needed for auto-fixing and analysis
+          echo "Installing workflow tools..."
+          pip install black isort PyYAML requests
 
       - name: 📝 Generate SARIF Security Reports Summary
         if: always()
