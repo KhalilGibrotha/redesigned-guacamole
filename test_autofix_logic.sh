@@ -16,7 +16,7 @@ python_files_fixed=0
 while IFS= read -r -d '' file; do
     python_files_found=$((python_files_found + 1))
     echo "  Checking: $file"
-    
+
     # Check if file needs formatting (same as workflow)
     if python3 -m black --check "$file" >/dev/null 2>&1; then
         echo "    ✅ Already properly formatted"
@@ -41,7 +41,7 @@ json_files_fixed=0
 while IFS= read -r -d '' file; do
     json_files_found=$((json_files_found + 1))
     echo "  Checking: $file"
-    
+
     # Check if file needs formatting
     if python3 -m json.tool "$file" >/dev/null 2>&1; then
         # Check if it's already properly formatted

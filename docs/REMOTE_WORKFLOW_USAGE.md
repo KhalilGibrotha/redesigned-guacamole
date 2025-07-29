@@ -69,6 +69,41 @@ All auto-fix tools are checked with `command -v` before use. If a tool is not av
 - No errors are thrown
 - Other auto-fixes still work
 
+## Confluence Publishing
+
+### Issue: Confluence Publishing Fails When Called Remotely
+
+**Problem**: When the reusable workflow is called from a remote repository, the Confluence publishing job fails because it tries to reference `./.github/workflows/publish-docs.yml` which doesn't exist in the calling repository.
+
+**Root Cause**: The publish job was using a relative path to call another workflow file:
+```yaml
+publish:
+  uses: ./.github/workflows/publish-docs.yml  # ❌ Only works in same repo
+```
+
+**Solution**: The publish job has been converted to inline steps that detect the repository context and handle both local and remote execution:
+
+```yaml
+publish:
+  name: 🚀 Publish to Confluence
+  runs-on: ubuntu-latest
+  steps:
+    - name: 🔍 Detect Repository Context
+      # Automatically detects if running locally or remotely
+    
+    - name: 📥 Checkout Redesigned-Guacamole (Scripts)
+      # Always checkout the scripts repository
+    
+    - name: 📥 Checkout Calling Repository (Content)
+      # Only when called remotely
+```
+
+**Features**:
+- ✅ **Automatic Repository Detection**: Knows if running locally or remotely
+- ✅ **Dual Checkout Strategy**: Gets scripts from redesigned-guacamole, content from calling repo
+- ✅ **Secrets Validation**: Graceful handling of missing Confluence secrets
+- ✅ **Dry Run Support**: Can run without secrets for testing
+
 ## Usage Examples
 
 ### From Remote Repository (Read-only Mode)
@@ -145,6 +180,32 @@ jobs:
       uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
       permissions:
         contents: write
+  ```
+
+### Error: "workflow file not found: ./.github/workflows/publish-docs.yml"
+- **Cause**: Old version of workflow using relative path for Confluence publishing
+- **Solution**: Update to latest workflow version that has inline Confluence publishing
+
+### Confluence Publishing Fails with Missing Secrets
+- **Cause**: Remote repository doesn't have Confluence secrets configured
+- **Solutions**:
+  - **Option 1**: Add Confluence secrets to the calling repository
+  - **Option 2**: Run with `dry_run: true` to test without actual publishing
+  - **Option 3**: Set up secrets in the calling repository:
+    ```yaml
+    # In calling repository's secrets:
+    CONFLUENCE_URL: https://your-confluence.atlassian.net
+    CONFLUENCE_USER: your-username
+    CONFLUENCE_API_TOKEN: your-api-token
+    ```
+
+### Confluence Publishing Succeeds But No Content
+- **Cause**: Calling repository might not have `docs/` directory or proper template files
+- **Solution**: Ensure calling repository has:
+  ```
+  docs/
+    ├── vars.yaml              # Configuration for templates
+    └── [template files]       # .j2 template files
   ```
 
 ### Auto-fixes Applied But Not Committed
