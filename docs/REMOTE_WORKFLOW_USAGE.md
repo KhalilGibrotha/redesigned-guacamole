@@ -90,10 +90,10 @@ publish:
   steps:
     - name: 🔍 Detect Repository Context
       # Automatically detects if running locally or remotely
-    
+
     - name: 📥 Checkout Redesigned-Guacamole (Scripts)
       # Always checkout the scripts repository
-    
+
     - name: 📥 Checkout Calling Repository (Content)
       # Only when called remotely
 ```
