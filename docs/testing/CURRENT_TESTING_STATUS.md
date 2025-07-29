@@ -1,4 +1,4 @@
-# Simplified Molecule Testing for Enterprise AAP
+# Testing Status and Molecule Plans
 
 ## Current Status
 
@@ -89,46 +89,7 @@ make security-check
 
 ## Next Steps for Molecule Integration
 
-### Option 1: **Docker-based Testing** (Recommended)
-When Docker is available in your environment:
-```bash
-# Install Docker support
-sudo apt install docker.io
-sudo usermod -aG docker $USER
-
-# Install Molecule with Docker
-pipx inject molecule molecule-plugins[docker]
-
-# Run full tests
-molecule test
-```
-
-### Option 2: **Local Testing** (Current)
-Using localhost for basic validation:
-```bash
-# Template validation
-make validate-templates
-
-# Security checks
-make security-check
-
-# Syntax validation
-make test-syntax
-```
-
-### Option 3: **CI/CD Integration**
-Implement Molecule in your CI/CD pipeline where container runtime is available:
-```yaml
-# CI/CD with Molecule
-test:
-  image: quay.io/ansible/molecule
-  script:
-    - molecule test
-```
-
-## Documentation Structure
-
-The project now includes:
+For Molecule testing you can use Docker, run tests locally or integrate into CI. Detailed setup instructions are available in MOLECULE_TESTING_GUIDE.md
 - **YAML_LINTING_STANDARDS.md**: Enterprise linting standards
 - **TESTING_SETUP_GUIDE.md**: Complete testing documentation
 - **MOLECULE_TESTING_GUIDE.md**: Molecule-specific guidance (for future implementation)

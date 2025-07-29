@@ -1,4 +1,4 @@
-# 🧪 Molecule Testing Troubleshooting Guide
+# Molecule Testing Troubleshooting Guide
 
 ## 🚨 Why Molecule Action May Not Be Starting
 

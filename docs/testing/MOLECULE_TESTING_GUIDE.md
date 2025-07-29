@@ -1,7 +1,6 @@
 # Molecule Testing Guide for Enterprise AAP
 
-⚠️ **WORK IN PROGRESS** ⚠️
-> **Status**: Molecule testing functionality is currently under development and has not been fully validated. The configuration exists but may require additional setup and testing. Consider this experimental functionality.
+**Note**: Molecule integration is optional and still under evaluation.
 
 ## Overview
 
