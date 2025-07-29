@@ -165,6 +165,14 @@ jobs:
 
 ## Troubleshooting
 
+### Error: "can't find requirements.txt" in Confluence Publishing
+- **Cause**: Confluence publishing job looking for dependencies in calling repository
+- **Solution**: Update to latest workflow version with improved dependency handling
+- **Details**: The workflow now:
+  - Always installs core Confluence dependencies (`jinja2`, `pyyaml`, `requests`, etc.)
+  - Uses scripts from `redesigned-guacamole` repository for dependency resolution
+  - Doesn't rely on pip cache to avoid remote repository conflicts
+
 ### Error: "can't find requirements.txt"
 - **Cause**: Old version with pip cache enabled
 - **Solution**: Update to latest workflow version
