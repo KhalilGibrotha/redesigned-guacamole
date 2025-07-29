@@ -19,6 +19,7 @@ class SuperLinterAnalyzer:
             "config_analysis": {},
             "markdown_analysis": {},
             "python_analysis": {},
+            "ansible_analysis": {},
             "overall_health": {},
         }
 
@@ -237,6 +238,107 @@ class SuperLinterAnalyzer:
             "python_health_score": self._calculate_python_health_score(metrics, quality_issues),
         }
 
+    def analyze_ansible_yaml_quality(self) -> Dict[str, Any]:
+        """Analyze Ansible YAML files and general YAML quality"""
+        print("🎭 Analyzing Ansible and YAML quality...")
+
+        # Find all YAML files
+        yaml_files = list(self.workspace_root.glob("**/*.yml")) + list(self.workspace_root.glob("**/*.yaml"))
+
+        # Categorize YAML files
+        ansible_files = []
+        github_actions_files = []
+        other_yaml_files = []
+
+        for yaml_file in yaml_files:
+            if any(skip in str(yaml_file) for skip in [".git", "__pycache__", ".venv", "venv"]):
+                continue
+
+            file_str = str(yaml_file)
+            if (
+                any(
+                    indicator in file_str
+                    for indicator in ["playbook", "tasks", "handlers", "vars", "inventory", "roles"]
+                )
+                or any(indicator in file_str for indicator in ["site.yml", "main.yml"])
+                or "vars/" in file_str
+            ):
+                ansible_files.append(yaml_file)
+            elif ".github/workflows" in file_str or ".github/actions" in file_str:
+                github_actions_files.append(yaml_file)
+            else:
+                other_yaml_files.append(yaml_file)
+
+        metrics = {
+            "total_yaml_files": len(yaml_files),
+            "ansible_files": len(ansible_files),
+            "github_actions_files": len(github_actions_files),
+            "other_yaml_files": len(other_yaml_files),
+            "yaml_syntax_errors": 0,
+            "ansible_best_practice_violations": 0,
+            "long_yaml_files": 0,
+            "complex_ansible_tasks": 0,
+            "unsafe_yaml_patterns": 0,
+            "missing_ansible_metadata": 0,
+        }
+
+        ansible_quality_issues = []
+        yaml_syntax_issues = []
+
+        # Analyze Ansible-specific files
+        for ansible_file in ansible_files:
+            try:
+                content = ansible_file.read_text(encoding="utf-8")
+                file_issues = self._analyze_single_ansible_file(content, ansible_file)
+
+                # Aggregate metrics
+                for key in [
+                    "ansible_best_practice_violations",
+                    "complex_ansible_tasks",
+                    "unsafe_yaml_patterns",
+                    "missing_ansible_metadata",
+                ]:
+                    metrics[key] += file_issues.get(key, 0)
+
+                ansible_quality_issues.extend(file_issues.get("issues", []))
+
+                # Check for long files (>200 lines)
+                if len(content.split("\n")) > 200:
+                    metrics["long_yaml_files"] += 1
+
+            except Exception as e:
+                print(f"⚠️ Error analyzing Ansible file {ansible_file}: {e}")
+                metrics["yaml_syntax_errors"] += 1
+                yaml_syntax_issues.append(f"{ansible_file}: {str(e)}")
+
+        # Analyze all YAML files for syntax and general quality
+        for yaml_file in yaml_files:
+            if any(skip in str(yaml_file) for skip in [".git", "__pycache__", ".venv", "venv"]):
+                continue
+
+            try:
+                content = yaml_file.read_text(encoding="utf-8")
+                syntax_issues = self._check_yaml_syntax_quality(content, yaml_file)
+                yaml_syntax_issues.extend(syntax_issues)
+
+            except Exception as e:
+                metrics["yaml_syntax_errors"] += 1
+                yaml_syntax_issues.append(f"{yaml_file}: Encoding/read error - {str(e)}")
+
+        metrics["yaml_syntax_errors"] = len(yaml_syntax_issues)
+
+        return {
+            "metrics": metrics,
+            "ansible_files_analyzed": [str(f) for f in ansible_files[:10]],  # Sample for output
+            "ansible_quality_issues": len(ansible_quality_issues),
+            "ansible_issue_details": ansible_quality_issues[:10],  # Limit for output
+            "yaml_syntax_issues": len(yaml_syntax_issues),
+            "yaml_syntax_details": yaml_syntax_issues[:8],  # Limit for output
+            "ansible_yaml_health_score": self._calculate_ansible_yaml_health_score(
+                metrics, ansible_quality_issues, yaml_syntax_issues
+            ),
+        }
+
     def generate_github_summary(self) -> str:
         """Generate GitHub Step Summary markdown"""
 
@@ -244,6 +346,7 @@ class SuperLinterAnalyzer:
         config_analysis = self.analysis_results["config_analysis"]
         markdown_analysis = self.analysis_results["markdown_analysis"]
         python_analysis = self.analysis_results["python_analysis"]
+        ansible_analysis = self.analysis_results["ansible_analysis"]
 
         summary = []
 
@@ -283,10 +386,11 @@ class SuperLinterAnalyzer:
         # Overall Health Score
         autofix_penalty = autofix_analysis.get("total_fixes", 0) * 1.5 if autofix_analysis.get("autofix_needed") else 0
         overall_score = (
-            config_analysis.get("config_health_score", 0) * 0.25
-            + markdown_analysis.get("markdown_health_score", 0) * 0.25
-            + python_analysis.get("python_health_score", 0) * 0.35
-            + max(0, 100 - autofix_penalty) * 0.15
+            config_analysis.get("config_health_score", 0) * 0.20
+            + markdown_analysis.get("markdown_health_score", 0) * 0.20
+            + python_analysis.get("python_health_score", 0) * 0.25
+            + ansible_analysis.get("ansible_yaml_health_score", 0) * 0.25
+            + max(0, 100 - autofix_penalty) * 0.10
         )
 
         health_emoji = "🟢" if overall_score >= 85 else "🟡" if overall_score >= 70 else "🔴"
@@ -326,6 +430,19 @@ class SuperLinterAnalyzer:
         summary.append(f"- **Quality Issues**: {python_analysis.get('quality_issues', 0)}")
         summary.append("")
 
+        # Ansible/YAML Analysis
+        summary.append("### 🎭 Ansible & YAML Analysis")
+        ansible_metrics = ansible_analysis.get("metrics", {})
+        summary.append(f"- **Total YAML Files**: {ansible_metrics.get('total_yaml_files', 0)}")
+        summary.append(f"- **Ansible Files**: {ansible_metrics.get('ansible_files', 0)}")
+        summary.append(f"- **GitHub Actions Files**: {ansible_metrics.get('github_actions_files', 0)}")
+        summary.append(f"- **YAML Syntax Errors**: {ansible_metrics.get('yaml_syntax_errors', 0)}")
+        summary.append(
+            f"- **Ansible Best Practice Violations**: {ansible_metrics.get('ansible_best_practice_violations', 0)}"
+        )
+        summary.append(f"- **Security/Safety Issues**: {ansible_metrics.get('unsafe_yaml_patterns', 0)}")
+        summary.append("")
+
         # Recommendations
         recommendations = config_analysis.get("recommendations", [])
         if recommendations:
@@ -353,8 +470,15 @@ class SuperLinterAnalyzer:
         python_status = "🟢 Excellent" if python_score >= 90 else "🟡 Good" if python_score >= 70 else "🔴 Needs Work"
         summary.append(f"| Python | {python_score:.1f}/100 | {python_status} |")
 
+        ansible_score = ansible_analysis.get("ansible_yaml_health_score", 0)
+        ansible_status = (
+            "🟢 Excellent" if ansible_score >= 90 else "🟡 Good" if ansible_score >= 70 else "🔴 Needs Work"
+        )
+        summary.append(f"| Ansible/YAML | {ansible_score:.1f}/100 | {ansible_status} |")
+
         overall_status = "Excellent" if overall_score >= 85 else "Good" if overall_score >= 70 else "Needs Work"
         summary.append(f"| **Overall** | **{overall_score:.1f}/100** | **{health_emoji} {overall_status}** |")
+        summary.append("")  # Add newline after table
 
         return "\n".join(summary)
 
@@ -542,6 +666,129 @@ class SuperLinterAnalyzer:
         line_penalty = metrics.get("long_lines", 0) * 0.5
         return max(0, min(100, base_score - issue_penalty - line_penalty))
 
+    def _analyze_single_ansible_file(self, content: str, file_path: Path) -> Dict[str, Any]:
+        """Analyze a single Ansible YAML file for best practices"""
+        issues = []
+        metrics = {
+            "ansible_best_practice_violations": 0,
+            "complex_ansible_tasks": 0,
+            "unsafe_yaml_patterns": 0,
+            "missing_ansible_metadata": 0,
+        }
+
+        # Check for Ansible best practices
+        if "hosts:" in content or "- hosts:" in content:
+            # This looks like a playbook
+            if "name:" not in content:
+                issues.append(f"{file_path}: Playbook missing descriptive name")
+                metrics["missing_ansible_metadata"] += 1
+
+            # Check for become usage without explicit permissions
+            if "become:" in content and "become_user:" not in content:
+                issues.append(f"{file_path}: Using become without explicit become_user")
+                metrics["ansible_best_practice_violations"] += 1
+
+        # Check for complex tasks (very long task definitions)
+        task_blocks = re.findall(r"- name:.*?(?=- name:|---|\Z)", content, re.DOTALL)
+        for task in task_blocks:
+            if len(task.split("\n")) > 15:  # Very long task
+                metrics["complex_ansible_tasks"] += 1
+                issues.append(f"{file_path}: Found overly complex task (>15 lines)")
+
+        # Check for unsafe YAML patterns
+        unsafe_patterns = [
+            (r"{{.*\|.*shell.*}}", "Potential shell injection in template"),
+            (r"shell:.*\$\{", "Potential variable injection in shell command"),
+            (r"command:.*\|", "Piping in command module (use shell instead)"),
+            (r"sudo:", "Using deprecated sudo (use become instead)"),
+        ]
+
+        for pattern, message in unsafe_patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                metrics["unsafe_yaml_patterns"] += 1
+                issues.append(f"{file_path}: {message}")
+
+        # Check for missing documentation in vars files
+        if "vars/" in str(file_path) or "variables" in str(file_path).lower():
+            if not re.search(r"#.*[Dd]escription|#.*[Dd]oc|#.*[Pp]urpose", content):
+                metrics["missing_ansible_metadata"] += 1
+                issues.append(f"{file_path}: Variables file missing documentation comments")
+
+        return {"issues": issues, **metrics}
+
+    def _check_yaml_syntax_quality(self, content: str, file_path: Path) -> List[str]:
+        """Check YAML syntax and quality issues"""
+        issues = []
+
+        try:
+            import yaml
+
+            # Try to parse the YAML
+            yaml.safe_load(content)
+        except ImportError:
+            # YAML library not available, skip syntax check
+            pass
+        except Exception as e:
+            # This catches both yaml.YAMLError and other parsing errors
+            issues.append(f"{file_path}: YAML parsing error - {str(e)}")
+
+        # Check for quality issues
+        lines = content.split("\n")
+        for i, line in enumerate(lines, 1):
+            # Very long lines in YAML
+            if len(line) > 160:
+                issues.append(f"{file_path}:{i}: Line exceeds 160 characters ({len(line)})")
+
+            # Tabs in YAML (should use spaces)
+            if "\t" in line:
+                issues.append(f"{file_path}:{i}: Found tab character (use spaces instead)")
+
+            # Trailing whitespace
+            if line.endswith(" ") or line.endswith("\t"):
+                issues.append(f"{file_path}:{i}: Trailing whitespace")
+
+        # Check for inconsistent indentation
+        indent_sizes = []
+        for line in lines:
+            if line.strip() and line.startswith(" "):
+                leading_spaces = len(line) - len(line.lstrip(" "))
+                if leading_spaces > 0:
+                    indent_sizes.append(leading_spaces)
+
+        if indent_sizes:
+            # Find the most common indentation that's not a multiple of others
+            from collections import Counter
+
+            common_indents = Counter(indent_sizes).most_common(3)
+            if len(common_indents) > 1:
+                # Check if indentation is inconsistent
+                base_indent = common_indents[0][0]
+                for indent, count in common_indents[1:]:
+                    if indent % base_indent != 0 and count > len(lines) * 0.1:  # 10% threshold
+                        issues.append(
+                            f"{file_path}: Inconsistent indentation detected ({base_indent} vs {indent} spaces)"
+                        )
+                        break
+
+        return issues
+
+    def _calculate_ansible_yaml_health_score(self, metrics: Dict, ansible_issues: List, yaml_issues: List) -> float:
+        """Calculate Ansible/YAML health score"""
+        base_score = 100
+
+        # Penalties for different types of issues
+        syntax_penalty = len(yaml_issues) * 5  # Syntax errors are serious
+        ansible_violation_penalty = metrics.get("ansible_best_practice_violations", 0) * 3
+        complexity_penalty = metrics.get("complex_ansible_tasks", 0) * 2
+        unsafe_penalty = metrics.get("unsafe_yaml_patterns", 0) * 4  # Security issues are serious
+        metadata_penalty = metrics.get("missing_ansible_metadata", 0) * 1
+
+        total_penalty = (
+            syntax_penalty + ansible_violation_penalty + complexity_penalty + unsafe_penalty + metadata_penalty
+        )
+
+        return max(0, min(100, base_score - total_penalty))
+
     def run_full_analysis(self) -> Dict[str, Any]:
         """Run complete analysis and return results"""
         print("🚀 Starting Enhanced Super Linter Analysis...")
@@ -550,6 +797,7 @@ class SuperLinterAnalyzer:
         self.analysis_results["config_analysis"] = self.analyze_linter_configurations()
         self.analysis_results["markdown_analysis"] = self.analyze_markdown_patterns()
         self.analysis_results["python_analysis"] = self.analyze_python_code_quality()
+        self.analysis_results["ansible_analysis"] = self.analyze_ansible_yaml_quality()
 
         return self.analysis_results
 
@@ -600,20 +848,35 @@ def main():
             config_score = results.get("config_analysis", {}).get("config_health_score", 0)
             markdown_score = results.get("markdown_analysis", {}).get("markdown_health_score", 0)
             python_score = results.get("python_analysis", {}).get("python_health_score", 0)
+            ansible_score = results.get("ansible_analysis", {}).get("ansible_yaml_health_score", 0)
 
             # Calculate overall score
             autofix_penalty = (
                 autofix_analysis.get("total_fixes", 0) * 1.5 if autofix_analysis.get("autofix_needed") else 0
             )
             overall_score = (
-                config_score * 0.25 + markdown_score * 0.25 + python_score * 0.35 + max(0, 100 - autofix_penalty) * 0.15
+                config_score * 0.20
+                + markdown_score * 0.20
+                + python_score * 0.25
+                + ansible_score * 0.25
+                + max(0, 100 - autofix_penalty) * 0.10
             )
 
             f.write(f"overall_health_score={overall_score:.1f}\n")
             f.write(f"config_health_score={config_score}\n")
             f.write(f"markdown_health_score={markdown_score}\n")
             f.write(f"python_health_score={python_score}\n")
+            f.write(f"ansible_yaml_health_score={ansible_score}\n")
+
+            # Ansible-specific outputs
+            ansible_metrics = results.get("ansible_analysis", {}).get("metrics", {})
+            f.write(f"ansible_files_count={ansible_metrics.get('ansible_files', 0)}\n")
+            f.write(f"yaml_syntax_errors={ansible_metrics.get('yaml_syntax_errors', 0)}\n")
+            f.write(f"ansible_violations={ansible_metrics.get('ansible_best_practice_violations', 0)}\n")
+            f.write(f"ansible_security_issues={ansible_metrics.get('unsafe_yaml_patterns', 0)}\n")
 
 
 if __name__ == "__main__":
+    main()
+    main()
     main()
