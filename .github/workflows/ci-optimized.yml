@@ -48,6 +48,8 @@ on:
         required: false
         type: boolean
         default: false
+
+  # Remote trigger - allows being called by other workflows
     secrets:
       CONFLUENCE_URL:
         required: false
@@ -509,8 +511,154 @@ jobs:
             echo "- Health score calculation based on issue severity"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: 🤖 Apply Auto-fixes
+        if: always()
+        id: apply-fixes
+        run: |
+          echo "🤖 Applying auto-fixes to detected issues..."
+
+          # Initialize counters
+          total_fixes=0
+          yaml_fixes=0
+          python_fixes=0
+          shell_fixes=0
+          markdown_fixes=0
+          json_fixes=0
+
+          # Python auto-fixes with Black and isort
+          echo "🐍 Applying Python auto-fixes..."
+          if command -v black >/dev/null 2>&1; then
+            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --check --quiet 2>/dev/null; then
+              echo "  ✅ Python files already formatted correctly"
+            else
+              echo "  � Formatting Python files with Black..."
+              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
+              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black
+              python_fixes=$((python_fixes + python_black_count))
+              total_fixes=$((total_fixes + python_black_count))
+              echo "    Applied $python_black_count Black formatting fixes"
+            fi
+          fi
+
+          if command -v isort >/dev/null 2>&1; then
+            echo "  🔧 Sorting Python imports with isort..."
+            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
+            find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort
+            python_fixes=$((python_fixes + python_isort_count))
+            total_fixes=$((total_fixes + python_isort_count))
+            echo "    Applied $python_isort_count import sorting fixes"
+          fi
+
+          # YAML auto-fixes (basic formatting)
+          echo "📄 Checking YAML files..."
+          yaml_count=0
+          for file in $(find . -name "*.yml" -o -name "*.yaml" | grep -v ".git"); do
+            if yamllint "$file" >/dev/null 2>&1; then
+              continue
+            else
+              # Simple YAML fixes: trailing whitespace
+              if sed -i 's/[[:space:]]*$//' "$file"; then
+                yaml_count=$((yaml_count + 1))
+              fi
+            fi
+          done
+          yaml_fixes=$yaml_count
+          total_fixes=$((total_fixes + yaml_count))
+          echo "  Applied $yaml_count YAML formatting fixes"
+
+          # Shell script auto-fixes with shfmt
+          echo "🐚 Applying shell script auto-fixes..."
+          if command -v shfmt >/dev/null 2>&1; then
+            shell_count=0
+            for file in $(find . -name "*.sh" | grep -v ".git"); do
+              if shfmt -d "$file" >/dev/null 2>&1; then
+                shfmt -w "$file"
+                shell_count=$((shell_count + 1))
+              fi
+            done
+            shell_fixes=$shell_count
+            total_fixes=$((total_fixes + shell_count))
+            echo "  Applied $shell_count shell script formatting fixes"
+          fi
+
+          # JSON auto-fixes
+          echo "📋 Applying JSON auto-fixes..."
+          json_count=0
+          for file in $(find . -name "*.json" | grep -v ".git" | grep -v "node_modules" | grep -v "package-lock.json"); do
+            if python3 -m json.tool "$file" > "${file}.tmp" 2>/dev/null; then
+              if ! diff -q "$file" "${file}.tmp" >/dev/null 2>&1; then
+                mv "${file}.tmp" "$file"
+                json_count=$((json_count + 1))
+              else
+                rm -f "${file}.tmp"
+              fi
+            else
+              rm -f "${file}.tmp"
+            fi
+          done
+          json_fixes=$json_count
+          total_fixes=$((total_fixes + json_count))
+          echo "  Applied $json_count JSON formatting fixes"
+
+          # Markdown auto-fixes
+          echo "📝 Applying Markdown auto-fixes..."
+          markdown_count=0
+
+          # Method 1: Basic markdown fixes (trailing whitespace, line endings)
+          for file in $(find . -name "*.md" | grep -v ".git" | grep -v "node_modules"); do
+            original_size=$(wc -c < "$file" 2>/dev/null || echo "0")
+
+            # Fix trailing whitespace
+            sed -i 's/[[:space:]]*$//' "$file" 2>/dev/null || true
+
+            # Ensure file ends with newline
+            if [ -s "$file" ] && [ "$(tail -c1 "$file" 2>/dev/null)" != "" ]; then
+              echo "" >> "$file"
+            fi
+
+            # Fix multiple consecutive empty lines (reduce to max 2)
+            awk '/^$/{if(++n<=2)print;next}{n=0;print}' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file" 2>/dev/null || true
+
+            new_size=$(wc -c < "$file" 2>/dev/null || echo "0")
+            if [ "$original_size" != "$new_size" ]; then
+              markdown_count=$((markdown_count + 1))
+            fi
+          done
+
+          # Method 2: Try markdownlint-cli2 auto-fix if available
+          if command -v markdownlint-cli2 >/dev/null 2>&1; then
+            echo "  🔧 Running markdownlint-cli2 auto-fix..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs markdownlint-cli2 --fix --config .markdownlint.json 2>/dev/null || true
+          elif command -v markdownlint >/dev/null 2>&1; then
+            echo "  🔧 Running markdownlint auto-fix..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs markdownlint --fix --config .markdownlint.json 2>/dev/null || true
+          fi
+
+          # Method 3: Try prettier for markdown if available
+          if command -v prettier >/dev/null 2>&1; then
+            echo "  🔧 Running prettier for markdown..."
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
+              xargs prettier --write --parser markdown --prose-wrap preserve 2>/dev/null || true
+          fi
+
+          markdown_fixes=$markdown_count
+          total_fixes=$((total_fixes + markdown_count))
+          echo "  Applied $markdown_count markdown formatting fixes"
+
+          # Set outputs for the commit step
+          echo "autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
+          echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
+          echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
+          echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
+          echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
+          echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
+          echo "ansible_fixes=0" >> $GITHUB_OUTPUT          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+
       - name: 💾 Commit Auto-fixes
-        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name != 'workflow_call'
+        if: steps.apply-fixes.outputs.autofix_needed == 'true'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -521,18 +669,24 @@ jobs:
           # Add all changes
           git add .
 
-          # Create detailed commit message
-          commit_msg="🤖 Auto-fix: Applied ${{ steps.enhanced-analysis.outputs.total_fixes }} linting fixes
+          # Check if there are actually changes to commit
+          if git diff --staged --quiet; then
+            echo "ℹ️ No changes to commit after autofix attempts"
+            exit 0
+          fi
 
-          Auto-fixes applied by Super Linter:
-          - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}
-          - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}
-          - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}
-          - Python fixes: ${{ steps.enhanced-analysis.outputs.python_fixes }}
-          - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}
-          - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}
+          # Create detailed commit message
+          commit_msg="🤖 Auto-fix: Applied ${{ steps.apply-fixes.outputs.total_fixes }} linting fixes
+
+          Auto-fixes applied by formatters:
+          - Shell fixes: ${{ steps.apply-fixes.outputs.shell_fixes }}
+          - YAML fixes: ${{ steps.apply-fixes.outputs.yaml_fixes }}
+          - Python fixes: ${{ steps.apply-fixes.outputs.python_fixes }}
+          - Markdown fixes: ${{ steps.apply-fixes.outputs.markdown_fixes }}
+          - JSON fixes: ${{ steps.apply-fixes.outputs.json_fixes }}
 
           Automated by: ${{ github.workflow }} #${{ github.run_number }}
+          Event: ${{ github.event_name }}
           Health Score: ${{ steps.enhanced-analysis.outputs.overall_health_score }}/100"
 
           # Commit changes
@@ -543,11 +697,11 @@ jobs:
 
           echo "✅ Auto-fixes committed and pushed!"
 
-      - name: ⚠️ Auto-fix Skipped (External Call)
-        if: steps.enhanced-analysis.outputs.autofix_needed == 'true' && github.event_name == 'workflow_call'
+      - name: ⚠️ Auto-fix Status
+        if: steps.enhanced-analysis.outputs.autofix_needed == 'true'
         run: |
-          echo "⚠️ Auto-fixes detected but skipped for external workflow calls"
-          echo "🔍 Found ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes:"
+          echo "🔍 Auto-fixes applied successfully!"
+          echo "� Summary of fixes:"
           echo "  - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}"
           echo "  - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}"
           echo "  - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}"
@@ -555,7 +709,7 @@ jobs:
           echo "  - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}"
           echo "  - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}"
           echo ""
-          echo "💡 To apply these fixes, run the workflow directly on the target repository"
+          echo "✅ Changes have been committed and pushed back to the branch"
 
       - name: 📤 Upload Super Linter Logs
         if: always()

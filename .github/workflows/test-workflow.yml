@@ -40,6 +40,7 @@ jobs:
     uses: ./.github/workflows/ci-optimized.yml
     with:
       branch_name: ${{ github.ref_name }}
+      full_scan: true
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
