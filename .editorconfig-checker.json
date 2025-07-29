@@ -19,8 +19,21 @@
     "coverage",
     "htmlcov",
     "\\.coverage",
+    "\\.vscode",
+    "\\.idea",
+    "bin/latest",
     "page_id_cache\\.json",
-    "tmp"
+    "package-lock\\.json",
+    "yarn\\.lock",
+    "runtime\\.yml",
+    "vars/vars\\.yml",
+    "vars/aap\\.yml",
+    "tmp",
+    "\\.tmp",
+    "\\.temp",
+    "\\.log",
+    "\\.backup",
+    "\\.bak"
   ],
   "AllowedContentTypes": [
     "application/ecmascript",
