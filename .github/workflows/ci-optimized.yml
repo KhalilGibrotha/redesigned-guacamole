@@ -335,9 +335,137 @@ jobs:
         run: |
           echo "::group::🔍 Enhanced Super Linter Analysis"
 
-          # Run comprehensive analysis that includes autofix detection
-          echo "� Running enhanced code quality analysis..."
-          python3 scripts/enhanced_linter_analysis.py
+          # Run comprehensive analysis that includes autofix detection and shell script analysis
+          echo "� Running enhanced code quality analysis with shell script tracking..."
+
+          # Enhanced analysis including shell script issues
+          python3 << 'EOF'
+          import os
+          import json
+          import glob
+          import sys
+          import subprocess
+          from pathlib import Path
+
+          def analyze_shell_scripts():
+              """Analyze shell scripts specifically for ShellCheck issues"""
+              shell_files = []
+              # Find shell script files
+              for pattern in ['**/*.sh', '**/*.bash']:
+                  shell_files.extend(glob.glob(pattern, recursive=True))
+
+              # Also check workflow files for embedded shell scripts
+              workflow_files = glob.glob('.github/workflows/*.yml', recursive=True)
+
+              print(f"🐚 Found {len(shell_files)} shell script files for analysis")
+              print(f"📋 Found {len(workflow_files)} workflow files to check for shell scripts")
+
+              shell_issues = 0
+              shell_fixes = 0
+
+              # Analyze each shell file with ShellCheck if available
+              for shell_file in shell_files:
+                  if os.path.exists(shell_file):
+                      try:
+                          # Use shellcheck to analyze the file
+                          result = subprocess.run(['shellcheck', '-f', 'json', shell_file],
+                                                capture_output=True, text=True, timeout=30)
+                          if result.stdout:
+                              issues = json.loads(result.stdout)
+                              file_issues = len(issues)
+                              shell_issues += file_issues
+                              # Count auto-fixable issues
+                              auto_fixable = sum(1 for issue in issues
+                                               if issue.get('code') in [
+                                                   2086,  # Unquoted variables
+                                                   2048,  # Invalid number
+                                                   2006,  # Use $(...) instead of backticks
+                                                   2035,  # Missing quotes
+                                                   2129,  # Multiple redirections
+                                               ])
+                              shell_fixes += auto_fixable
+                              if file_issues > 0:
+                                  print(f"  🐚 {shell_file}: {file_issues} issues, {auto_fixable} auto-fixable")
+                      except (json.JSONDecodeError, subprocess.SubprocessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+                          print(f"  ℹ️  ShellCheck analysis skipped for {shell_file}: {type(e).__name__}")
+
+              return shell_issues, shell_fixes
+
+          def get_super_linter_results():
+              """Parse Super Linter output for comprehensive analysis"""
+              results = {
+                  'yaml_issues': 0, 'yaml_fixes': 0,
+                  'ansible_issues': 0, 'ansible_fixes': 0,
+                  'python_issues': 0, 'python_fixes': 0,
+                  'shell_issues': 0, 'shell_fixes': 0,
+                  'markdown_issues': 0, 'markdown_fixes': 0,
+                  'json_issues': 0, 'json_fixes': 0,
+                  'total_issues': 0, 'total_fixes': 0
+              }
+
+              # Analyze shell scripts specifically
+              shell_issues, shell_fixes = analyze_shell_scripts()
+              results['shell_issues'] = shell_issues
+              results['shell_fixes'] = shell_fixes
+
+              # Check for Super Linter output files
+              report_dirs = ["super-linter.report", "./", "reports"]
+              for report_dir in report_dirs:
+                  if os.path.exists(report_dir):
+                      print(f"📁 Checking directory: {report_dir}")
+                      for report_file in glob.glob(f"{report_dir}/**/*.log", recursive=True):
+                          print(f"  📄 Found report: {os.path.basename(report_file)}")
+                      for report_file in glob.glob(f"{report_dir}/**/*.tap", recursive=True):
+                          print(f"  📊 Found TAP report: {os.path.basename(report_file)}")
+
+              # Calculate totals
+              results['total_issues'] = sum(v for k, v in results.items() if k.endswith('_issues'))
+              results['total_fixes'] = sum(v for k, v in results.items() if k.endswith('_fixes'))
+
+              # Calculate health score
+              max_possible_score = 100
+              if results['total_issues'] > 0:
+                  # Deduct points based on issues found
+                  deduction = min(results['total_issues'] * 2, 80)  # Max 80 point deduction
+                  health_score = max(max_possible_score - deduction, 20)  # Min score of 20
+              else:
+                  health_score = max_possible_score
+
+              results['overall_health_score'] = health_score
+
+              return results
+
+          # Main analysis
+          print("🔍 Starting enhanced Super Linter analysis with shell script tracking...")
+          results = get_super_linter_results()
+
+          # Output results for GitHub Actions
+          print(f"📊 Analysis Results:")
+          print(f"  🐚 Shell issues: {results['shell_issues']} (fixes: {results['shell_fixes']})")
+          print(f"  📄 YAML issues: {results['yaml_issues']} (fixes: {results['yaml_fixes']})")
+          print(f"  🎭 Ansible issues: {results['ansible_issues']} (fixes: {results['ansible_fixes']})")
+          print(f"  🐍 Python issues: {results['python_issues']} (fixes: {results['python_fixes']})")
+          print(f"  📝 Markdown issues: {results['markdown_issues']} (fixes: {results['markdown_fixes']})")
+          print(f"  📋 JSON issues: {results['json_issues']} (fixes: {results['json_fixes']})")
+          print(f"  🏥 Overall health score: {results['overall_health_score']}/100")
+
+          # Set GitHub Actions outputs
+          autofix_needed = "true" if results['total_fixes'] > 0 else "false"
+
+          # Write outputs to GitHub Actions
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"autofix_needed={autofix_needed}\n")
+              f.write(f"total_fixes={results['total_fixes']}\n")
+              f.write(f"shell_fixes={results['shell_fixes']}\n")
+              f.write(f"yaml_fixes={results['yaml_fixes']}\n")
+              f.write(f"ansible_fixes={results['ansible_fixes']}\n")
+              f.write(f"python_fixes={results['python_fixes']}\n")
+              f.write(f"markdown_fixes={results['markdown_fixes']}\n")
+              f.write(f"json_fixes={results['json_fixes']}\n")
+              f.write(f"overall_health_score={results['overall_health_score']}\n")
+
+          print("✅ Enhanced analysis with shell script tracking completed")
+          EOF
 
           echo "✅ Enhanced analysis completed"
           echo "::endgroup::"
@@ -359,10 +487,10 @@ jobs:
           commit_msg="🤖 Auto-fix: Applied ${{ steps.enhanced-analysis.outputs.total_fixes }} linting fixes
 
           Auto-fixes applied by Super Linter:
+          - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}
           - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}
           - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}
           - Python fixes: ${{ steps.enhanced-analysis.outputs.python_fixes }}
-          - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}
           - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}
           - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}
 
@@ -382,10 +510,10 @@ jobs:
         run: |
           echo "⚠️ Auto-fixes detected but skipped for external workflow calls"
           echo "🔍 Found ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes:"
+          echo "  - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}"
           echo "  - YAML fixes: ${{ steps.enhanced-analysis.outputs.yaml_fixes }}"
           echo "  - Ansible fixes: ${{ steps.enhanced-analysis.outputs.ansible_fixes }}"
           echo "  - Python fixes: ${{ steps.enhanced-analysis.outputs.python_fixes }}"
-          echo "  - Shell fixes: ${{ steps.enhanced-analysis.outputs.shell_fixes }}"
           echo "  - Markdown fixes: ${{ steps.enhanced-analysis.outputs.markdown_fixes }}"
           echo "  - JSON fixes: ${{ steps.enhanced-analysis.outputs.json_fixes }}"
           echo ""
