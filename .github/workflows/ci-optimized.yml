@@ -319,7 +319,7 @@ jobs:
         id: scan-trigger
         run: |
           echo "🎯 Checking for full scan trigger file..."
-          
+
           # Check if trigger file exists
           if [ -f ".lint-all-files" ]; then
             echo "✅ Found .lint-all-files trigger - enabling full codebase scan"
@@ -334,7 +334,7 @@ jobs:
             echo "full_scan_triggered=false" >> $GITHUB_OUTPUT
             echo "trigger_reason=default behavior" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "Full scan triggered: $([ -f ".lint-all-files" ] || [ "${{ inputs.full_scan }}" == "true" ] && echo "true" || echo "false")"
           echo "Reason: $([ -f ".lint-all-files" ] && echo "trigger file" || [ "${{ inputs.full_scan }}" == "true" ] && echo "manual input" || echo "default behavior")"
 

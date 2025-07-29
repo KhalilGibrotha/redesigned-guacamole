@@ -56,11 +56,11 @@ Based on the file structure analysis, I've updated the exclusion patterns across
 
 ### **Files Still Being Linted:**
 
-✅ **Source Code:** Python, JavaScript, Shell scripts  
-✅ **Documentation:** Markdown files, README files  
-✅ **Configuration:** YAML, JSON (excluding sensitive/generated)  
-✅ **Templates:** Jinja2 templates (`.j2` files)  
-✅ **Infrastructure:** Dockerfile, CI/CD workflows  
+✅ **Source Code:** Python, JavaScript, Shell scripts
+✅ **Documentation:** Markdown files, README files
+✅ **Configuration:** YAML, JSON (excluding sensitive/generated)
+✅ **Templates:** Jinja2 templates (`.j2` files)
+✅ **Infrastructure:** Dockerfile, CI/CD workflows
 ✅ **Example Files:** `vars/aap.yml.example` (safe examples)
 
 ### **Testing:**
