@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: true
+      auto_fix:
+        description: 'Apply auto-fixes to detected issues'
+        required: false
+        type: boolean
+        default: true
       target_environment:
         description: 'Target environment for publishing'
         required: false
@@ -33,6 +38,11 @@ on:
         required: false
         type: boolean
         default: false
+      auto_fix:
+        description: 'Apply auto-fixes to detected issues'
+        required: false
+        type: boolean
+        default: true
       branch_name:
         description: 'Branch name to checkout'
         required: false
@@ -200,7 +210,7 @@ jobs:
     if: needs.detect-changes.outputs.any-code-changed == 'true' || inputs.full_scan == true
 
     permissions:
-      contents: read
+      contents: write  # Required for auto-fix commits
       packages: read
       statuses: write
       security-events: write
@@ -512,10 +522,11 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 🤖 Apply Auto-fixes
-        if: always()
+        if: always() && (inputs.auto_fix == true || inputs.auto_fix == null)
         id: apply-fixes
         run: |
           echo "🤖 Applying auto-fixes to detected issues..."
+          echo "🔍 Auto-fix mode: ${{ inputs.auto_fix || 'true (default)' }}"
 
           # Initialize counters
           total_fixes=0
@@ -527,6 +538,14 @@ jobs:
 
           # Python auto-fixes with Black and isort
           echo "🐍 Applying Python auto-fixes..."
+
+          # Debug: List Python files found
+          python_files_found=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*")
+          python_file_count=$(echo "$python_files_found" | grep -c "\.py$" || echo "0")
+          echo "  🔍 Found $python_file_count Python files to check"
+          if [ "$python_file_count" -gt 0 ] && [ "$python_file_count" -le 5 ]; then
+            echo "    Files: $python_files_found"
+          fi
           if command -v black >/dev/null 2>&1; then
             if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --check --quiet 2>/dev/null; then
               echo "  ✅ Python files already formatted correctly"
@@ -662,14 +681,18 @@ jobs:
           echo "  Applied $markdown_count markdown formatting fixes"
 
           # Set outputs for the commit step
-          echo "autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)
+          echo "autofix_needed=$autofix_needed" >> $GITHUB_OUTPUT
           echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
           echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
           echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
           echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
           echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
           echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
-          echo "ansible_fixes=0" >> $GITHUB_OUTPUT          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+          echo "ansible_fixes=0" >> $GITHUB_OUTPUT
+
+          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+          echo "📊 Autofix status: $autofix_needed (total_fixes=$total_fixes)"
 
       - name: 💾 Commit Auto-fixes
         if: steps.apply-fixes.outputs.autofix_needed == 'true'
