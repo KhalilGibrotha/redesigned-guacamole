@@ -613,10 +613,12 @@ jobs:
       - name: 🛡️ Security Summary
         if: always()
         run: |
-          echo "## 🛡️ Security Validation Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ **DevSkim scan completed**" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ **Secret detection completed**" >> "$GITHUB_STEP_SUMMARY"
-          echo "✅ **File permissions checked**" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## 🛡️ Security Validation Summary"
+            echo "✅ **DevSkim scan completed**"
+            echo "✅ **Secret detection completed**"
+            echo "✅ **File permissions checked**"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
@@ -798,22 +800,20 @@ jobs:
       - name: 📊 Execution Summary
         if: always()
         run: |
-          echo "## 🚀 Workflow Execution Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### 🔍 Change Detection Results" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Repository**: ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **External call**: ${{ needs.detect-changes.outputs.external-call }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}" >>
-            "$GITHUB_STEP_SUMMARY"
-          echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}" >>
-            "$GITHUB_STEP_SUMMARY"
-          echo "- **Workflow files changed**: ${{ needs.detect-changes.outputs.workflows-changed }}" >>
-            "$GITHUB_STEP_SUMMARY"
-          echo "- **Any code changed**: ${{ needs.detect-changes.outputs.any-code-changed }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### 📊 Job Execution Status" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Super Linter**: ${{ needs.super-linter.result }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Security Scan**: ${{ needs.security.result }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}" >>
-            "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## 🚀 Workflow Execution Summary"
+            echo ""
+            echo "### 🔍 Change Detection Results"
+            echo "- **Repository**: ${{ github.repository }}"
+            echo "- **External call**: ${{ needs.detect-changes.outputs.external-call }}"
+            echo "- **Documentation changed**: ${{ needs.detect-changes.outputs.docs-changed }}"
+            echo "- **Ansible files changed**: ${{ needs.detect-changes.outputs.ansible-changed }}"
+            echo "- **Python files changed**: ${{ needs.detect-changes.outputs.python-changed }}"
+            echo "- **Workflow files changed**: ${{ needs.detect-changes.outputs.workflows-changed }}"
+            echo "- **Any code changed**: ${{ needs.detect-changes.outputs.any-code-changed }}"
+            echo ""
+            echo "### 📊 Job Execution Status"
+            echo "- **Super Linter**: ${{ needs.super-linter.result }}"
+            echo "- **Security Scan**: ${{ needs.security.result }}"
+            echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
