@@ -12,35 +12,35 @@ confluence_hierarchy:
   root:
     title: "Ansible Automation Platform Documentation"
     space: "AH"
-    pageId: "1343742"  # Main parent page
-  
+    pageId: "1343742" # Main parent page
+
   # Documentation structure organized by categories
   categories:
     operations:
       title: "Operations & Maintenance"
       parent: "root"
       description: "Daily operations, maintenance procedures, and operational guidelines"
-    
+
     administration:
       title: "Platform Administration"
       parent: "root"
       description: "System administration, user management, and configuration"
-    
+
     governance:
       title: "Policies & Governance"
       parent: "root"
       description: "Security policies, compliance standards, and governance frameworks"
-    
+
     automation_hub:
       title: "Automation Hub"
       parent: "root"
       description: "Content management, collections, and automation hub operations"
-    
+
     guides:
       title: "User Guides & Training"
       parent: "root"
       description: "End-user documentation, training materials, and quick reference guides"
-    
+
     testing:
       title: "Testing & Validation"
       parent: "root"
