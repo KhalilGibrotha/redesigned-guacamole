@@ -160,10 +160,8 @@ jobs:
 - **Solution**: Normal - workflow degrades gracefully
 
 ### Cache Directory Permission Errors
-- **Cause**: Auto-fix tools trying to modify read-only cache files (`.mypy_cache`, `__pycache__`, etc.)
-- **Solution**: Already fixed - cache directories are excluded from auto-fix operations
-- **Effect**: Permission denied errors during JSON/Python auto-fixes
-- **Solution**: Workflow now excludes cache directories from auto-fix operations
+- **Cause**: Auto-fix tools attempting to modify read-only cache files (`.mypy_cache`, `__pycache__`, etc.), which can cause permission errors.
+- **Solution**: The workflow automatically excludes common cache directories from auto-fix operations.
 
 ## Excluded Directories
 
