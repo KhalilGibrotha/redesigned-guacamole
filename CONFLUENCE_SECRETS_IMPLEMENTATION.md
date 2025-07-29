@@ -23,7 +23,7 @@ The Confluence publishing job was failing when called from remote repositories t
     echo "  - CONFLUENCE_URL defined: $([ -n "${{ secrets.CONFLUENCE_URL }}" ] && echo 'true' || echo 'false')"
     echo "  - CONFLUENCE_USER defined: $([ -n "${{ secrets.CONFLUENCE_USER }}" ] && echo 'true' || echo 'false')"
     echo "  - CONFLUENCE_API_TOKEN defined: $([ -n "${{ secrets.CONFLUENCE_API_TOKEN }}" ] && echo 'true' || echo 'false')"
-    
+
     # Check if all secrets are available
     if [ -n "${{ secrets.CONFLUENCE_URL }}" ] && [ -n "${{ secrets.CONFLUENCE_USER }}" ] && [ -n "${{ secrets.CONFLUENCE_API_TOKEN }}" ]; then
       echo "secrets-available=true" >> $GITHUB_OUTPUT

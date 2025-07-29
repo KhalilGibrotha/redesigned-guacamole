@@ -17,7 +17,7 @@ echo ""
 
 for repo in "${test_repos[@]}"; do
     echo "📋 Testing repository: $repo"
-    
+
     # Simulate the workflow logic
     if [[ "$repo" == *"redesigned-guacamole" ]]; then
         same_repo="true"
@@ -30,7 +30,7 @@ for repo in "${test_repos[@]}"; do
         echo "  📥 Checkout calling repo: WILL RUN"
         echo "  🔗 Symlink step: SKIPPED"
     fi
-    
+
     echo "  ✅ same-repo output: $same_repo"
     echo ""
 done
