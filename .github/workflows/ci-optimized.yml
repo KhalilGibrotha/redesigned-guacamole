@@ -415,17 +415,41 @@ jobs:
           head -20 .github/super-linter-dynamic.env
           echo ""
           echo "🎯 Validation summary:"
-          echo "  - YAML validation: ${yaml_validation} (files: ${{ steps.detect-files.outputs.yaml_files }})"
-          echo "  - Ansible validation: ${ansible_validation} (files: ${{ steps.detect-files.outputs.ansible_files }})"
-          echo "  - Markdown validation: ${markdown_validation} (files: ${{ steps.detect-files.outputs.markdown_files }})"
-          echo "  - Python validation: ${python_validation} (files: ${{ steps.detect-files.outputs.python_files }})"
-          echo "  - Shell validation: ${shell_validation} (files: ${{ steps.detect-files.outputs.shell_files }})"
+          echo "  - YAML files found: ${{ steps.detect-files.outputs.yaml_files }}"
+          echo "  - Ansible files found: ${{ steps.detect-files.outputs.ansible_files }}"
+          echo "  - Markdown files found: ${{ steps.detect-files.outputs.markdown_files }}"
+          echo "  - Python files found: ${{ steps.detect-files.outputs.python_files }}"
+          echo "  - Shell files found: ${{ steps.detect-files.outputs.shell_files }}"
+          echo ""
+          echo "📋 Linters that will be enabled based on file detection:"
+          [ "${{ steps.detect-files.outputs.yaml_files }}" -gt 0 ] && echo "  ✅ YAML/yamllint"
+          [ "${{ steps.detect-files.outputs.ansible_files }}" -gt 0 ] && echo "  ✅ Ansible/ansible-lint"
+          [ "${{ steps.detect-files.outputs.markdown_files }}" -gt 0 ] && echo "  ✅ Markdown/markdownlint"
+          [ "${{ steps.detect-files.outputs.python_files }}" -gt 0 ] && echo "  ✅ Python/flake8"
+          [ "${{ steps.detect-files.outputs.shell_files }}" -gt 0 ] && echo "  ✅ Shell/ShellCheck"
+          [ "${{ steps.detect-files.outputs.json_files }}" -gt 0 ] && echo "  ✅ JSON/jsonlint"
+          [ "${{ steps.detect-files.outputs.github_actions_files }}" -gt 0 ] && echo "  ✅ GitHub Actions/actionlint"
 
       - name: 🔍 Verify Configuration Files
         run: |
           echo "🔍 Verifying Super Linter configuration..."
-          echo "Configuration file contents:"
-          cat .github/super-linter-dynamic.env
+          echo "Static configuration file contents:"
+          cat .github/super-linter.env
+          echo ""
+          echo "🔍 Verifying yamllint configuration:"
+          if [ -f ".yamllint" ]; then
+            echo "✅ .yamllint file exists"
+            echo "📄 .yamllint line-length configuration:"
+            grep -A 10 "line-length:" .yamllint || echo "❌ line-length not found in .yamllint"
+          else
+            echo "❌ .yamllint file not found"
+          fi
+
+      - name: 🔍 Verify Configuration Files
+        run: |
+          echo "🔍 Verifying Super Linter configuration..."
+          echo "Static configuration file contents:"
+          cat .github/super-linter.env
           echo ""
           echo "🔍 Verifying yamllint configuration:"
           if [ -f ".yamllint" ]; then
@@ -440,6 +464,9 @@ jobs:
         id: super-linter
         uses: super-linter/super-linter@v5
         env:
+          # Use static configuration file
+          ENV_FILE: .github/super-linter.env
+
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -447,7 +474,7 @@ jobs:
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
           VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan == true }}
 
-          # Enable validation based on file detection
+          # Enable validation ONLY for file types that exist (no false values)
           VALIDATE_YAML: ${{ steps.detect-files.outputs.yaml_files > 0 }}
           VALIDATE_ANSIBLE: ${{ steps.detect-files.outputs.ansible_files > 0 }}
           VALIDATE_MARKDOWN: ${{ steps.detect-files.outputs.markdown_files > 0 }}
@@ -456,30 +483,6 @@ jobs:
           VALIDATE_JSON: ${{ steps.detect-files.outputs.json_files > 0 }}
           VALIDATE_SHELL_SHFMT: ${{ steps.detect-files.outputs.shell_files > 0 }}
           VALIDATE_GITHUB_ACTIONS: ${{ steps.detect-files.outputs.github_actions_files > 0 }}
-
-          # Configuration file paths - CRITICAL for custom configs
-          YAML_CONFIG_FILE: .yamllint
-          ANSIBLE_CONFIG_FILE: .ansible.cfg
-          
-          # Additional yamllint settings
-          YAMLLINT_CONFIG_FILE: .yamllint
-          YAML_ERROR_ON_WARNING: false
-
-          # Performance and output settings
-          PARALLEL: true
-          SLIM_IMAGE: true
-          FAIL_FAST: false
-          OUTPUT_FORMAT: tap
-          OUTPUT_DETAILS: detailed
-          CREATE_LOG_FILE: true
-          
-          # File filtering
-          USE_FIND_ALGORITHM: false
-          IGNORE_GITIGNORED_FILES: true
-          
-          # Suppress noise
-          SUPPRESS_POSSUM: true
-          SUPPRESS_FILE_TYPE_WARN: true
 
       - name: � Enhanced Super Linter Analysis
         if: always()
@@ -551,16 +554,16 @@ jobs:
           path: |
             super-linter.log
             github-super-linter.log
-            .github/super-linter-dynamic.env
+            .github/super-linter.env
           retention-days: 30
           if-no-files-found: ignore
 
-      - name: 📤 Upload Dynamic Configuration (Debug)
+      - name: 📤 Upload Static Configuration (Debug)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-config-${{ github.run_id }}
-          path: .github/super-linter-dynamic.env
+          path: .github/super-linter.env
           retention-days: 7
           if-no-files-found: warn
 
