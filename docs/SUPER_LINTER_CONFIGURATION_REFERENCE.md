@@ -13,7 +13,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
 ### 1. **Ansible Lint** 🤖
 - **Purpose**: Validates Ansible playbooks, roles, and tasks for best practices and common issues
 - **Config File**: `.ansible-lint`
-- **What it checks**: 
+- **What it checks**:
   - Playbook syntax and structure
   - Task naming conventions
   - Deprecated modules usage
@@ -172,6 +172,25 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
 ---
 
 ## 🚀 **Usage Examples**
+
+### **Full Codebase Scanning Trigger**
+
+You can enable full codebase scanning (instead of just changed files) in two ways:
+
+#### **Method 1: Trigger File (Automatic)**
+Create an empty file named `.lint-all-files` in the repository root:
+```bash
+# Create trigger file for full scan
+touch .lint-all-files
+git add .lint-all-files
+git commit -m "trigger: enable full codebase linting"
+git push
+```
+
+#### **Method 2: Manual Workflow Input**
+- Go to **Actions** → **🚀 CI/CD Pipeline** → **Run workflow**
+- Check **"Run full codebase scan"** option
+- Click **Run workflow**
 
 ### **Local Testing Commands**
 ```bash

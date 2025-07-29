@@ -2,7 +2,10 @@
   "threshold": 15,
   "minLines": 5,
   "minTokens": 50,
-  "reporters": ["console", "json"],
+  "reporters": [
+    "console",
+    "json"
+  ],
   "ignore": [
     "**/node_modules/**",
     "**/.git/**",
@@ -39,14 +42,36 @@
   "debug": false,
   "output": "./jscpd-report",
   "formatsExts": {
-    "javascript": ["js", "jsx"],
-    "typescript": ["ts", "tsx"],
-    "python": ["py"],
-    "yaml": ["yml", "yaml"],
-    "json": ["json"],
-    "markdown": ["md", "markdown"],
-    "shell": ["sh", "bash"],
-    "dockerfile": ["Dockerfile", "dockerfile"]
+    "javascript": [
+      "js",
+      "jsx"
+    ],
+    "typescript": [
+      "ts",
+      "tsx"
+    ],
+    "python": [
+      "py"
+    ],
+    "yaml": [
+      "yml",
+      "yaml"
+    ],
+    "json": [
+      "json"
+    ],
+    "markdown": [
+      "md",
+      "markdown"
+    ],
+    "shell": [
+      "sh",
+      "bash"
+    ],
+    "dockerfile": [
+      "Dockerfile",
+      "dockerfile"
+    ]
   },
   "excludePattern": [
     "test/**",

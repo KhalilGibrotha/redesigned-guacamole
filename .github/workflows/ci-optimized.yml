@@ -315,6 +315,29 @@ jobs:
             echo "❌ .yamllint file not found"
           fi
 
+      - name: 🎯 Check Full Scan Trigger
+        id: scan-trigger
+        run: |
+          echo "🎯 Checking for full scan trigger file..."
+          
+          # Check if trigger file exists
+          if [ -f ".lint-all-files" ]; then
+            echo "✅ Found .lint-all-files trigger - enabling full codebase scan"
+            echo "full_scan_triggered=true" >> $GITHUB_OUTPUT
+            echo "trigger_reason=trigger file" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.full_scan }}" == "true" ]; then
+            echo "✅ Manual full scan requested via workflow input"
+            echo "full_scan_triggered=true" >> $GITHUB_OUTPUT
+            echo "trigger_reason=manual input" >> $GITHUB_OUTPUT
+          else
+            echo "📄 No trigger detected - scanning changed files only"
+            echo "full_scan_triggered=false" >> $GITHUB_OUTPUT
+            echo "trigger_reason=default behavior" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Full scan triggered: $([ -f ".lint-all-files" ] || [ "${{ inputs.full_scan }}" == "true" ] && echo "true" || echo "false")"
+          echo "Reason: $([ -f ".lint-all-files" ] && echo "trigger file" || [ "${{ inputs.full_scan }}" == "true" ] && echo "manual input" || echo "default behavior")"
+
       - name: 🔍 Run Super Linter
         id: super-linter
         uses: super-linter/super-linter@v5
@@ -327,7 +350,7 @@ jobs:
 
           # Branch and validation settings
           DEFAULT_BRANCH: ${{ steps.config.outputs.default_branch }}
-          VALIDATE_ALL_CODEBASE: ${{ inputs.full_scan == true }}
+          VALIDATE_ALL_CODEBASE: ${{ steps.scan-trigger.outputs.full_scan_triggered == 'true' }}
 
       - name: � Enhanced Super Linter Analysis
         if: always()
