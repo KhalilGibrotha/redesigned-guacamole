@@ -2,7 +2,9 @@
 
 # Test file with intentional formatting issues for auto-fix testing
 
-import os, sys, json
+import os
+import sys
+import json
 import requests
 
 
