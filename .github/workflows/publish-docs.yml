@@ -201,8 +201,19 @@ jobs:
             echo "🏠 Same repository - macros already available, no copying needed"
           fi
 
-          # Make the script executable
-          chmod +x redesigned-guacamole/scripts/confluence_publisher.py
+          # Verify the script exists (no chmod needed for python3 execution)
+          if [ ! -f "redesigned-guacamole/scripts/confluence_publisher.py" ]; then
+            echo "❌ ERROR: confluence_publisher.py not found at expected path"
+            echo "🐛 Available files in scripts directory:"
+            if [ -d "redesigned-guacamole/scripts" ]; then
+              ls -la redesigned-guacamole/scripts/
+            else
+              echo "📁 Scripts directory not found!"
+            fi
+            exit 1
+          else
+            echo "✅ Confluence publisher script found and ready to use"
+          fi
 
           # Run the Python-based Confluence publisher
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
