@@ -516,7 +516,7 @@ jobs:
         id: apply-fixes
         run: |
           echo "🤖 Applying auto-fixes to detected issues..."
-          
+
           # Initialize counters
           total_fixes=0
           yaml_fixes=0
@@ -524,7 +524,7 @@ jobs:
           shell_fixes=0
           markdown_fixes=0
           json_fixes=0
-          
+
           # Python auto-fixes with Black and isort
           echo "🐍 Applying Python auto-fixes..."
           if command -v black >/dev/null 2>&1; then
@@ -539,7 +539,7 @@ jobs:
               echo "    Applied $python_black_count Black formatting fixes"
             fi
           fi
-          
+
           if command -v isort >/dev/null 2>&1; then
             echo "  🔧 Sorting Python imports with isort..."
             python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
@@ -548,7 +548,7 @@ jobs:
             total_fixes=$((total_fixes + python_isort_count))
             echo "    Applied $python_isort_count import sorting fixes"
           fi
-          
+
           # YAML auto-fixes (basic formatting)
           echo "📄 Checking YAML files..."
           yaml_count=0
@@ -565,7 +565,7 @@ jobs:
           yaml_fixes=$yaml_count
           total_fixes=$((total_fixes + yaml_count))
           echo "  Applied $yaml_count YAML formatting fixes"
-          
+
           # Shell script auto-fixes with shfmt
           echo "🐚 Applying shell script auto-fixes..."
           if command -v shfmt >/dev/null 2>&1; then
@@ -580,7 +580,7 @@ jobs:
             total_fixes=$((total_fixes + shell_count))
             echo "  Applied $shell_count shell script formatting fixes"
           fi
-          
+
           # JSON auto-fixes
           echo "📋 Applying JSON auto-fixes..."
           json_count=0
@@ -599,7 +599,7 @@ jobs:
           json_fixes=$json_count
           total_fixes=$((total_fixes + json_count))
           echo "  Applied $json_count JSON formatting fixes"
-          
+
           # Set outputs for the commit step
           echo "autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
           echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
@@ -609,7 +609,7 @@ jobs:
           echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
           echo "markdown_fixes=0" >> $GITHUB_OUTPUT
           echo "ansible_fixes=0" >> $GITHUB_OUTPUT
-          
+
           echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
 
       - name: 💾 Commit Auto-fixes

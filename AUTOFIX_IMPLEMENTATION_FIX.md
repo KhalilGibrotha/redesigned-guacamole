@@ -24,7 +24,7 @@ I've replaced the Super Linter auto-fix reliance with **direct formatter executi
 1. Run Super Linter for validation and reporting
 2. Execute formatters directly on files:
    - black --fix for Python
-   - isort for Python imports  
+   - isort for Python imports
    - shfmt for shell scripts
    - yamllint-based fixes for YAML
    - json.tool for JSON formatting
@@ -36,7 +36,7 @@ I've replaced the Super Linter auto-fix reliance with **direct formatter executi
 
 #### **New Step: "🤖 Apply Auto-fixes"**
 - **Python**: `black` + `isort` on all `.py` files
-- **Shell**: `shfmt` formatting on all `.sh` files  
+- **Shell**: `shfmt` formatting on all `.sh` files
 - **YAML**: Trailing whitespace removal and basic fixes
 - **JSON**: Proper formatting with `python -m json.tool`
 - **Counting**: Tracks actual files modified per formatter
@@ -81,7 +81,7 @@ The workflow will now:
 3. ✅ Commit the changes with message like:
    ```
    🤖 Auto-fix: Applied 1 linting fixes
-   
+
    Auto-fixes applied by formatters:
    - Python fixes: 1
    - Shell fixes: 0
@@ -106,7 +106,7 @@ jobs:
 - **isort**: Import statement organization and sorting
 - **Detection**: Uses `black --check --diff` to count changes
 
-### **Shell Scripts** 🐚  
+### **Shell Scripts** 🐚
 - **shfmt**: Indentation, spacing, formatting
 - **Detection**: Uses `shfmt -d` to identify changes needed
 
@@ -123,7 +123,7 @@ jobs:
 ### **Formatter Requirements**
 The workflow expects these tools to be available:
 - ✅ `black` (Python formatter)
-- ✅ `isort` (Python import sorter)  
+- ✅ `isort` (Python import sorter)
 - ✅ `shfmt` (Shell formatter)
 - ✅ `python3 -m json.tool` (JSON formatter)
 
