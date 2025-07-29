@@ -25,7 +25,7 @@ on:
 
 # Grant all permissions needed by the reusable workflow
 permissions:
-  contents: read
+  contents: write
   packages: read
   statuses: write
   security-events: write

@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: true
+      auto_fix:
+        description: 'Apply auto-fixes to detected issues'
+        required: false
+        type: boolean
+        default: true
       target_environment:
         description: 'Target environment for publishing'
         required: false
@@ -33,6 +38,11 @@ on:
         required: false
         type: boolean
         default: false
+      auto_fix:
+        description: 'Apply auto-fixes to detected issues'
+        required: false
+        type: boolean
+        default: true
       branch_name:
         description: 'Branch name to checkout'
         required: false
@@ -200,7 +210,7 @@ jobs:
     if: needs.detect-changes.outputs.any-code-changed == 'true' || inputs.full_scan == true
 
     permissions:
-      contents: read
+      contents: read   # Base permission for reading code
       packages: read
       statuses: write
       security-events: write
@@ -212,7 +222,24 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch_name || github.ref }}
 
-      - name: 🔧 Configure Environment
+      - name: � Check Write Permissions
+        id: check-permissions
+        run: |
+          # Try to create a test file to check write permissions
+          if echo "test" > .permission-test 2>/dev/null && rm .permission-test 2>/dev/null; then
+            echo "has_write_access=true" >> $GITHUB_OUTPUT
+            echo "✅ Write permissions available - auto-fixes can be committed"
+          else
+            echo "has_write_access=false" >> $GITHUB_OUTPUT
+            echo "ℹ️  Read-only mode - auto-fixes will run but not be committed"
+          fi
+
+          # Also check if auto_fix input is enabled
+          auto_fix_enabled="${{ inputs.auto_fix != false }}"
+          echo "auto_fix_enabled=$auto_fix_enabled" >> $GITHUB_OUTPUT
+          echo "🔧 Auto-fix enabled: $auto_fix_enabled"
+
+      - name: �🔧 Configure Environment
         id: config
         run: |
           # Dynamic branch detection
@@ -267,10 +294,10 @@ jobs:
           yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*" | wc -l)
           ansible_files=$(find . -type f \( -path "./playbooks/*" -o -path "./roles/*" \
             -o -name "site.yml" -o -name "playbook*.yml" -o -name "playbook*.yaml" \) | wc -l)
-          python_files=$(find . -type f -name "*.py" ! -path "./.git/*" ! -path "./.venv/*" ! -path "./venv/*" | wc -l)
+          python_files=$(find . -type f -name "*.py" ! -path "./.git/*" ! -path "./.venv/*" ! -path "./venv/*" ! -path "./.mypy_cache/*" ! -path "./__pycache__/*" | wc -l)
           markdown_files=$(find . -type f -name "*.md" ! -path "./.git/*" | wc -l)
           shell_files=$(find . -type f -name "*.sh" ! -path "./.git/*" | wc -l)
-          json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" | wc -l)
+          json_files=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" ! -path "./.mypy_cache/*" ! -path "./.pytest_cache/*" ! -path "./.venv/*" ! -path "./venv/*" ! -path "./.tox/*" ! -path "./__pycache__/*" | wc -l)
           github_actions_files=$(find .github/workflows -type f \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null |
             wc -l)
 
@@ -500,6 +527,11 @@ jobs:
             echo "### 🤖 Auto-fix Status"
             if [ "${{ steps.enhanced-analysis.outputs.autofix_needed }}" = "true" ]; then
               echo "✅ **Auto-fixes available**: ${{ steps.enhanced-analysis.outputs.total_fixes }} potential fixes detected"
+              if [ "${{ steps.check-permissions.outputs.has_write_access }}" = "true" ]; then
+                echo "📝 **Commit mode**: Auto-fixes will be applied and committed"
+              else
+                echo "👀 **Read-only mode**: Auto-fixes will be applied but not committed"
+              fi
             else
               echo "🎉 **No auto-fixes needed**: Code quality is excellent!"
             fi
@@ -512,10 +544,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 🤖 Apply Auto-fixes
-        if: always()
+        if: always() && steps.check-permissions.outputs.auto_fix_enabled == 'true'
         id: apply-fixes
         run: |
           echo "🤖 Applying auto-fixes to detected issues..."
+          echo "🔍 Auto-fix mode: ${{ inputs.auto_fix || 'true (default)' }}"
+          echo "🔐 Write access: ${{ steps.check-permissions.outputs.has_write_access }}"
 
           # Initialize counters
           total_fixes=0
@@ -527,13 +561,21 @@ jobs:
 
           # Python auto-fixes with Black and isort
           echo "🐍 Applying Python auto-fixes..."
+
+          # Debug: List Python files found
+          python_files_found=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*")
+          python_file_count=$(echo "$python_files_found" | grep -c "\.py$" || echo "0")
+          echo "  🔍 Found $python_file_count Python files to check"
+          if [ "$python_file_count" -gt 0 ] && [ "$python_file_count" -le 5 ]; then
+            echo "    Files: $python_files_found"
+          fi
           if command -v black >/dev/null 2>&1; then
-            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --check --quiet 2>/dev/null; then
+            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --check --quiet 2>/dev/null; then
               echo "  ✅ Python files already formatted correctly"
             else
               echo "  � Formatting Python files with Black..."
-              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
-              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs black
+              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
+              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black
               python_fixes=$((python_fixes + python_black_count))
               total_fixes=$((total_fixes + python_black_count))
               echo "    Applied $python_black_count Black formatting fixes"
@@ -542,8 +584,8 @@ jobs:
 
           if command -v isort >/dev/null 2>&1; then
             echo "  🔧 Sorting Python imports with isort..."
-            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
-            find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" | xargs isort
+            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
+            find . -name "*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort
             python_fixes=$((python_fixes + python_isort_count))
             total_fixes=$((total_fixes + python_isort_count))
             echo "    Applied $python_isort_count import sorting fixes"
@@ -584,7 +626,21 @@ jobs:
           # JSON auto-fixes
           echo "📋 Applying JSON auto-fixes..."
           json_count=0
-          for file in $(find . -name "*.json" | grep -v ".git" | grep -v "node_modules" | grep -v "package-lock.json"); do
+          for file in $(find . -name "*.json" \
+            -not -path "./.git/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.mypy_cache/*" \
+            -not -path "./.pytest_cache/*" \
+            -not -path "./.venv/*" \
+            -not -path "./venv/*" \
+            -not -path "./.tox/*" \
+            -not -path "./__pycache__/*" \
+            -not -name "package-lock.json" \
+            -not -name "*.tmp"); do
+            # Skip if file is not writable
+            if [ ! -w "$file" ]; then
+              continue
+            fi
             if python3 -m json.tool "$file" > "${file}.tmp" 2>/dev/null; then
               if ! diff -q "$file" "${file}.tmp" >/dev/null 2>&1; then
                 mv "${file}.tmp" "$file"
@@ -648,17 +704,21 @@ jobs:
           echo "  Applied $markdown_count markdown formatting fixes"
 
           # Set outputs for the commit step
-          echo "autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)" >> $GITHUB_OUTPUT
+          autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)
+          echo "autofix_needed=$autofix_needed" >> $GITHUB_OUTPUT
           echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
           echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
           echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
           echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
           echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
           echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
-          echo "ansible_fixes=0" >> $GITHUB_OUTPUT          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+          echo "ansible_fixes=0" >> $GITHUB_OUTPUT
+
+          echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
+          echo "📊 Autofix status: $autofix_needed (total_fixes=$total_fixes)"
 
       - name: 💾 Commit Auto-fixes
-        if: steps.apply-fixes.outputs.autofix_needed == 'true'
+        if: steps.apply-fixes.outputs.autofix_needed == 'true' && steps.check-permissions.outputs.has_write_access == 'true'
         run: |
           echo "💾 Committing auto-fixes..."
 
@@ -696,6 +756,22 @@ jobs:
           git push origin ${{ github.ref_name }}
 
           echo "✅ Auto-fixes committed and pushed!"
+
+      - name: ℹ️ Auto-fix Applied (Read-only Mode)
+        if: steps.apply-fixes.outputs.autofix_needed == 'true' && steps.check-permissions.outputs.has_write_access != 'true'
+        run: |
+          echo "🔧 Auto-fixes were applied but could not be committed (read-only mode)"
+          echo "📋 To enable auto-fix commits in remote workflows:"
+          echo "  1. Grant 'contents: write' permission in the calling workflow"
+          echo "  2. Or run the workflow directly on this repository"
+          echo ""
+          echo "📊 Fixes that would have been applied:"
+          echo "  - Python fixes: ${{ steps.apply-fixes.outputs.python_fixes || '0' }}"
+          echo "  - JSON fixes: ${{ steps.apply-fixes.outputs.json_fixes || '0' }}"
+          echo "  - YAML fixes: ${{ steps.apply-fixes.outputs.yaml_fixes || '0' }}"
+          echo "  - Shell fixes: ${{ steps.apply-fixes.outputs.shell_fixes || '0' }}"
+          echo "  - Markdown fixes: ${{ steps.apply-fixes.outputs.markdown_fixes || '0' }}"
+          echo "  - Total fixes: ${{ steps.apply-fixes.outputs.total_fixes || '0' }}"
 
       - name: ⚠️ Auto-fix Status
         if: steps.enhanced-analysis.outputs.autofix_needed == 'true'
@@ -853,14 +929,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          cache: 'pip'
+          # Don't use cache to avoid dependency on calling repo's requirements
 
       - name: 📦 Install Dependencies
         run: |
           python -m pip install --upgrade pip
+          # Only install dependencies if they exist in the calling repository
           if [ -f requirements.txt ]; then
+            echo "Found requirements.txt in calling repository, installing dependencies..."
             pip install -r requirements.txt
+          elif [ -f pyproject.toml ]; then
+            echo "Found pyproject.toml in calling repository, installing dependencies..."
+            pip install -e .
+          else
+            echo "No requirements.txt or pyproject.toml found in calling repository"
+            echo "Installing minimal dependencies for workflow functionality..."
           fi
+
+          # Always install tools needed for auto-fixing and analysis
+          echo "Installing workflow tools..."
+          pip install black isort PyYAML requests
 
       - name: 📝 Generate SARIF Security Reports Summary
         if: always()
