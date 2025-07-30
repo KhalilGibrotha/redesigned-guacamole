@@ -149,7 +149,7 @@ class ConfluencePublisher:
                 )
                 response.raise_for_status()
                 logger.info(f"✅ Updated page: {title} (ID: {page_id})")
-                return page_id
+                return str(page_id)
 
             else:
                 # Create new page
@@ -170,7 +170,7 @@ class ConfluencePublisher:
                 )
                 response.raise_for_status()
                 page_data = response.json()
-                page_id = page_data["id"]
+                page_id = str(page_data["id"])
                 logger.info(f"✅ Created page: {title} (ID: {page_id})")
                 return page_id
 
@@ -189,7 +189,7 @@ class ConfluencePublisher:
             results = response.json()
 
             if results["results"]:
-                return results["results"][0]
+                return dict(results["results"][0])
             return None
 
         except Exception as e:
@@ -204,7 +204,7 @@ class ConfluencePublisher:
                 params={"expand": "version,space"},
             )
             response.raise_for_status()
-            return response.json()
+            return dict(response.json())
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
@@ -311,7 +311,7 @@ class ConfluencePublisher:
 
                 if response.status_code == 200:
                     attachment_data = response.json()
-                    attachment_info = attachment_data["results"][0]
+                    attachment_info = dict(attachment_data["results"][0])
                     logger.info(f"✅ Uploaded attachment: {attachment_name}")
                     return attachment_info
                 else:
@@ -472,9 +472,10 @@ class DocumentProcessor:
                 root_page_id = hierarchy.get("root", {}).get("pageId")
                 if root_page_id:
                     logger.info(f"🔗 Resolved root category to page ID: {root_page_id}")
+                    return str(root_page_id)
                 else:
                     logger.error("❌ Root page ID not configured in hierarchy")
-                return root_page_id
+                return None
 
             # Look up category in hierarchy
             categories = hierarchy.get("categories", {})
@@ -493,11 +494,12 @@ class DocumentProcessor:
                     logger.info(
                         f"🔗 Resolved category '{category_key}' -> root page ID: {root_page_id}"
                     )
+                    return str(root_page_id)
                 else:
                     logger.error(
                         f"❌ Root page ID not configured for category '{category_key}'"
                     )
-                return root_page_id
+                return None
             elif parent_ref in categories:
                 # For nested categories, you could implement recursive resolution here
                 # For now, just handle root-level categories
@@ -507,7 +509,8 @@ class DocumentProcessor:
                 logger.warning(
                     f"💡 Falling back to root page for category '{category_key}'"
                 )
-                return hierarchy.get("root", {}).get("pageId")
+                root_page_id = hierarchy.get("root", {}).get("pageId")
+                return str(root_page_id) if root_page_id else None
             else:
                 logger.error(
                     f"❌ Unknown parent reference '{parent_ref}' for category '{category_key}'"
