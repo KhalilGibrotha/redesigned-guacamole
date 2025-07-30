@@ -1168,9 +1168,6 @@ jobs:
           echo "  - CONFLUENCE_URL available: ${{ secrets.CONFLUENCE_URL != '' }}"
           echo "  - CONFLUENCE_USER available: ${{ secrets.CONFLUENCE_USER != '' }}"
           echo "  - CONFLUENCE_API_TOKEN available: ${{ secrets.CONFLUENCE_API_TOKEN != '' }}"
-          echo "  - CONFLUENCE_URL length: ${#CONFLUENCE_URL:-0}"
-          echo "  - CONFLUENCE_USER length: ${#CONFLUENCE_USER:-0}"
-          echo "  - CONFLUENCE_TOKEN length: ${#CONFLUENCE_TOKEN:-0}"
 
           # Auto-enable dry-run if secrets are missing
           if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]] || [[ -z "${{ secrets.CONFLUENCE_USER }}" ]] || [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
