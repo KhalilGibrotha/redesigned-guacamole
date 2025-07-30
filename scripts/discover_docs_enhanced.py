@@ -20,7 +20,7 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
     Returns:
         dict: Structure with main pages, children, and nested sub-sections
     """
-    structure = {}
+    structure: dict[str, dict] = {}
 
     # Find all subdirectories in docs/
     if not os.path.exists(docs_path):
