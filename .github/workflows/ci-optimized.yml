@@ -1338,6 +1338,9 @@ jobs:
         run: |
           echo "📊 Generating publishing report..."
 
+          # Ensure output directory exists
+          mkdir -p output/confluence
+
           # Create a summary report
           cat > output/confluence/publishing_report.md << EOF
           # 📚 Confluence Publishing Report
