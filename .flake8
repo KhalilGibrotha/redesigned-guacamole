@@ -60,10 +60,7 @@ extend-ignore =
 # Allow complexity and other specific issues in certain files
 per-file-ignores =
     # Makefile complexity is functional and breaking it down would reduce readability
-    scripts/Makefile:*,
-    scripts/enhanced_linter_analysis.py:C901,
-
-# Show source code for each error
+    scripts/Makefile:*,# Show source code for each error
 show-source = True
 
 # Show pep8 error codes
