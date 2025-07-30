@@ -31,7 +31,7 @@ You can manually trigger the pipeline with these options:
 
 ## 📊 Reporting Features
 
-The pipeline generates comprehensive markdown reports including:
+The pipeline generates comprehensive Markdown reports including:
 
 - Repository statistics (file counts by type)
 - Quality gate results with status indicators

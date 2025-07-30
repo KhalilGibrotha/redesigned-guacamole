@@ -2,7 +2,10 @@
 
 ## Overview
 
-The CI workflow (`ci-optimized.yml`) is designed to be called from remote repositories without depending on the calling repository's Python dependencies.
+The CI workflow (`ci-optimizAll autofix tools are checked with `command -v` before use. If a tool is not available:
+- The workflow continues without that specific autofix
+- No error is thrown
+- Other autofixes still workml`) is designed to be called from remote repositories without depending on the calling repository's Python dependencies.
 
 ## Changes Made for Remote Compatibility
 
@@ -47,7 +50,7 @@ The CI workflow (`ci-optimized.yml`) is designed to be called from remote reposi
       echo "Installing minimal dependencies for workflow functionality..."
     fi
 
-    # ✅ Always install tools needed for auto-fixing and analysis
+    # ✅ Always install tools needed for autofix and analysis
     echo "Installing workflow tools..."
     pip install black isort PyYAML requests
 ```text
@@ -108,7 +111,7 @@ publish:
 
 ### From Remote Repository (Read-only Mode)
 ```yaml
-name: Lint with Auto-fix (Analysis Only)
+name: Lint with Autofix (Analysis Only)
 on: [push, pull_request]
 
 jobs:
@@ -116,16 +119,16 @@ jobs:
     uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
     with:
       auto_fix: true
-    # Note: Auto-fixes will be applied but not committed due to permission restrictions
+    # Note: Autofixes will be applied but not committed due to permission restrictions
 ```text
 
-### From Remote Repository (With Auto-fix Commits)
+### From Remote Repository (With Autofix Commits)
 ```yaml
-name: Lint with Auto-fix (Full Mode)
+name: Lint with Autofix (Full Mode)
 on: [push, pull_request]
 
 permissions:
-  contents: write  # Required for auto-fix commits
+  contents: write  # Required for autofix commits
 
 jobs:
   lint:
@@ -133,15 +136,15 @@ jobs:
     with:
       auto_fix: true
     permissions:
-      contents: write  # Enable auto-fix commits
+      contents: write  # Enable autofix commits
       packages: read
       statuses: write
 ```text
 
 ### From Same Repository (Full Access)
 ```yaml
-# Auto-fixes will be applied and committed automatically
-name: Lint with Auto-fix
+# Autofixes will be applied and committed automatically
+name: Lint with Autofix
 on: [push, pull_request]
 
 jobs:
@@ -151,7 +154,7 @@ jobs:
       auto_fix: true
 ```text
 
-## Auto-fix Capabilities
+## Autofix Capabilities
 
 ### Available Everywhere
 - **Python**: Black formatting, isort import sorting
@@ -160,7 +163,7 @@ jobs:
 
 ### Available with Super Linter
 - **Shell**: `shfmt` formatting
-- **Markdown**: `markdownlint-cli2` auto-fix, `prettier` formatting
+- **Markdown**: `markdownlint-cli2` autofix, `prettier` formatting
 - **Additional**: Various other formatters
 
 ## Troubleshooting
@@ -239,22 +242,22 @@ jobs:
            CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
      ```
 
-### Auto-fixes Applied But Not Committed
+### Autofixes Applied But Not Committed
 - **Cause**: Running in read-only mode (remote call without write permissions)
-- **Effect**: Auto-fixes are applied to detect issues but changes aren't committed
+- **Effect**: Autofixes are applied to detect issues but changes aren't committed
 - **Solution**:
   - **Option 1**: Add `contents: write` permission to enable commits
   - **Option 2**: Accept read-only mode for analysis purposes
 
-### Limited Auto-fixes
+### Limited Autofixes
 - **Cause**: Super Linter not running (minimal mode)
-- **Effect**: Only Python, YAML, and JSON auto-fixes available
+- **Effect**: Only Python, YAML, and JSON autofixes available
 - **Solution**: Normal - workflow degrades gracefully
 
 ### Cache Directory Permission Errors
-- **Cause**: Auto-fix tools trying to modify read-only cache files (`.mypy_cache`, `__pycache__`, etc.)
-- **Solution**: Already fixed - cache directories are excluded from auto-fix operations
-- **Effect**: Permission denied errors during JSON/Python auto-fixes
+- **Cause**: Autofix tools trying to modify read-only cache files (`.mypy_cache`, `__pycache__`, etc.)
+- **Solution**: Already fixed - cache directories are excluded from autofix operations
+- **Effect**: Permission denied errors during JSON/Python autofixes
 - **Solution**: Workflow now excludes cache directories from auto-fix operations
 
 ## Excluded Directories
