@@ -262,7 +262,26 @@ class SuperLinterAnalyzer:
     def analyze_json_files(self) -> Dict[str, Any]:
         """Analyze JSON files"""
         json_files = list(self.workspace_root.glob("**/*.json"))
-        json_files = [f for f in json_files if not any(skip in str(f) for skip in [".git", ".venv", "node_modules"])]
+        # More thorough filtering to exclude common large directories
+        json_files = [
+            f
+            for f in json_files
+            if not any(
+                skip in str(f)
+                for skip in [
+                    ".git",
+                    ".venv",
+                    "venv",
+                    "node_modules",
+                    "__pycache__",
+                    ".pytest_cache",
+                    ".mypy_cache",
+                    ".tox",
+                    "build",
+                    "dist",
+                ]
+            )
+        ]
 
         errors = 0
         warnings = 0
@@ -448,14 +467,25 @@ class SuperLinterAnalyzer:
         enabled_checks = sum(1 for check in checks.values() if check["enabled"])
         passed_checks = sum(1 for check in checks.values() if check["status"] == "✅ PASS" and check["enabled"])
 
-        # Calculate health score
+        # Calculate health score with more balanced approach
         if enabled_checks == 0:
             health_score = 100
         else:
+            # Base score from passed checks percentage
             base_score = (passed_checks / enabled_checks) * 100
-            error_penalty = min(total_errors * 5, 50)
-            warning_penalty = min(total_warnings * 2, 30)
-            health_score = max(0, base_score - error_penalty - warning_penalty)
+
+            # More moderate penalty system:
+            # - Errors are serious: 3 points each, max 30 point penalty
+            # - Warnings are minor: 0.5 points each, max 15 point penalty
+            error_penalty = min(total_errors * 3, 30)
+            warning_penalty = min(total_warnings * 0.5, 15)
+
+            # Apply penalties but ensure reasonable minimum score
+            health_score = max(20, base_score - error_penalty - warning_penalty)
+
+            # Bonus for having no errors (even with warnings)
+            if total_errors == 0 and total_warnings <= 10:
+                health_score = min(100, health_score + 10)  # Small bonus for clean code
 
         summary = {
             "total_errors": total_errors,
