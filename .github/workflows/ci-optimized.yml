@@ -98,10 +98,10 @@ jobs:
           # Detect external calls via workflow_call event
           # When called externally via workflow_call, we assume all changes for simplicity
           if [[ "${{ github.event_name }}" == "workflow_call" ]]; then
-            echo "external-call=true" >> $GITHUB_OUTPUT
+            echo "external-call=true" >> "$GITHUB_OUTPUT"
             echo "🔄 External workflow call detected (workflow_call event) - will assume docs changed"
           else
-            echo "external-call=false" >> $GITHUB_OUTPUT
+            echo "external-call=false" >> "$GITHUB_OUTPUT"
             echo "🏠 Internal repository call - will detect actual changes"
           fi
 
@@ -138,70 +138,82 @@ jobs:
         id: defaults
         if: steps.context.outputs.external-call != 'true' && steps.changes.outcome != 'success'
         run: |
-          echo "docs=false" >> $GITHUB_OUTPUT
-          echo "ansible=false" >> $GITHUB_OUTPUT
-          echo "python=false" >> $GITHUB_OUTPUT
-          echo "workflows=false" >> $GITHUB_OUTPUT
-          echo "code=false" >> $GITHUB_OUTPUT
+          {
+            echo "docs=false"
+            echo "ansible=false"
+            echo "python=false"
+            echo "workflows=false"
+            echo "code=false"
+          } >> "$GITHUB_OUTPUT"
 
       - name: 🔄 Set External Changes
         id: external
         if: steps.context.outputs.external-call == 'true'
         run: |
           echo "🔄 External call detected - assuming all changes"
-          echo "docs-changed=true" >> $GITHUB_OUTPUT
-          echo "ansible-changed=true" >> $GITHUB_OUTPUT
-          echo "python-changed=true" >> $GITHUB_OUTPUT
-          echo "workflows-changed=true" >> $GITHUB_OUTPUT
-          echo "any-code-changed=true" >> $GITHUB_OUTPUT
+          {
+            echo "docs-changed=true"
+            echo "ansible-changed=true"
+            echo "python-changed=true"
+            echo "workflows-changed=true"
+            echo "any-code-changed=true"
+          } >> "$GITHUB_OUTPUT"
 
       - name: 🔄 Set Internal Changes
         id: internal
         if: steps.context.outputs.external-call != 'true'
         run: |
           echo "🏠 Internal call - using actual change detection"
-          echo "docs-changed=${{ steps.changes.outputs.docs || 'false' }}" >> $GITHUB_OUTPUT
-          echo "ansible-changed=${{ steps.changes.outputs.ansible || 'false' }}" >> $GITHUB_OUTPUT
-          echo "python-changed=${{ steps.changes.outputs.python || 'false' }}" >> $GITHUB_OUTPUT
-          echo "workflows-changed=${{ steps.changes.outputs.workflows || 'false' }}" >> $GITHUB_OUTPUT
-          echo "any-code-changed=${{ steps.changes.outputs.code || 'false' }}" >> $GITHUB_OUTPUT
+          {
+            echo "docs-changed=${{ steps.changes.outputs.docs || 'false' }}"
+            echo "ansible-changed=${{ steps.changes.outputs.ansible || 'false' }}"
+            echo "python-changed=${{ steps.changes.outputs.python || 'false' }}"
+            echo "workflows-changed=${{ steps.changes.outputs.workflows || 'false' }}"
+            echo "any-code-changed=${{ steps.changes.outputs.code || 'false' }}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: 🔄 Finalize Change Detection
         id: final
         run: |
           # Use outputs from the step that actually ran
           if [[ "${{ steps.context.outputs.external-call }}" == "true" ]]; then
-            echo "docs-changed=${{ steps.external.outputs.docs-changed }}" >> $GITHUB_OUTPUT
-            echo "ansible-changed=${{ steps.external.outputs.ansible-changed }}" >> $GITHUB_OUTPUT
-            echo "python-changed=${{ steps.external.outputs.python-changed }}" >> $GITHUB_OUTPUT
-            echo "workflows-changed=${{ steps.external.outputs.workflows-changed }}" >> $GITHUB_OUTPUT
-            echo "any-code-changed=${{ steps.external.outputs.any-code-changed }}" >> $GITHUB_OUTPUT
+            {
+              echo "docs-changed=${{ steps.external.outputs.docs-changed }}"
+              echo "ansible-changed=${{ steps.external.outputs.ansible-changed }}"
+              echo "python-changed=${{ steps.external.outputs.python-changed }}"
+              echo "workflows-changed=${{ steps.external.outputs.workflows-changed }}"
+              echo "any-code-changed=${{ steps.external.outputs.any-code-changed }}"
+            } >> "$GITHUB_OUTPUT"
           else
-            echo "docs-changed=${{ steps.internal.outputs.docs-changed }}" >> $GITHUB_OUTPUT
-            echo "ansible-changed=${{ steps.internal.outputs.ansible-changed }}" >> $GITHUB_OUTPUT
-            echo "python-changed=${{ steps.internal.outputs.python-changed }}" >> $GITHUB_OUTPUT
-            echo "workflows-changed=${{ steps.internal.outputs.workflows-changed }}" >> $GITHUB_OUTPUT
-            echo "any-code-changed=${{ steps.internal.outputs.any-code-changed }}" >> $GITHUB_OUTPUT
+            {
+              echo "docs-changed=${{ steps.internal.outputs.docs-changed }}"
+              echo "ansible-changed=${{ steps.internal.outputs.ansible-changed }}"
+              echo "python-changed=${{ steps.internal.outputs.python-changed }}"
+              echo "workflows-changed=${{ steps.internal.outputs.workflows-changed }}"
+              echo "any-code-changed=${{ steps.internal.outputs.any-code-changed }}"
+            } >> "$GITHUB_OUTPUT"
           fi
 
       - name: 📊 Debug Publishing Conditions
         run: |
-          echo "## 🔍 Publishing Condition Debug" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Event name**: ${{ github.event_name }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Branch reference**: ${{ github.ref }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Branch name**: ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **External call**: ${{ steps.context.outputs.external-call }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Docs changed**: ${{ steps.final.outputs.docs-changed }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Full scan input**: ${{ inputs.full_scan }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Publishing will run if:" >> "$GITHUB_STEP_SUMMARY"
-          echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' ||
-            github.event_name == 'workflow_dispatch' }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "2. External call OR branch is main/release/hotfix ✅: ${{ steps.context.outputs.external-call == 'true' ||
-            github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') ||
-            startsWith(github.ref, 'refs/heads/hotfix/') }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "3. Docs changed OR full_scan OR external call ✅: ${{ steps.final.outputs.docs-changed == 'true' ||
-            inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## 🔍 Publishing Condition Debug"
+            echo "- **Event name**: ${{ github.event_name }}"
+            echo "- **Branch reference**: ${{ github.ref }}"
+            echo "- **Branch name**: ${{ github.ref_name }}"
+            echo "- **External call**: ${{ steps.context.outputs.external-call }}"
+            echo "- **Docs changed**: ${{ steps.final.outputs.docs-changed }}"
+            echo "- **Full scan input**: ${{ inputs.full_scan }}"
+            echo ""
+            echo "### Publishing will run if:"
+            echo "1. Event is 'workflow_call/workflow_dispatch' ✅: ${{ github.event_name == 'workflow_call' ||
+              github.event_name == 'workflow_dispatch' }}"
+            echo "2. External call OR branch is main/release/hotfix ✅: ${{ steps.context.outputs.external-call == 'true' ||
+              github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') ||
+              startsWith(github.ref, 'refs/heads/hotfix/') }}"
+            echo "3. Docs changed OR full_scan OR external call ✅: ${{ steps.final.outputs.docs-changed == 'true' ||
+              inputs.full_scan == true || steps.context.outputs.external-call == 'true' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   super-linter:
     name: 🔍 Super Linter
@@ -231,10 +243,10 @@ jobs:
           # Check if we're in the redesigned-guacamole repo or being called remotely
           if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
             echo "🏠 Running within redesigned-guacamole repository"
-            echo "same-repo=true" >> $GITHUB_OUTPUT
+            echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
             echo "🌐 Being called from external repository: ${{ github.repository }}"
-            echo "same-repo=false" >> $GITHUB_OUTPUT
+            echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 📥 Checkout Redesigned-Guacamole (Lint Configs)
@@ -330,20 +342,20 @@ jobs:
             echo "📜 Ansible repository detected!"
             echo "   - Using Ansible-optimized shellcheck configuration"
             echo "   - Excluded rules: SC1091, SC2034, SC2154, SC2086"
-            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086"' >> $GITHUB_ENV
-            echo "REPO_TYPE=ansible" >> $GITHUB_ENV
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086"' >> "$GITHUB_ENV"
+            echo "REPO_TYPE=ansible" >> "$GITHUB_ENV"
           elif [[ -d "scripts" || -f "install.sh" || -f "setup.sh" || -f "build.sh" ]]; then
             echo "🛠️ Standalone script repository detected!"
             echo "   - Using strict shellcheck configuration"
             echo "   - Excluded rules: SC1091, SC2034, SC2154 (minimal exclusions)"
-            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154"' >> $GITHUB_ENV
-            echo "REPO_TYPE=scripts" >> $GITHUB_ENV
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154"' >> "$GITHUB_ENV"
+            echo "REPO_TYPE=scripts" >> "$GITHUB_ENV"
           else
             echo "🔄 CI/CD repository detected!"
             echo "   - Using CI/CD-optimized shellcheck configuration"
             echo "   - Excluded rules: SC1091, SC2034, SC2154, SC2086, SC2129, SC2038, SC2015, SC2044, SC2193, SC2081"
-            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086,SC2129,SC2038,SC2015,SC2044,SC2193,SC2081"' >> $GITHUB_ENV
-            echo "REPO_TYPE=cicd" >> $GITHUB_ENV
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086,SC2129,SC2038,SC2015,SC2044,SC2193,SC2081"' >> "$GITHUB_ENV"
+            echo "REPO_TYPE=cicd" >> "$GITHUB_ENV"
           fi
 
           echo "✅ Repository type: $REPO_TYPE"
@@ -395,10 +407,10 @@ jobs:
         run: |
           # Try to create a test file to check write permissions
           if echo "test" > .permission-test 2>/dev/null && rm .permission-test 2>/dev/null; then
-            echo "has_write_access=true" >> $GITHUB_OUTPUT
+            echo "has_write_access=true" >> "$GITHUB_OUTPUT"
             echo "✅ Write permissions available - auto-fixes can be committed"
           else
-            echo "has_write_access=false" >> $GITHUB_OUTPUT
+            echo "has_write_access=false" >> "$GITHUB_OUTPUT"
             echo "ℹ️  Read-only mode - auto-fixes will run but not be committed"
           fi
 
@@ -411,16 +423,16 @@ jobs:
             echo "🔧 Auto-fix enabled (input: ${{ inputs.auto_fix || 'default true' }})"
           fi
           echo "🐛 Setting auto_fix_enabled=$auto_fix_enabled"
-          echo "auto_fix_enabled=$auto_fix_enabled" >> $GITHUB_OUTPUT
+          echo "auto_fix_enabled=$auto_fix_enabled" >> "$GITHUB_OUTPUT"
 
       - name: �🔧 Configure Environment
         id: config
         run: |
           # Dynamic branch detection
           if [ "${{ github.event.repository.default_branch }}" != "" ]; then
-            echo "default_branch=${{ github.event.repository.default_branch }}" >> $GITHUB_OUTPUT
+            echo "default_branch=${{ github.event.repository.default_branch }}" >> "$GITHUB_OUTPUT"
           else
-            echo "default_branch=main" >> $GITHUB_OUTPUT
+            echo "default_branch=main" >> "$GITHUB_OUTPUT"
           fi
 
       - name: 🔍 Validate Critical Linter Configurations
@@ -481,13 +493,15 @@ jobs:
             wc -l)
 
           # Set outputs
-          echo "yaml_files=$yaml_files" >> $GITHUB_OUTPUT
-          echo "ansible_files=$ansible_files" >> $GITHUB_OUTPUT
-          echo "python_files=$python_files" >> $GITHUB_OUTPUT
-          echo "markdown_files=$markdown_files" >> $GITHUB_OUTPUT
-          echo "shell_files=$shell_files" >> $GITHUB_OUTPUT
-          echo "json_files=$json_files" >> $GITHUB_OUTPUT
-          echo "github_actions_files=$github_actions_files" >> $GITHUB_OUTPUT
+          {
+            echo "yaml_files=$yaml_files"
+            echo "ansible_files=$ansible_files"
+            echo "python_files=$python_files"
+            echo "markdown_files=$markdown_files"
+            echo "shell_files=$shell_files"
+            echo "json_files=$json_files"
+            echo "github_actions_files=$github_actions_files"
+          } >> "$GITHUB_OUTPUT"
 
           # Output summary
           echo "🎯 File detection summary:"
@@ -646,12 +660,13 @@ jobs:
             echo "    Files: $python_files_found"
           fi
           if command -v black >/dev/null 2>&1; then
-            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --check --quiet 2>/dev/null; then
+            # Use find -exec instead of xargs to handle filenames with spaces
+            if find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" -exec black --check --quiet {} + 2>/dev/null; then
               echo "  ✅ Python files already formatted correctly"
             else
-              echo "  � Formatting Python files with Black..."
-              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black --diff --quiet 2>&1 | grep -c "would reformat" || echo "0")
-              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs black
+              echo "  🔧 Formatting Python files with Black..."
+              python_black_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" -exec black --diff --quiet {} + 2>&1 | grep -c "would reformat" || echo "0")
+              find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" -exec black {} +
               python_fixes=$((python_fixes + python_black_count))
               total_fixes=$((total_fixes + python_black_count))
               echo "    Applied $python_black_count Black formatting fixes"
@@ -660,8 +675,8 @@ jobs:
 
           if command -v isort >/dev/null 2>&1; then
             echo "  🔧 Sorting Python imports with isort..."
-            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort --check-only --diff 2>&1 | grep -c "Fixing" || echo "0")
-            find . -name "*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" | xargs isort
+            python_isort_count=$(find . -name "*.py" -not -path "./.git/*" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" -exec isort --check-only --diff {} + 2>&1 | grep -c "Fixing" || echo "0")
+            find . -name "*.py" -not -path "./.venv/*" -not -path "./venv/*" -not -path "./node_modules/*" -not -path "./.mypy_cache/*" -not -path "./__pycache__/*" -exec isort {} +
             python_fixes=$((python_fixes + python_isort_count))
             total_fixes=$((total_fixes + python_isort_count))
             echo "    Applied $python_isort_count import sorting fixes"
@@ -670,7 +685,8 @@ jobs:
           # YAML auto-fixes (basic formatting)
           echo "📄 Checking YAML files..."
           yaml_count=0
-          for file in $(find . -name "*.yml" -o -name "*.yaml" | grep -v ".git"); do
+          # Use while loop instead of for loop with find to handle filenames with spaces
+          while IFS= read -r -d '' file; do
             if yamllint "$file" >/dev/null 2>&1; then
               continue
             else
@@ -679,7 +695,7 @@ jobs:
                 yaml_count=$((yaml_count + 1))
               fi
             fi
-          done
+          done < <(find . -name "*.yml" -o -name "*.yaml" | grep -v ".git" | tr '\n' '\0')
           yaml_fixes=$yaml_count
           total_fixes=$((total_fixes + yaml_count))
           echo "  Applied $yaml_count YAML formatting fixes"
@@ -688,12 +704,13 @@ jobs:
           echo "🐚 Applying shell script auto-fixes..."
           if command -v shfmt >/dev/null 2>&1; then
             shell_count=0
-            for file in $(find . -name "*.sh" | grep -v ".git"); do
+            # Use while loop instead of for loop with find
+            while IFS= read -r -d '' file; do
               if shfmt -d "$file" >/dev/null 2>&1; then
                 shfmt -w "$file"
                 shell_count=$((shell_count + 1))
               fi
-            done
+            done < <(find . -name "*.sh" | grep -v ".git" | tr '\n' '\0')
             shell_fixes=$shell_count
             total_fixes=$((total_fixes + shell_count))
             echo "  Applied $shell_count shell script formatting fixes"
@@ -702,17 +719,8 @@ jobs:
           # JSON auto-fixes
           echo "📋 Applying JSON auto-fixes..."
           json_count=0
-          for file in $(find . -name "*.json" \
-            -not -path "./.git/*" \
-            -not -path "./node_modules/*" \
-            -not -path "./.mypy_cache/*" \
-            -not -path "./.pytest_cache/*" \
-            -not -path "./.venv/*" \
-            -not -path "./venv/*" \
-            -not -path "./.tox/*" \
-            -not -path "./__pycache__/*" \
-            -not -name "package-lock.json" \
-            -not -name "*.tmp"); do
+          # Use while loop instead of for loop with find
+          while IFS= read -r -d '' file; do
             # Skip if file is not writable
             if [ ! -w "$file" ]; then
               continue
@@ -727,7 +735,17 @@ jobs:
             else
               rm -f "${file}.tmp"
             fi
-          done
+          done < <(find . -name "*.json" \
+            -not -path "./.git/*" \
+            -not -path "./node_modules/*" \
+            -not -path "./.mypy_cache/*" \
+            -not -path "./.pytest_cache/*" \
+            -not -path "./.venv/*" \
+            -not -path "./venv/*" \
+            -not -path "./.tox/*" \
+            -not -path "./__pycache__/*" \
+            -not -name "package-lock.json" \
+            -not -name "*.tmp" -print0)
           json_fixes=$json_count
           total_fixes=$((total_fixes + json_count))
           echo "  Applied $json_count JSON formatting fixes"
@@ -737,7 +755,8 @@ jobs:
           markdown_count=0
 
           # Method 1: Basic markdown fixes (trailing whitespace, line endings)
-          for file in $(find . -name "*.md" | grep -v ".git" | grep -v "node_modules"); do
+          # Use while loop instead of for loop with find
+          while IFS= read -r -d '' file; do
             original_size=$(wc -c < "$file" 2>/dev/null || echo "0")
 
             # Fix trailing whitespace
@@ -749,30 +768,31 @@ jobs:
             fi
 
             # Fix multiple consecutive empty lines (reduce to max 2)
-            awk '/^$/{if(++n<=2)print;next}{n=0;print}' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file" 2>/dev/null || true
+            if awk '/^$/{if(++n<=2)print;next}{n=0;print}' "$file" > "${file}.tmp" 2>/dev/null; then
+              mv "${file}.tmp" "$file" 2>/dev/null || true
+            else
+              rm -f "${file}.tmp" 2>/dev/null || true
+            fi
 
             new_size=$(wc -c < "$file" 2>/dev/null || echo "0")
             if [ "$original_size" != "$new_size" ]; then
               markdown_count=$((markdown_count + 1))
             fi
-          done
+          done < <(find . -name "*.md" | grep -v ".git" | grep -v "node_modules" | tr '\n' '\0')
 
           # Method 2: Try markdownlint-cli2 auto-fix if available
           if command -v markdownlint-cli2 >/dev/null 2>&1; then
             echo "  🔧 Running markdownlint-cli2 auto-fix..."
-            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
-              xargs markdownlint-cli2 --fix --config .markdownlint.json 2>/dev/null || true
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -exec markdownlint-cli2 --fix --config .markdownlint.json {} + 2>/dev/null || true
           elif command -v markdownlint >/dev/null 2>&1; then
             echo "  🔧 Running markdownlint auto-fix..."
-            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
-              xargs markdownlint --fix --config .markdownlint.json 2>/dev/null || true
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -exec markdownlint --fix --config .markdownlint.json {} + 2>/dev/null || true
           fi
 
           # Method 3: Try prettier for markdown if available
           if command -v prettier >/dev/null 2>&1; then
             echo "  🔧 Running prettier for markdown..."
-            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" | \
-              xargs prettier --write --parser markdown --prose-wrap preserve 2>/dev/null || true
+            find . -name "*.md" -not -path "./.git/*" -not -path "./node_modules/*" -exec prettier --write --parser markdown --prose-wrap preserve {} + 2>/dev/null || true
           fi
 
           markdown_fixes=$markdown_count
@@ -780,15 +800,21 @@ jobs:
           echo "  Applied $markdown_count markdown formatting fixes"
 
           # Set outputs for the commit step
-          autofix_needed=$([ $total_fixes -gt 0 ] && echo true || echo false)
-          echo "autofix_needed=$autofix_needed" >> $GITHUB_OUTPUT
-          echo "total_fixes=$total_fixes" >> $GITHUB_OUTPUT
-          echo "python_fixes=$python_fixes" >> $GITHUB_OUTPUT
-          echo "yaml_fixes=$yaml_fixes" >> $GITHUB_OUTPUT
-          echo "shell_fixes=$shell_fixes" >> $GITHUB_OUTPUT
-          echo "json_fixes=$json_fixes" >> $GITHUB_OUTPUT
-          echo "markdown_fixes=$markdown_fixes" >> $GITHUB_OUTPUT
-          echo "ansible_fixes=0" >> $GITHUB_OUTPUT
+          if [ "$total_fixes" -gt 0 ]; then
+            autofix_needed="true"
+          else
+            autofix_needed="false"
+          fi
+          {
+            echo "autofix_needed=$autofix_needed"
+            echo "total_fixes=$total_fixes"
+            echo "python_fixes=$python_fixes"
+            echo "yaml_fixes=$yaml_fixes"
+            echo "shell_fixes=$shell_fixes"
+            echo "json_fixes=$json_fixes"
+            echo "markdown_fixes=$markdown_fixes"
+            echo "ansible_fixes=0"
+          } >> "$GITHUB_OUTPUT"
 
           echo "🎯 Auto-fix summary: $total_fixes total fixes applied"
           echo "📊 Autofix status: $autofix_needed (total_fixes=$total_fixes)"
@@ -950,10 +976,11 @@ jobs:
           echo "🔒 Checking file permissions..."
 
           # Check for world-writable files
-          if find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" |
-            xargs ls -la | grep "^-.......rw"; then
+          # Use find -exec instead of xargs to handle filenames with spaces
+          if find . \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" \) -exec ls -la {} + |
+            grep "^-.......rw"; then
             echo "❌ World-writable files found"
-            find . -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" | xargs ls -la | grep "^-.......rw"
+            find . \( -name "*.yml" -o -name "*.yaml" -o -name "*.py" -o -name "*.sh" \) -exec ls -la {} + | grep "^-.......rw"
             exit 1
           else
             echo "✅ File permissions look secure"
@@ -988,13 +1015,13 @@ jobs:
           # Check if we're in the redesigned-guacamole repo or being called remotely
           if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
             echo "🏠 Running within redesigned-guacamole repository"
-            echo "same-repo=true" >> $GITHUB_OUTPUT
+            echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
             echo "🌐 Being called from external repository: ${{ github.repository }}"
-            echo "same-repo=false" >> $GITHUB_OUTPUT
+            echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "🐛 Debug: same-repo detection result: $([ "${{ github.repository }}" == *"redesigned-guacamole" ] && echo "true" || echo "false")"
+          echo "🐛 Debug: same-repo detection result: $([[ "${{ github.repository }}" == *"redesigned-guacamole" ]] && echo "true" || echo "false")"
 
       - name: 📥 Checkout Redesigned-Guacamole (Scripts)
         uses: actions/checkout@v4
@@ -1111,9 +1138,9 @@ jobs:
           echo "  - CONFLUENCE_URL available: ${{ secrets.CONFLUENCE_URL != '' }}"
           echo "  - CONFLUENCE_USER available: ${{ secrets.CONFLUENCE_USER != '' }}"
           echo "  - CONFLUENCE_API_TOKEN available: ${{ secrets.CONFLUENCE_API_TOKEN != '' }}"
-          echo "  - CONFLUENCE_URL length: ${#CONFLUENCE_URL}"
-          echo "  - CONFLUENCE_USER length: ${#CONFLUENCE_USER}"
-          echo "  - CONFLUENCE_TOKEN length: ${#CONFLUENCE_TOKEN}"
+          echo "  - CONFLUENCE_URL length: ${#CONFLUENCE_URL:-0}"
+          echo "  - CONFLUENCE_USER length: ${#CONFLUENCE_USER:-0}"
+          echo "  - CONFLUENCE_TOKEN length: ${#CONFLUENCE_TOKEN:-0}"
 
           # Auto-enable dry-run if secrets are missing
           if [[ -z "${{ secrets.CONFLUENCE_URL }}" ]] || [[ -z "${{ secrets.CONFLUENCE_USER }}" ]] || [[ -z "${{ secrets.CONFLUENCE_API_TOKEN }}" ]]; then
@@ -1173,7 +1200,7 @@ jobs:
           fi
 
           # Store the effective dry-run status for later steps
-          echo "EFFECTIVE_DRY_RUN=$effective_dry_run" >> $GITHUB_ENV
+          echo "EFFECTIVE_DRY_RUN=$effective_dry_run" >> "$GITHUB_ENV"
 
       - name: 🔧 Prepare Publishing Environment
         run: |
@@ -1194,11 +1221,13 @@ jobs:
           CONFLUENCE_USER_VALUE="${{ secrets.CONFLUENCE_USER || 'not-configured' }}"
           CONFLUENCE_TOKEN_VALUE="${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
 
-          echo "CONFLUENCE_URL=$CONFLUENCE_URL_VALUE" >> $GITHUB_ENV
-          echo "CONFLUENCE_USER=$CONFLUENCE_USER_VALUE" >> $GITHUB_ENV
-          echo "CONFLUENCE_TOKEN=$CONFLUENCE_TOKEN_VALUE" >> $GITHUB_ENV
-          echo "DRY_RUN=${{ inputs.dry_run }}" >> $GITHUB_ENV
-          echo "TARGET_ENV=${{ inputs.target_environment }}" >> $GITHUB_ENV
+          {
+            echo "CONFLUENCE_URL=$CONFLUENCE_URL_VALUE"
+            echo "CONFLUENCE_USER=$CONFLUENCE_USER_VALUE"
+            echo "CONFLUENCE_TOKEN=$CONFLUENCE_TOKEN_VALUE"
+            echo "DRY_RUN=${{ inputs.dry_run }}"
+            echo "TARGET_ENV=${{ inputs.target_environment }}"
+          } >> "$GITHUB_ENV"
 
           echo "🐛 Environment variables set:"
           echo "  - CONFLUENCE_URL: ${CONFLUENCE_URL_VALUE:0:30}..."
@@ -1316,29 +1345,37 @@ jobs:
       - name: 🔔 Publishing Summary
         if: always()
         run: |
-          echo "## 📚 Confluence Publishing Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target Environment**: ${{ inputs.target_environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Dry Run**: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Git Reference**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Repository Context**: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'Remote Call' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 📚 Confluence Publishing Summary"
+            echo ""
+            echo "### 📋 Details"
+            echo "- **Target Environment**: ${{ inputs.target_environment }}"
+            echo "- **Dry Run**: ${{ inputs.dry_run }}"
+            echo "- **Git Reference**: ${{ github.ref_name }}"
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo "- **Repository Context**: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'Remote Call' }}"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ "$EFFECTIVE_DRY_RUN" == "true" ]]; then
-            echo "### 🧪 Dry Run Results" >> $GITHUB_STEP_SUMMARY
-            echo "- No actual changes were made to Confluence" >> $GITHUB_STEP_SUMMARY
-            echo "- Documentation processing completed successfully" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### 🧪 Dry Run Results"
+              echo "- No actual changes were made to Confluence"
+              echo "- Documentation processing completed successfully"
+            } >> "$GITHUB_STEP_SUMMARY"
             if [[ "${{ inputs.dry_run }}" != "true" ]]; then
-              echo "- **Auto-enabled due to missing Confluence secrets**" >> $GITHUB_STEP_SUMMARY
-              echo "- Add CONFLUENCE_URL, CONFLUENCE_USER, and CONFLUENCE_API_TOKEN secrets for live publishing" >> $GITHUB_STEP_SUMMARY
+              {
+                echo "- **Auto-enabled due to missing Confluence secrets**"
+                echo "- Add CONFLUENCE_URL, CONFLUENCE_USER, and CONFLUENCE_API_TOKEN secrets for live publishing"
+              } >> "$GITHUB_STEP_SUMMARY"
             fi
-            echo "- Ready for live publishing when secrets are configured" >> $GITHUB_STEP_SUMMARY
+            echo "- Ready for live publishing when secrets are configured" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### ✅ Publishing Results" >> $GITHUB_STEP_SUMMARY
-            echo "- Documentation has been published to Confluence" >> $GITHUB_STEP_SUMMARY
-            echo "- Check Confluence space for updated content" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### ✅ Publishing Results"
+              echo "- Documentation has been published to Confluence"
+              echo "- Check Confluence space for updated content"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # Comprehensive report - always runs to provide summary
