@@ -20,7 +20,21 @@
     "htmlcov",
     "\\.coverage",
     "page_id_cache\\.json",
-    "tmp"
+    "tmp",
+    ".*\\.md$",
+    ".*\\.j2$",
+    ".*\\.jinja$",
+    ".*\\.jinja2$",
+    ".*\\.py$",
+    ".*\\.yml$",
+    ".*\\.yaml$",
+    ".*\\.json$",
+    ".*\\.sh$",
+    ".*\\.bash$",
+    ".*\\.js$",
+    ".*\\.ts$",
+    ".*\\.jsx$",
+    ".*\\.tsx$"
   ],
   "AllowedContentTypes": [
     "application/ecmascript",
