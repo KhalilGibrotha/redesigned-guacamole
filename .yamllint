@@ -22,14 +22,13 @@ rules:
 
   # Boolean values - enforce consistent true/false over yes/no
   truthy:
-    allowed-values: ['true', 'false']
+    allowed-values: ["true", "false"]
     check-keys: false
 
   # Comments formatting - enforce clean comment style
   comments:
     min-spaces-from-content: 1
     require-starting-space: true
-  comments-indentation: false
 
   # Brackets and braces formatting - enforce consistent spacing
   brackets:
