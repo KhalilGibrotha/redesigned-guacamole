@@ -6,7 +6,10 @@ class UsePackageModuleRule(AnsibleLintRule):
 
     id = "CUSTOM001"
     shortdesc = "Use package module instead of yum, apt, or dnf"
-    description = "Tasks should use the generic package module instead of yum, apt, or dnf " "for better portability."
+    description = (
+        "Tasks should use the generic package module instead of yum, apt, or dnf "
+        "for better portability."
+    )
     severity = "MEDIUM"
     tags = ["portability", "modules"]
 

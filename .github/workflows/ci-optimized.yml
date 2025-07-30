@@ -612,6 +612,21 @@ jobs:
           echo "🔍 Auto-fix mode: ${{ inputs.auto_fix || 'true (default)' }}"
           echo "🔐 Write access: ${{ steps.check-permissions.outputs.has_write_access }}"
 
+          # Install formatters if they're not available
+          echo "📦 Ensuring formatters are available..."
+          if ! command -v black >/dev/null 2>&1; then
+            echo "  🔧 Installing Black..."
+            pip install black || echo "  ⚠️ Failed to install Black"
+          fi
+          if ! command -v isort >/dev/null 2>&1; then
+            echo "  🔧 Installing isort..."
+            pip install isort || echo "  ⚠️ Failed to install isort"
+          fi
+          if ! command -v yamllint >/dev/null 2>&1; then
+            echo "  🔧 Installing yamllint..."
+            pip install yamllint || echo "  ⚠️ Failed to install yamllint"
+          fi
+
           # Initialize counters
           total_fixes=0
           yaml_fixes=0

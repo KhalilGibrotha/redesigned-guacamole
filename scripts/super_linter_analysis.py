@@ -18,7 +18,9 @@ class SuperLinterAnalyzer:
         self.workspace_root = Path(workspace_root)
         self.results: Dict[str, Any] = {"checks": {}, "summary": {}, "health_score": 0}
 
-    def get_linter_status(self, linter_name: str, log_pattern: Optional[str] = None) -> Dict[str, Any]:
+    def get_linter_status(
+        self, linter_name: str, log_pattern: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Get status for a specific linter"""
         status: Dict[str, Any] = {
             "enabled": True,
@@ -38,8 +40,14 @@ class SuperLinterAnalyzer:
                         with open(log_file, "r") as f:
                             content = f.read()
                             # Parse errors/warnings from log
-                            errors = len(re.findall(r"ERROR|FAIL|CRITICAL", content, re.IGNORECASE))
-                            warnings = len(re.findall(r"WARNING|WARN", content, re.IGNORECASE))
+                            errors = len(
+                                re.findall(
+                                    r"ERROR|FAIL|CRITICAL", content, re.IGNORECASE
+                                )
+                            )
+                            warnings = len(
+                                re.findall(r"WARNING|WARN", content, re.IGNORECASE)
+                            )
 
                             status["errors"] += errors
                             status["warnings"] += warnings
@@ -57,8 +65,14 @@ class SuperLinterAnalyzer:
 
     def analyze_yaml_files(self) -> Dict[str, Any]:
         """Analyze YAML files"""
-        yaml_files = list(self.workspace_root.glob("**/*.yml")) + list(self.workspace_root.glob("**/*.yaml"))
-        yaml_files = [f for f in yaml_files if not any(skip in str(f) for skip in [".git", ".venv", "node_modules"])]
+        yaml_files = list(self.workspace_root.glob("**/*.yml")) + list(
+            self.workspace_root.glob("**/*.yaml")
+        )
+        yaml_files = [
+            f
+            for f in yaml_files
+            if not any(skip in str(f) for skip in [".git", ".venv", "node_modules"])
+        ]
 
         errors = 0
         warnings = 0
@@ -97,11 +111,25 @@ class SuperLinterAnalyzer:
     def analyze_ansible_files(self) -> Dict[str, Any]:
         """Analyze Ansible files"""
         ansible_files = []
-        for pattern in ["**/playbook*.yml", "**/site.yml", "**/main.yml", "playbooks/**/*.yml", "roles/**/*.yml"]:
+        for pattern in [
+            "**/playbook*.yml",
+            "**/site.yml",
+            "**/main.yml",
+            "playbooks/**/*.yml",
+            "roles/**/*.yml",
+        ]:
             ansible_files.extend(list(self.workspace_root.glob(pattern)))
 
         # Remove duplicates and filter out excluded paths
-        ansible_files = list(set([f for f in ansible_files if not any(skip in str(f) for skip in [".git", ".venv"])]))
+        ansible_files = list(
+            set(
+                [
+                    f
+                    for f in ansible_files
+                    if not any(skip in str(f) for skip in [".git", ".venv"])
+                ]
+            )
+        )
 
         errors = 0
         warnings = 0
@@ -140,7 +168,11 @@ class SuperLinterAnalyzer:
     def analyze_python_files(self) -> Dict[str, Any]:
         """Analyze Python files"""
         python_files = list(self.workspace_root.glob("**/*.py"))
-        python_files = [f for f in python_files if not any(skip in str(f) for skip in [".git", ".venv", "__pycache__"])]
+        python_files = [
+            f
+            for f in python_files
+            if not any(skip in str(f) for skip in [".git", ".venv", "__pycache__"])
+        ]
 
         errors = 0
         warnings = 0
@@ -152,7 +184,10 @@ class SuperLinterAnalyzer:
                 for line in lines:
                     if len(line) > 120:
                         warnings += 1
-                    if re.search(r"print\s*\(.*\)", line) and "debug" not in line.lower():
+                    if (
+                        re.search(r"print\s*\(.*\)", line)
+                        and "debug" not in line.lower()
+                    ):
                         warnings += 1
             except Exception:
                 errors += 1
@@ -181,7 +216,11 @@ class SuperLinterAnalyzer:
         for pattern in ["**/*.sh", "**/*.bash"]:
             shell_files.extend(list(self.workspace_root.glob(pattern)))
 
-        shell_files = [f for f in shell_files if not any(skip in str(f) for skip in [".git", ".venv"])]
+        shell_files = [
+            f
+            for f in shell_files
+            if not any(skip in str(f) for skip in [".git", ".venv"])
+        ]
 
         errors = 0
         warnings = 0
@@ -190,7 +229,10 @@ class SuperLinterAnalyzer:
         for shell_file in shell_files:
             try:
                 result = subprocess.run(
-                    ["shellcheck", "-f", "json", str(shell_file)], capture_output=True, text=True, timeout=10
+                    ["shellcheck", "-f", "json", str(shell_file)],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
                 )
                 if result.stdout:
                     issues = json.loads(result.stdout)
@@ -199,7 +241,12 @@ class SuperLinterAnalyzer:
                             errors += 1
                         else:
                             warnings += 1
-            except (subprocess.TimeoutExpired, subprocess.SubprocessError, json.JSONDecodeError, FileNotFoundError):
+            except (
+                subprocess.TimeoutExpired,
+                subprocess.SubprocessError,
+                json.JSONDecodeError,
+                FileNotFoundError,
+            ):
                 # Fallback to basic analysis if shellcheck not available
                 try:
                     content = shell_file.read_text()
@@ -231,7 +278,9 @@ class SuperLinterAnalyzer:
     def analyze_markdown_files(self) -> Dict[str, Any]:
         """Analyze Markdown files"""
         md_files = list(self.workspace_root.glob("**/*.md"))
-        md_files = [f for f in md_files if not any(skip in str(f) for skip in [".git", ".venv"])]
+        md_files = [
+            f for f in md_files if not any(skip in str(f) for skip in [".git", ".venv"])
+        ]
 
         errors = 0
         warnings = 0
@@ -329,7 +378,11 @@ class SuperLinterAnalyzer:
         ]:
             docker_files.extend(list(self.workspace_root.glob(pattern)))
 
-        docker_files = [f for f in docker_files if not any(skip in str(f) for skip in [".git", ".venv"])]
+        docker_files = [
+            f
+            for f in docker_files
+            if not any(skip in str(f) for skip in [".git", ".venv"])
+        ]
 
         errors = 0
         warnings = 0
@@ -371,7 +424,9 @@ class SuperLinterAnalyzer:
         for pattern in ["**/*.tf", "**/*.tfvars", "**/*.hcl"]:
             tf_files.extend(list(self.workspace_root.glob(pattern)))
 
-        tf_files = [f for f in tf_files if not any(skip in str(f) for skip in [".git", ".venv"])]
+        tf_files = [
+            f for f in tf_files if not any(skip in str(f) for skip in [".git", ".venv"])
+        ]
 
         errors = 0
         warnings = 0
@@ -413,7 +468,11 @@ class SuperLinterAnalyzer:
         for pattern in ["**/*.py", "**/*.js", "**/*.yml", "**/*.yaml", "**/*.sh"]:
             all_files.extend(list(self.workspace_root.glob(pattern)))
 
-        all_files = [f for f in all_files if not any(skip in str(f) for skip in [".git", ".venv", "node_modules"])]
+        all_files = [
+            f
+            for f in all_files
+            if not any(skip in str(f) for skip in [".git", ".venv", "node_modules"])
+        ]
 
         for file_path in all_files:
             try:
@@ -472,7 +531,11 @@ class SuperLinterAnalyzer:
         total_warnings = sum(check["warnings"] for check in checks.values())
         total_files = sum(check["files_checked"] for check in checks.values())
         enabled_checks = sum(1 for check in checks.values() if check["enabled"])
-        passed_checks = sum(1 for check in checks.values() if check["status"] == "✅ PASS" and check["enabled"])
+        passed_checks = sum(
+            1
+            for check in checks.values()
+            if check["status"] == "✅ PASS" and check["enabled"]
+        )
 
         # Calculate health score with improved weighting system
         if enabled_checks == 0:
@@ -485,12 +548,22 @@ class SuperLinterAnalyzer:
             # 4. Bonus for clean code patterns
 
             # Factor 1: Base score from check status distribution
-            failed_checks = sum(1 for check in checks.values() if check["status"] == "❌ FAIL" and check["enabled"])
-            warning_checks = sum(1 for check in checks.values() if check["status"] == "⚠️ WARN" and check["enabled"])
+            failed_checks = sum(
+                1
+                for check in checks.values()
+                if check["status"] == "❌ FAIL" and check["enabled"]
+            )
+            warning_checks = sum(
+                1
+                for check in checks.values()
+                if check["status"] == "⚠️ WARN" and check["enabled"]
+            )
 
             # Weight check results: Pass=100pts, Warning=75pts, Fail=0pts
             check_score = (
-                ((passed_checks * 100) + (warning_checks * 75) + (failed_checks * 0)) / (enabled_checks * 100) * 70
+                ((passed_checks * 100) + (warning_checks * 75) + (failed_checks * 0))
+                / (enabled_checks * 100)
+                * 70
             )
 
             # Factor 2: Error impact (scaled by file count for context)
@@ -528,7 +601,9 @@ class SuperLinterAnalyzer:
                 quality_bonus += 3
 
             # Calculate final score with proper weighting
-            health_score = check_score + (30 - error_penalty - warning_penalty) + quality_bonus
+            health_score = (
+                check_score + (30 - error_penalty - warning_penalty) + quality_bonus
+            )
 
             # Ensure score stays within reasonable bounds
             health_score = max(15, min(100, health_score))
@@ -542,7 +617,11 @@ class SuperLinterAnalyzer:
             "health_score": round(health_score, 1),
         }
 
-        self.results = {"checks": checks, "summary": summary, "health_score": health_score}
+        self.results = {
+            "checks": checks,
+            "summary": summary,
+            "health_score": health_score,
+        }
 
         return self.results
 
@@ -557,7 +636,9 @@ class SuperLinterAnalyzer:
 
         # Overall health score
         health_score = summary["health_score"]
-        health_emoji = "🟢" if health_score >= 85 else "🟡" if health_score >= 70 else "🔴"
+        health_emoji = (
+            "🟢" if health_score >= 85 else "🟡" if health_score >= 70 else "🔴"
+        )
         lines.append(f"### {health_emoji} Overall Health Score: {health_score}/100")
         lines.append("")
 
@@ -588,19 +669,35 @@ class SuperLinterAnalyzer:
         )
 
         # Calculate check distribution
-        failed_checks = sum(1 for check in checks.values() if check["status"] == "❌ FAIL" and check["enabled"])
-        warning_checks = sum(1 for check in checks.values() if check["status"] == "⚠️ WARN" and check["enabled"])
+        failed_checks = sum(
+            1
+            for check in checks.values()
+            if check["status"] == "❌ FAIL" and check["enabled"]
+        )
+        warning_checks = sum(
+            1
+            for check in checks.values()
+            if check["status"] == "⚠️ WARN" and check["enabled"]
+        )
 
         lines.append(
             f"- **Check Results**: ✅ {summary['passed_checks']} pass, ⚠️ {warning_checks} warnings, ❌ {failed_checks} failed"
         )
-        lines.append(f"- **Issue Summary**: {summary['total_errors']} errors, {summary['total_warnings']} warnings")
+        lines.append(
+            f"- **Issue Summary**: {summary['total_errors']} errors, {summary['total_warnings']} warnings"
+        )
 
         # Add quality metrics
         if summary["total_files"] > 0:
-            error_rate = round(summary["total_errors"] / summary["total_files"] * 100, 2)
-            warning_rate = round(summary["total_warnings"] / summary["total_files"] * 100, 2)
-            lines.append(f"- **Quality Metrics**: {error_rate}% error rate, {warning_rate}% warning rate")
+            error_rate = round(
+                summary["total_errors"] / summary["total_files"] * 100, 2
+            )
+            warning_rate = round(
+                summary["total_warnings"] / summary["total_files"] * 100, 2
+            )
+            lines.append(
+                f"- **Quality Metrics**: {error_rate}% error rate, {warning_rate}% warning rate"
+            )
 
         lines.append("")
 
@@ -619,7 +716,9 @@ class SuperLinterAnalyzer:
         if summary["total_errors"] == 0 and summary["total_warnings"] == 0:
             lines.append("🎉 **Excellent! No issues found.**")
         elif summary["total_errors"] == 0:
-            lines.append(f"⚠️ **Good! Only {summary['total_warnings']} warnings found.**")
+            lines.append(
+                f"⚠️ **Good! Only {summary['total_warnings']} warnings found.**"
+            )
         else:
             lines.append(
                 f"❌ **Issues found: {summary['total_errors']} errors, {summary['total_warnings']} warnings.**"
