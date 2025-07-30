@@ -291,6 +291,17 @@ jobs:
             fi
           done
 
+          # Copy custom_rules directory if it exists (for Ansible custom rules)
+          if [ -d ".lint-configs/custom_rules" ]; then
+            if [ ! -d "custom_rules" ]; then
+              cp -r ".lint-configs/custom_rules" "custom_rules"
+              echo "  ✅ Copied custom_rules/ directory from redesigned-guacamole"
+              copied_count=$((copied_count + 1))
+            else
+              echo "  ℹ️  Skipped custom_rules/ (already exists in calling repository)"
+            fi
+          fi
+
           # Copy Super Linter configuration if it exists
           if [ -f ".lint-configs/.github/super-linter.env" ]; then
             mkdir -p .github
