@@ -7,6 +7,12 @@
 5. **📊 Comprehensive Report**: Generates detailed execution summary
 6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
 
+## 📚 **Documentation**
+
+📖 **[Complete Documentation](docs/INDEX.md)** - Start here for guides, setup, and usage instructions
+
+🚀 **[Workflow Guide](docs/WORKFLOW_GUIDE.md)** - Main guide for using this CI/CD system
+
 ## 📁 Repository Dependencies
 
 ### What Your Repository Needs to Provide
