@@ -181,7 +181,9 @@ class ConfluenceManager:
             "title": title,
             "version": result["version"]["number"],
             "url": f"{self.base_url}/wiki{result['_links']['webui']}",
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={result['id']}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/" f"viewpagestorage.action?pageId={result['id']}"
+            ),
         }
 
     def _update_page(self, existing_page, content, content_hash, labels):
@@ -205,7 +207,9 @@ class ConfluenceManager:
                 "version": current_version,
                 "reason": "no-content-changes",
                 "url": f"{self.base_url}/wiki{existing_page['_links']['webui']}",
-                "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+                "storage_view_url": (
+                    f"{self.base_url}/wiki/plugins/viewstorage/" f"viewpagestorage.action?pageId={page_id}"
+                ),
             }
 
         # Update the page
@@ -249,7 +253,9 @@ class ConfluenceManager:
             "previous_hash": current_hash,
             "new_hash": content_hash,
             "url": f"{self.base_url}/wiki{result['_links']['webui']}",
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/" f"viewpagestorage.action?pageId={page_id}"
+            ),
         }
 
     def validate_page_content(self, page_id, expected_hash=None):
@@ -271,7 +277,9 @@ class ConfluenceManager:
             "content_hash": current_hash,
             "content_length": len(current_content),
             "last_modified": page_data["version"]["when"],
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/" f"viewpagestorage.action?pageId={page_id}"
+            ),
             "view_url": f"{self.base_url}/wiki{page_data['_links']['webui']}",
         }
 

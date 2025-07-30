@@ -4,7 +4,6 @@ Dynamic documentation structure discovery script with nested folder support.
 Discovers main pages, their child pages, and nested sub-sections from the docs/ folder structure.
 """
 
-import glob
 import json
 import os
 import sys

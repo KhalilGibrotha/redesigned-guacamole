@@ -583,7 +583,8 @@ class SuperLinterAnalyzer:
         lines.append(f"- **Total Files Checked**: {summary['total_files']}")
         lines.append(f"- **Active Linters**: {summary['enabled_checks']}")
         lines.append(
-            f"- **Passed Checks**: {summary['passed_checks']}/{summary['enabled_checks']} ({round(summary['passed_checks']/max(summary['enabled_checks'], 1)*100, 1)}%)"
+            f"- **Passed Checks**: {summary['passed_checks']}/{summary['enabled_checks']} "
+            f"({round(summary['passed_checks'] / max(summary['enabled_checks'], 1) * 100, 1)}%)"
         )
 
         # Calculate check distribution
