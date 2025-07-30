@@ -318,8 +318,7 @@ class ConfluencePublisher:
                     logger.error(
                         f"❌ Failed to upload attachment, status: {response.status_code}"
                     )
-                    response.raise_for_status()
-                    return None  # This line should never be reached, but satisfies mypy
+                    response.raise_for_status()  # Propagate the exception for HTTP errors
 
         except Exception as e:
             logger.error(f"❌ Failed to upload attachment {file_path.name}: {e}")
