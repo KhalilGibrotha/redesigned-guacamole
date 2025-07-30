@@ -568,14 +568,15 @@ class SuperLinterAnalyzer:
 
             # Factor 2: Error impact (scaled by file count for context)
             # Fewer errors per file = less penalty
-            if total_files > 0:
+            has_files = total_files > 0
+            if has_files:
                 error_rate = total_errors / total_files
                 error_penalty = min(error_rate * 25, 25)  # Max 25 point penalty
             else:
                 error_penalty = 0
 
             # Factor 3: Warning impact (much lighter penalty)
-            if total_files > 0:
+            if has_files:
                 warning_rate = total_warnings / total_files
                 warning_penalty = min(warning_rate * 8, 8)  # Max 8 point penalty
             else:
