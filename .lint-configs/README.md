@@ -27,6 +27,19 @@ Instead of cluttering the root directory, all linting configurations are central
 | `.yamllint` | YAML linting | yamllint |
 | `pyproject.toml` | Python project config | Various Python tools |
 
+## ⚙️ **Configuration Highlights**
+
+### YAML Linting (`.yamllint`)
+- **Line Length**: 350 characters (accommodates long shell commands in CI/CD)
+- **Indentation**: 2 spaces with sequence indentation
+- **Boolean Values**: Enforces `true`/`false` over `yes`/`no`
+- **Document Structure**: Requires `---` start marker
+
+### Python Configuration (`pyproject.toml`, `.flake8`, `.pylintrc`)
+- **Line Length**: 120 characters (PEP 8 extended)
+- **Import Sorting**: isort with black compatibility
+- **Type Checking**: mypy configuration included
+
 ## 🔗 **How It Works**
 
 1. **Actual Files**: Stored in `.lint-configs/`
