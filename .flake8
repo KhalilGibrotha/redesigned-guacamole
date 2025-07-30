@@ -59,7 +59,6 @@ extend-ignore =
 # Per-file ignores
 # Allow complexity and other specific issues in certain files
 per-file-ignores =
-    per-file-ignores =
     # Makefile complexity is functional and breaking it down would reduce readability
     scripts/Makefile:*,
     scripts/enhanced_linter_analysis.py:C901,
