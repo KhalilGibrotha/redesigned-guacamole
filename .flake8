@@ -59,11 +59,10 @@ extend-ignore =
 # Per-file ignores
 # Allow complexity and other specific issues in certain files
 per-file-ignores =
-    __init__.py:F401,
-    scripts/discover_docs.py:C901,
-    scripts/confluence_manager.py:C901,
-    scripts/confluence_publisher.py:C901,
-    test_*.py:E501,F401
+    per-file-ignores =
+    # Makefile complexity is functional and breaking it down would reduce readability
+    scripts/Makefile:*,
+    scripts/enhanced_linter_analysis.py:C901,
 
 # Show source code for each error
 show-source = True
