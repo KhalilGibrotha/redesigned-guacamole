@@ -222,6 +222,134 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch_name || github.ref }}
 
+      - name: 🔍 Detect Repository Context for Linting
+        id: context
+        run: |
+          echo "Current repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+
+          # Check if we're in the redesigned-guacamole repo or being called remotely
+          if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
+            echo "🏠 Running within redesigned-guacamole repository"
+            echo "same-repo=true" >> $GITHUB_OUTPUT
+          else
+            echo "🌐 Being called from external repository: ${{ github.repository }}"
+            echo "same-repo=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📥 Checkout Redesigned-Guacamole (Lint Configs)
+        if: steps.context.outputs.same-repo != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/redesigned-guacamole
+          ref: main
+          fetch-depth: 1
+          path: .lint-configs
+
+      - name: 📋 Copy Lint Configuration Files
+        if: steps.context.outputs.same-repo != 'true'
+        run: |
+          echo "📋 Copying lint configuration files from redesigned-guacamole..."
+
+          # List of lint configuration files to copy
+          LINT_FILES=(
+            ".ansible-lint"
+            ".yamllint"
+            ".markdownlint.json"
+            ".markdownlint.yml"
+            ".flake8"
+            ".pylintrc"
+            ".eslintrc.json"
+            ".eslintrc.yml"
+            ".eslintrc.yaml"
+            ".eslintrc.js"
+            ".jscpd.json"
+            ".jsonlintrc"
+            ".shellcheckrc"
+            ".shfmt"
+            ".editorconfig"
+            ".editorconfig-checker.json"
+            ".prettierrc.json"
+            ".prettierrc.yml"
+            ".textlintrc"
+            ".gitleaks.toml"
+            ".pre-commit-config.yaml"
+            "pyproject.toml"
+          )
+
+          copied_count=0
+          for config_file in "${LINT_FILES[@]}"; do
+            if [ -f ".lint-configs/$config_file" ]; then
+              # Only copy if the file doesn't already exist in the calling repo
+              if [ ! -f "$config_file" ]; then
+                cp ".lint-configs/$config_file" "$config_file"
+                echo "  ✅ Copied $config_file from redesigned-guacamole"
+                copied_count=$((copied_count + 1))
+              else
+                echo "  ℹ️  Skipped $config_file (already exists in calling repository)"
+              fi
+            fi
+          done
+
+          # Copy Super Linter configuration if it exists
+          if [ -f ".lint-configs/.github/super-linter.env" ]; then
+            mkdir -p .github
+            if [ ! -f ".github/super-linter.env" ]; then
+              cp ".lint-configs/.github/super-linter.env" ".github/super-linter.env"
+              echo "  ✅ Copied .github/super-linter.env from redesigned-guacamole"
+              copied_count=$((copied_count + 1))
+            else
+              echo "  ℹ️  Skipped .github/super-linter.env (already exists in calling repository)"
+            fi
+          fi
+
+          echo "📊 Summary: Copied $copied_count lint configuration files"
+          echo "🎯 Lint configuration setup complete for external repository"
+
+          # Clean up the temporary checkout
+          rm -rf .lint-configs
+
+      - name: 📋 Verify Available Lint Configurations
+        run: |
+          echo "📋 Available lint configuration files in current workspace:"
+
+          # List all available lint config files
+          LINT_FILES=(
+            ".ansible-lint"
+            ".yamllint"
+            ".markdownlint.json"
+            ".markdownlint.yml"
+            ".flake8"
+            ".pylintrc"
+            ".eslintrc.json"
+            ".eslintrc.yml"
+            ".eslintrc.yaml"
+            ".eslintrc.js"
+            ".jscpd.json"
+            ".jsonlintrc"
+            ".shellcheckrc"
+            ".shfmt"
+            ".editorconfig"
+            ".github/super-linter.env"
+            "pyproject.toml"
+          )
+
+          found_count=0
+          for config_file in "${LINT_FILES[@]}"; do
+            if [ -f "$config_file" ]; then
+              echo "  ✅ $config_file ($(wc -l < "$config_file" 2>/dev/null || echo "binary") lines)"
+              found_count=$((found_count + 1))
+            fi
+          done
+
+          echo "📊 Total lint configuration files available: $found_count"
+
+          if [ "$found_count" -eq 0 ]; then
+            echo "⚠️  No lint configuration files found - Super Linter will use defaults"
+          else
+            echo "🎯 Super Linter will use the available configuration files for enhanced linting"
+          fi
+
       - name: � Check Write Permissions
         id: check-permissions
         run: |
@@ -255,41 +383,46 @@ jobs:
             echo "default_branch=main" >> $GITHUB_OUTPUT
           fi
 
-      - name: 🔍 Verify Linter Configuration Files
+      - name: 🔍 Validate Critical Linter Configurations
         run: |
-          echo "🔍 Checking for linter configuration files..."
+          echo "🔍 Validating critical linter configurations..."
 
-          # Check for .ansible-lint
+          # Validate .ansible-lint if present
           if [ -f ".ansible-lint" ]; then
-            echo "✅ .ansible-lint found ($(wc -l < .ansible-lint) lines)"
-            echo "📄 .ansible-lint preview:"
-            head -5 .ansible-lint
-          else
-            echo "❌ .ansible-lint not found"
+            echo "✅ .ansible-lint found - validating syntax..."
+            if python3 -c "import yaml; yaml.safe_load(open('.ansible-lint'))" 2>/dev/null; then
+              echo "  ✅ .ansible-lint syntax is valid"
+            else
+              echo "  ⚠️  .ansible-lint has syntax issues"
+            fi
           fi
 
-          # Check for .yamllint
+          # Validate .yamllint if present
           if [ -f ".yamllint" ]; then
-            echo "✅ .yamllint found ($(wc -l < .yamllint) lines)"
-          else
-            echo "❌ .yamllint not found"
+            echo "✅ .yamllint found - validating syntax..."
+            if python3 -c "import yaml; yaml.safe_load(open('.yamllint'))" 2>/dev/null; then
+              echo "  ✅ .yamllint syntax is valid"
+            else
+              echo "  ⚠️  .yamllint has syntax issues"
+            fi
           fi
 
-          # Check for markdownlint config (prefer .json)
+          # Validate markdownlint config if present
           if [ -f ".markdownlint.json" ]; then
-            echo "✅ .markdownlint.json found ($(wc -l < .markdownlint.json) lines)"
-          elif [ -f ".markdownlint.yml" ]; then
-            echo "✅ .markdownlint.yml found ($(wc -l < .markdownlint.yml) lines)"
-          else
-            echo "❌ No markdownlint config found"
+            echo "✅ .markdownlint.json found - validating syntax..."
+            if python3 -c "import json; json.load(open('.markdownlint.json'))" 2>/dev/null; then
+              echo "  ✅ .markdownlint.json syntax is valid"
+            else
+              echo "  ⚠️  .markdownlint.json has syntax issues"
+            fi
           fi
 
-          # Check for any conflicting config files
+          # Check for conflicting config files
           if [ -f ".markdownlint.json" ] && [ -f ".markdownlint.yml" ]; then
             echo "⚠️  Both .markdownlint.json and .markdownlint.yml found - Super Linter will prefer .json"
           fi
 
-          echo "🎯 Super Linter will auto-detect all configuration files at repo root"
+          echo "🎯 Configuration validation complete"
 
       - name: 🔍 Detect Files for Validation
         id: detect-files
@@ -338,8 +471,16 @@ jobs:
       - name: 🔍 Verify Configuration Files
         run: |
           echo "🔍 Verifying Super Linter configuration..."
-          echo "Static configuration file contents:"
-          cat .github/super-linter.env
+
+          # Check for Super Linter config (may not exist in remote repositories)
+          if [ -f ".github/super-linter.env" ]; then
+            echo "✅ Found .github/super-linter.env configuration file:"
+            cat .github/super-linter.env
+          else
+            echo "ℹ️ No .github/super-linter.env found - using Super Linter defaults"
+            echo "📝 Super Linter will use built-in defaults and detect configuration files automatically"
+          fi
+
           echo ""
           echo "🔍 Verifying yamllint configuration:"
           if [ -f ".yamllint" ]; then
@@ -347,15 +488,15 @@ jobs:
             echo "📄 .yamllint line-length configuration:"
             grep -A 10 "line-length:" .yamllint || echo "❌ line-length not found in .yamllint"
           else
-            echo "❌ .yamllint file not found"
+            echo "ℹ️ .yamllint file not found - Super Linter will use defaults"
           fi
 
       - name: 🔍 Run Super Linter
         id: super-linter
         uses: super-linter/super-linter@v5
         env:
-          # Use static configuration file
-          ENV_FILE: .github/super-linter.env
+          # Use static configuration file if it exists (only in redesigned-guacamole repo)
+          ENV_FILE: ${{ hashFiles('.github/super-linter.env') != '' && '.github/super-linter.env' || '' }}
 
           # GitHub token (required for API access)
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -821,7 +962,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: 📤 Upload Static Configuration (Debug)
-        if: always()
+        if: always() && hashFiles('.github/super-linter.env') != ''
         uses: actions/upload-artifact@v4
         with:
           name: super-linter-config-${{ github.run_id }}
