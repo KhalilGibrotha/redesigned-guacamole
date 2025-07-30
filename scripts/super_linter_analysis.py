@@ -16,11 +16,18 @@ from typing import Any, Dict, Optional
 class SuperLinterAnalyzer:
     def __init__(self, workspace_root: str = "."):
         self.workspace_root = Path(workspace_root)
-        self.results = {"checks": {}, "summary": {}, "health_score": 0}
+        self.results: Dict[str, Any] = {"checks": {}, "summary": {}, "health_score": 0}
 
     def get_linter_status(self, linter_name: str, log_pattern: Optional[str] = None) -> Dict[str, Any]:
         """Get status for a specific linter"""
-        status = {"enabled": True, "errors": 0, "warnings": 0, "files_checked": 0, "status": "✅ PASS", "details": ""}
+        status: Dict[str, Any] = {
+            "enabled": True,
+            "errors": 0,
+            "warnings": 0,
+            "files_checked": 0,
+            "status": "✅ PASS",
+            "details": "",
+        }
 
         # Check if Super Linter log files exist
         if log_pattern:
@@ -541,8 +548,8 @@ class SuperLinterAnalyzer:
 
     def generate_github_summary(self) -> str:
         """Generate GitHub Step Summary markdown"""
-        checks = self.results["checks"]
-        summary = self.results["summary"]
+        checks: Dict[str, Any] = self.results["checks"]
+        summary: Dict[str, Any] = self.results["summary"]
 
         lines = []
         lines.append("## 🔍 Super Linter Analysis Results")
@@ -625,8 +632,8 @@ class SuperLinterAnalyzer:
         if not github_output:
             return
 
-        summary = self.results["summary"]
-        checks = self.results["checks"]
+        summary: Dict[str, Any] = self.results["summary"]
+        checks: Dict[str, Any] = self.results["checks"]
 
         with open(github_output, "a") as f:
             f.write(f"health_score={summary['health_score']}\n")

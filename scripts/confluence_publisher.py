@@ -134,7 +134,7 @@ class ConfluencePublisher:
 
             else:
                 # Create new page
-                create_data = {
+                create_data: Dict[str, Any] = {
                     "type": "page",
                     "title": title,
                     "space": {"key": space_key},
@@ -278,7 +278,9 @@ class ConfluencePublisher:
                     logger.info(f"✅ Uploaded attachment: {attachment_name}")
                     return attachment_info
                 else:
+                    logger.error(f"❌ Failed to upload attachment, status: {response.status_code}")
                     response.raise_for_status()
+                    return None  # This line should never be reached, but satisfies mypy
 
         except Exception as e:
             logger.error(f"❌ Failed to upload attachment {file_path.name}: {e}")
