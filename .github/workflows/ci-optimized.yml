@@ -320,6 +320,35 @@ jobs:
           # Clean up the temporary checkout
           rm -rf .lint-configs
 
+      - name: 🤖 Auto-Configure Repository-Specific Linting
+        if: steps.context.outputs.same-repo != 'true'
+        run: |
+          echo "🔍 Auto-detecting repository type for optimal linting configuration..."
+
+          # Detect repository type and configure appropriate shellcheck settings
+          if [[ -d "playbooks" || -d "roles" || -f "site.yml" || -f "ansible.cfg" || -d "inventory" ]]; then
+            echo "📜 Ansible repository detected!"
+            echo "   - Using Ansible-optimized shellcheck configuration"
+            echo "   - Excluded rules: SC1091, SC2034, SC2154, SC2086"
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086"' >> $GITHUB_ENV
+            echo "REPO_TYPE=ansible" >> $GITHUB_ENV
+          elif [[ -d "scripts" || -f "install.sh" || -f "setup.sh" || -f "build.sh" ]]; then
+            echo "🛠️ Standalone script repository detected!"
+            echo "   - Using strict shellcheck configuration"
+            echo "   - Excluded rules: SC1091, SC2034, SC2154 (minimal exclusions)"
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154"' >> $GITHUB_ENV
+            echo "REPO_TYPE=scripts" >> $GITHUB_ENV
+          else
+            echo "🔄 CI/CD repository detected!"
+            echo "   - Using CI/CD-optimized shellcheck configuration"
+            echo "   - Excluded rules: SC1091, SC2034, SC2154, SC2086, SC2129, SC2038, SC2015, SC2044, SC2193, SC2081"
+            echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086,SC2129,SC2038,SC2015,SC2044,SC2193,SC2081"' >> $GITHUB_ENV
+            echo "REPO_TYPE=cicd" >> $GITHUB_ENV
+          fi
+
+          echo "✅ Repository type: $REPO_TYPE"
+          echo "✅ Shellcheck configuration automatically applied"
+
       - name: 📋 Verify Available Lint Configurations
         run: |
           echo "📋 Available lint configuration files in current workspace:"

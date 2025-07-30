@@ -63,6 +63,26 @@ Where:
 | **Terraform Linting** | `*.tf`, `*.tfvars`, `*.hcl` | Resource validation |
 | **Security Scan** | All supported files | Credential detection, secret patterns |
 
+## 🎯 **Context-Aware Configuration**
+
+### 🤖 **Automatic Repository Detection**
+
+The system automatically detects the repository type and applies appropriate linting configurations:
+
+| Repository Type | Auto-Detection Criteria | Applied Configuration |
+|-----------------|------------------------|----------------------|
+| **📜 Ansible** | `playbooks/`, `roles/`, `site.yml`, `ansible.cfg` | Moderate shellcheck strictness |
+| **🛠️ Scripts** | `scripts/`, `install.sh`, `setup.sh`, `build.sh` | Maximum shellcheck strictness |
+| **🔄 CI/CD** | Default (workflows, GitHub Actions) | Workflow-optimized settings |
+
+### Benefits
+- **Zero Configuration**: Works out-of-the-box for all repository types
+- **Intelligent Adaptation**: Recognizes project patterns automatically
+- **Consistent Standards**: Applies appropriate rules for each context
+- **Transparent Operation**: Logs detected type for debugging
+
+This ensures that the scoring methodology accounts for different project contexts while maintaining meaningful quality assessments.
+
 ## 📊 Output Formats
 
 ### GitHub Actions Summary
