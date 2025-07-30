@@ -23,7 +23,7 @@ make lint              # Full linting suite
 make dev               # Complete development checks
 make validate          # Full validation (excluding molecule)
 make ci                # CI/CD pipeline validation
-```
+```text
 
 ## Enterprise-Ready Testing Strategy
 
@@ -35,7 +35,7 @@ pre-commit install
 
 # Manual validation
 make sanity-check
-```
+```text
 
 ### 2. **Development Workflow** (Daily)
 ```bash
@@ -47,13 +47,13 @@ make sanity-check
 
 # Before committing
 make dev
-```
+```text
 
 ### 3. **CI/CD Integration** (Automated)
 ```bash
 # Complete validation pipeline
 make validate
-```
+```text
 
 ## Quality Gates Implementation
 
@@ -73,7 +73,7 @@ validate:
   only:
     - merge_requests
     - main
-```
+```text
 
 ### Manual Testing
 ```bash
@@ -85,7 +85,7 @@ ansible-playbook playbook.yml --check
 
 # Security audit
 make security-check
-```
+```text
 
 ## Next Steps for Molecule Integration
 
@@ -101,7 +101,7 @@ pipx inject molecule molecule-plugins[docker]
 
 # Run full tests
 molecule test
-```
+```text
 
 ### Option 2: **Local Testing** (Current)
 Using localhost for basic validation:
@@ -114,7 +114,7 @@ make security-check
 
 # Syntax validation
 make test-syntax
-```
+```text
 
 ### Option 3: **CI/CD Integration**
 Implement Molecule in your CI/CD pipeline where container runtime is available:
@@ -124,7 +124,7 @@ test:
   image: quay.io/ansible/molecule
   script:
     - molecule test
-```
+```text
 
 ## Documentation Structure
 
@@ -156,14 +156,14 @@ The project now includes:
 # Required for all team members
 make sanity-check    # Before every commit
 make security-check  # Weekly security review
-```
+```text
 
 ### Phase 2: **Enhanced Validation** (Week 2-3)
 ```bash
 # Extended development workflow
 make dev            # Complete development validation
 make validate       # Pre-deployment checks
-```
+```text
 
 ### Phase 3: **CI/CD Integration** (Week 4)
 - Implement automated quality gates

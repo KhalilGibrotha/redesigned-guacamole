@@ -13,7 +13,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
 ### 1. **Ansible Lint** 🤖
 - **Purpose**: Validates Ansible playbooks, roles, and tasks for best practices and common issues
 - **Config File**: `.ansible-lint`
-- **What it checks**: 
+- **What it checks**:
   - Playbook syntax and structure
   - Task naming conventions
   - Deprecated modules usage
@@ -152,7 +152,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
 
 ## 📁 **Configuration File Locations**
 
-```
+```text
 .
 ├── .ansible-lint              # Ansible playbook linting rules
 ├── .editorconfig              # Universal formatting rules
@@ -167,7 +167,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
 ├── .yamllint                 # YAML formatting and syntax rules
 └── .github/
     └── super-linter.env      # Super Linter configuration
-```
+```text
 
 ---
 
@@ -187,7 +187,7 @@ shellcheck scripts/*.sh
 npx jscpd --threshold 15 .
 gitleaks detect --config .gitleaks.toml
 ansible-lint playbooks/
-```
+```text
 
 ### **Super Linter Integration**
 All linters run automatically in GitHub Actions via Super Linter v5 with comprehensive reporting and error detection.

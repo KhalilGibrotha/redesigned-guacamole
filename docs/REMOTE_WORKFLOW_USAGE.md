@@ -22,7 +22,7 @@ The CI workflow (`ci-optimized.yml`) is designed to be called from remote reposi
     if [ -f requirements.txt ]; then
       pip install -r requirements.txt  # ❌ Failed when file missing
     fi
-```
+```text
 
 **After:**
 ```yaml
@@ -50,7 +50,7 @@ The CI workflow (`ci-optimized.yml`) is designed to be called from remote reposi
     # ✅ Always install tools needed for auto-fixing and analysis
     echo "Installing workflow tools..."
     pip install black isort PyYAML requests
-```
+```text
 
 ## Tool Dependencies
 
@@ -79,7 +79,7 @@ All auto-fix tools are checked with `command -v` before use. If a tool is not av
 ```yaml
 publish:
   uses: ./.github/workflows/publish-docs.yml  # ❌ Only works in same repo
-```
+```text
 
 **Solution**: The publish job has been converted to inline steps that detect the repository context and handle both local and remote execution:
 
@@ -96,7 +96,7 @@ publish:
 
     - name: 📥 Checkout Calling Repository (Content)
       # Only when called remotely
-```
+```text
 
 **Features**:
 - ✅ **Automatic Repository Detection**: Knows if running locally or remotely
@@ -117,7 +117,7 @@ jobs:
     with:
       auto_fix: true
     # Note: Auto-fixes will be applied but not committed due to permission restrictions
-```
+```text
 
 ### From Remote Repository (With Auto-fix Commits)
 ```yaml
@@ -136,7 +136,7 @@ jobs:
       contents: write  # Enable auto-fix commits
       packages: read
       statuses: write
-```
+```text
 
 ### From Same Repository (Full Access)
 ```yaml
@@ -149,7 +149,7 @@ jobs:
     uses: ./.github/workflows/ci-optimized.yml
     with:
       auto_fix: true
-```
+```text
 
 ## Auto-fix Capabilities
 
@@ -210,7 +210,7 @@ jobs:
 ### Confluence Publishing Succeeds But No Content
 - **Cause**: Calling repository might not have `docs/` directory or proper template files
 - **Solution**: Ensure calling repository has:
-  ```
+  ```text
   docs/
     ├── vars.yaml              # Configuration for templates
     └── [template files]       # .j2 template files
@@ -222,7 +222,7 @@ jobs:
 - **Result**: Publishing step runs successfully but doesn't make actual changes
 - **Solution (if you want live publishing)**:
   1. **Add secrets to your repository**:
-     ```
+     ```text
      # In your repository settings > Secrets and variables > Actions
      CONFLUENCE_URL=https://your-confluence.atlassian.net
      CONFLUENCE_USER=your-username-or-email

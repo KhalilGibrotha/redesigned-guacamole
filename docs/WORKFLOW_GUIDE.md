@@ -22,7 +22,7 @@ If you're working directly in this repository:
 ```yaml
 # Workflow runs automatically on push/PR
 # Manual trigger also available in Actions tab
-```
+```text
 
 ### For Remote Repository Usage
 
@@ -48,7 +48,7 @@ jobs:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
-```
+```text
 
 ## 🔧 Workflow Configuration
 
@@ -111,7 +111,7 @@ All linter configuration files are automatically copied to remote repositories:
 .editorconfig-checker.json  # File formatting rules
 .shellcheckrc          # Shell script rules
 # ... and more
-```
+```text
 
 ## 📄 Documentation System
 
@@ -141,7 +141,7 @@ confluence:
 # {{ organization_name }} Operations Guide
 
 Our technologies: {{ macros.oxford_comma_list(aap_network_tech) }}
-```
+```text
 
 For complete documentation details, see [README.md](README.md).
 
@@ -154,7 +154,7 @@ For complete documentation details, see [README.md](README.md).
 jobs:
   lint:
     uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@develop
-```
+```text
 
 2. **With Auto-fix Commits**:
 ```yaml
@@ -165,7 +165,7 @@ jobs:
     uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@develop
     with:
       auto_fix: true
-```
+```text
 
 3. **With Confluence Publishing**:
 ```yaml
@@ -176,7 +176,7 @@ jobs:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
-```
+```text
 
 ### Troubleshooting Remote Usage
 
@@ -257,7 +257,7 @@ For local testing:
 yamllint docs/
 markdownlint docs/
 black --check scripts/
-```
+```text
 
 ## 📚 Additional Documentation
 

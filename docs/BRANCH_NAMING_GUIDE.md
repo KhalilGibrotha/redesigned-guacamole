@@ -58,7 +58,7 @@ git checkout -b rel/v1.1.0
 git checkout -b hotfix/critical-security-fix
 git checkout -b hotfix/login-bug-fix
 git checkout -b hf/auth-token-issue
-```
+```text
 
 ### Multi-level (Advanced)
 ```bash
@@ -74,7 +74,7 @@ git checkout -b release/hotfix/v1.1.1
 # Multi-level hotfix branches
 git checkout -b hotfix/security/auth-vulnerability
 git checkout -b hf/performance/database-optimization
-```
+```text
 
 ## ❌ **Patterns That Won't Trigger**
 
@@ -94,7 +94,7 @@ fix/bug                 # Should be 'hotfix/bug' or 'hf/bug'
 # Missing slash
 featurelogin            # Should be 'feature/login'
 releaseV1               # Should be 'release/v1'
-```
+```text
 
 ## 🔍 **Debug Information**
 
@@ -105,7 +105,7 @@ When the pipeline runs, you'll see debug output in the "Quick Validation" job th
 
 ## 👥 **Team Guidelines**
 
-### For Your Dev Who Uses "ft" 
+### For Your Dev Who Uses "ft"
 ✅ **These will work perfectly:**
 - `ft/new-feature`
 - `ft/user-dashboard`

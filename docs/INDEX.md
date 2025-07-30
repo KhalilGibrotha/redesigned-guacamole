@@ -23,7 +23,7 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 
 ## 🎯 **Quick Navigation**
 
-### I want to...
+### I want to
 
 **🔧 Use this workflow in my repository**
 → [WORKFLOW_GUIDE.md - Remote Usage Guide](WORKFLOW_GUIDE.md#-remote-usage-guide)
@@ -48,7 +48,7 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 
 ## 📁 **Directory Structure**
 
-```
+```text
 docs/
 ├── INDEX.md                                    # This file
 ├── WORKFLOW_GUIDE.md                           # 🚀 Main guide (START HERE)
@@ -66,7 +66,7 @@ docs/
 ├── vars.yaml                                  # 📊 Template variables
 ├── macros/                                    # 🧩 Jinja2 macros
 └── images/                                    # 🖼️ Image assets
-```
+```text
 
 ## 🔄 **Document Relationships**
 
@@ -79,7 +79,7 @@ graph TD
     B --> F[examples/<br/>🧪 Template Examples]
     B --> G[macros/<br/>🧩 Reusable Components]
     D --> H[Troubleshooting<br/>🐛 Problem Solving]
-```
+```text
 
 ## 🎯 **Documentation Quality**
 

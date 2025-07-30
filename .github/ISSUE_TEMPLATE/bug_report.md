@@ -29,9 +29,9 @@ A clear and concise description of what you expected to happen.
 **Error Output**
 If applicable, add error output to help explain your problem.
 
-```
+```text
 Error output here
-```
+```text
 
 **Additional context**
 Add any other context about the problem here.

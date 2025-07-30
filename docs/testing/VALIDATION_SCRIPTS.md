@@ -26,7 +26,7 @@ Runs all validation checks including:
 
 # Quiet mode
 ./validate-all.sh --quiet
-```
+```text
 
 ### 2. `quick-validate.sh` - Essential Checks Only
 Runs only the most critical validation checks for quick feedback:
@@ -40,7 +40,7 @@ Runs only the most critical validation checks for quick feedback:
 ```bash
 # Run quick validation
 ./quick-validate.sh
-```
+```text
 
 ### 3. `merge-branch.sh` - Safe Branch Merge
 Validates a branch and safely merges it with main:
@@ -60,7 +60,7 @@ Validates a branch and safely merges it with main:
 
 # Dry run mode
 ./merge-branch.sh --dry-run feature/test
-```
+```text
 
 ### 4. `git-flow.sh` - Git Flow Helper
 Manages Git Flow workflow with feature, release, and hotfix branches:
@@ -84,7 +84,7 @@ Manages Git Flow workflow with feature, release, and hotfix branches:
 # Status and cleanup
 ./git-flow.sh status                         # Show Git Flow status
 ./git-flow.sh cleanup                        # Clean up merged branches
-```
+```text
 
 ## Workflow Examples
 
@@ -107,7 +107,7 @@ Manages Git Flow workflow with feature, release, and hotfix branches:
 
 # 6. Finalize release and deploy to production
 ./git-flow.sh release finish v1.2.0
-```
+```text
 
 ### Traditional Workflow (Manual Branch Management)
 ```bash
@@ -119,7 +119,7 @@ Manages Git Flow workflow with feature, release, and hotfix branches:
 
 # Before merging a release to main
 ./merge-branch.sh --to-main release/v1.0
-```
+```text
 
 ### CI/CD Integration
 ```bash
@@ -131,7 +131,7 @@ else
     echo "Validation failed, blocking deployment"
     exit 1
 fi
-```
+```text
 
 ## Git Flow Integration
 
@@ -155,14 +155,14 @@ The `merge-branch.sh` script now automatically detects branch types:
 # Feature branches automatically merge to develop
 ./merge-branch.sh feature/new-docs          # → merges to develop
 
-# Release/hotfix branches automatically merge to main  
+# Release/hotfix branches automatically merge to main
 ./merge-branch.sh release/v1.0              # → merges to main
 ./merge-branch.sh hotfix/critical-fix       # → merges to main
 
 # Override automatic detection
 ./merge-branch.sh --to-main feature/special # → force merge to main
 ./merge-branch.sh --to-develop hotfix/test  # → force merge to develop
-```
+```text
 
 ## Exit Codes
 
@@ -204,7 +204,7 @@ make install-tools
 # Or platform-specific
 make install-ubuntu-apt-only    # Ubuntu/Debian
 make install-rhel-dnf-only      # RHEL/CentOS/Fedora
-```
+```text
 
 ### Validation Failures
 1. Run with verbose output to see details
@@ -218,7 +218,7 @@ git merge feature/branch-name
 # Resolve conflicts manually
 git commit
 git push origin main
-```
+```text
 
 ## Best Practices
 
@@ -254,7 +254,7 @@ Edit the scripts to add project-specific validations:
 ```bash
 # In validate-all.sh, add to main() function
 run_check "Custom check" "your-custom-command"
-```
+```text
 
 ### Environment Variables
 Set environment variables to customize behavior:
@@ -262,7 +262,7 @@ Set environment variables to customize behavior:
 ```bash
 export VALIDATION_STRICT=true    # Fail on warnings
 export SKIP_TEMPLATE_TESTS=true  # Skip template rendering
-```
+```text
 
 ## Support
 

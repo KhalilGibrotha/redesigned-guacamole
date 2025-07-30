@@ -11,7 +11,7 @@ This project now includes comprehensive testing and quality assurance tools for 
 - **ansible-lint**: Ansible-specific best practices
 - **Security scanning**: Automated secret detection
 
-### 🧪 **Testing Framework** 
+### 🧪 **Testing Framework**
 - **Molecule**: Comprehensive testing framework
 - **Syntax validation**: Playbook structure verification
 - **Template testing**: Jinja2 template validation
@@ -33,7 +33,7 @@ make dev
 
 # Before committing changes
 make validate
-```
+```text
 
 ### Available Commands
 
@@ -42,20 +42,20 @@ make validate
 make lint           # Run all linting checks
 make test           # Syntax check playbook
 make security-check # Security validation
-```
+```text
 
 #### Advanced Testing
 ```bash
 make validate-templates  # Check template structure
 make test-syntax        # Comprehensive syntax validation
 make validate          # Full validation suite
-```
+```text
 
 #### Maintenance
 ```bash
 make fix    # Auto-fix common issues
 make clean  # Remove temporary files
-```
+```text
 
 ## Testing Scenarios
 
@@ -107,7 +107,7 @@ make clean  # Remove temporary files
 
 ## File Structure
 
-```
+```text
 confluence_test/
 ├── .yamllint                    # YAML linting configuration
 ├── .pre-commit-config.yaml      # Pre-commit hook configuration
@@ -127,7 +127,7 @@ confluence_test/
     ├── platform_runbook.md.j2
     ├── operator_runbook.md.j2
     └── training_enablement.md.j2
-```
+```text
 
 ## Configuration Details
 
@@ -166,7 +166,7 @@ security:
   script:
     - make security-check
   allow_failure: false
-```
+```text
 
 ### GitHub Actions
 ```yaml
@@ -178,7 +178,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: make ci
-```
+```text
 
 ### Jenkins Pipeline
 ```groovy
@@ -197,7 +197,7 @@ pipeline {
         }
     }
 }
-```
+```text
 
 ## Best Practices
 
@@ -214,7 +214,7 @@ make dev
 
 # Before merge/deployment
 make validate
-```
+```text
 
 ### 2. **Team Standards**
 - Run `make sanity-check` before every commit
@@ -240,7 +240,7 @@ make fix
 # Check specific rules
 yamllint -c .yamllint playbook.yml
 ansible-lint playbook.yml
-```
+```text
 
 #### Template Issues
 ```bash
@@ -249,7 +249,7 @@ make validate-templates
 
 # Test template rendering
 make test-render
-```
+```text
 
 #### Security Warnings
 ```bash
@@ -258,7 +258,7 @@ make security-check
 
 # Check for exposed secrets
 grep -r "password\|secret" . --include="*.yml"
-```
+```text
 
 ### Getting Help
 
@@ -284,6 +284,6 @@ Track these quality metrics:
 
 ---
 
-**Maintained by**: Platform Engineering Team  
-**Last Updated**: January 2025  
+**Maintained by**: Platform Engineering Team
+**Last Updated**: January 2025
 **Version**: 1.0

@@ -41,9 +41,9 @@ The health score uses a sophisticated multi-factor approach designed to provide 
 
 ### Formula
 
-```
+```text
 health_score = check_score + (30 - error_penalty - warning_penalty) + quality_bonus
-```
+```text
 
 Where:
 - `check_score = (pass_checks * 100 + warning_checks * 75 + fail_checks * 0) / (total_checks * 100) * 70`
@@ -108,7 +108,7 @@ outputs:
   passed_checks: # Number of linters that passed
   enabled_checks: # Number of active linters
   # Individual linter results (status, errors, warnings, files)
-```
+```text
 
 ### JSON Results
 
@@ -135,7 +135,7 @@ Provides comprehensive JSON output for programmatic processing:
     "health_score": 99.0
   }
 }
-```
+```text
 
 ## 🚀 Usage
 
@@ -143,7 +143,7 @@ Provides comprehensive JSON output for programmatic processing:
 
 ```bash
 python3 scripts/super_linter_analysis.py
-```
+```text
 
 ### In GitHub Actions
 
@@ -156,7 +156,7 @@ python3 scripts/super_linter_analysis.py
     echo "Health Score: ${{ steps.analysis.outputs.health_score }}"
     echo "Errors: ${{ steps.analysis.outputs.total_errors }}"
     echo "Warnings: ${{ steps.analysis.outputs.total_warnings }}"
-```
+```text
 
 ## 🎯 Score Interpretation
 

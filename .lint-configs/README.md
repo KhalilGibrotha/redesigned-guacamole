@@ -108,21 +108,21 @@ Instead of cluttering the root directory, all linting configurations are central
 shellcheck script.sh
 # Or manually specify exclusions
 shellcheck -e SC1091,SC2034,SC2154,SC2086,SC2129,SC2038,SC2015,SC2044,SC2193,SC2081 script.sh
-```
+```text
 
 #### For Ansible Playbook Repositories
 ```bash
 # Use Ansible-appropriate exclusions
 shellcheck -e SC1091,SC2034,SC2154,SC2086 script.sh
 # For shell tasks in playbooks, these exclusions balance safety with practicality
-```
+```text
 
 #### For Standalone Script Repositories
 ```bash
 # Use minimal exclusions for maximum safety
 shellcheck -e SC1091,SC2034,SC2154 script.sh
 # Keeps important checks like SC2086 (quoting) enabled
-```
+```text
 
 #### Repository-Specific Override
 Create a `.shellcheckrc-local` in consuming repositories:
@@ -131,7 +131,7 @@ Create a `.shellcheckrc-local` in consuming repositories:
 source=.lint-configs/.shellcheckrc-ansible
 # Add repository-specific exclusions
 exclude=SC1091,SC2034,SC2154,SC2086,SCXXXX
-```
+```text
 
 ## 📋 **Remote Repository Support**
 
@@ -163,4 +163,4 @@ If you need to override the automatic detection, add this to your repository's w
 ```yaml
 - name: 🔧 Override Shellcheck Configuration
   run: echo 'SHELLCHECK_OPTS="-e SC1091,SC2034,SC2154,SC2086"' >> $GITHUB_ENV
-```
+```text

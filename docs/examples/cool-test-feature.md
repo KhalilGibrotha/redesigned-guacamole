@@ -11,7 +11,7 @@ confluence:
   imageFolder: "docs/images"
 ---
 
-# {{ project_name }} Documentation
+## {{ project_name }} Documentation
 
 This document describes the architecture for our awesome new feature.
 

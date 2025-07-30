@@ -5,7 +5,7 @@ confluence:
   category: "testing"  # Uses hierarchy: testing -> root
 ---
 
-# Image Test Documentation
+## Image Test Documentation
 
 This document tests image functionality with the Confluence publisher.
 
@@ -31,7 +31,7 @@ You can also use HTML img tags:
 
 The publisher supports these image formats:
 - ✅ PNG (.png)
-- ✅ JPEG (.jpg, .jpeg) 
+- ✅ JPEG (.jpg, .jpeg)
 - ✅ GIF (.gif)
 - ✅ WebP (.webp)
 - ✅ BMP (.bmp)
@@ -41,7 +41,7 @@ The publisher supports these image formats:
 ## Features
 
 - ✅ Automatically uploads images as Confluence attachments
-- ✅ Updates content to reference uploaded attachments  
+- ✅ Updates content to reference uploaded attachments
 - ✅ Works with both Markdown and HTML image syntax
 - ✅ Handles relative and absolute paths
 - ✅ Preserves image dimensions when specified

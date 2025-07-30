@@ -21,7 +21,7 @@ This directory contains Jinja2 templates for generating dynamic documentation us
 
 ## � Table of Contents
 
-- [Template Structure](#-template-structure)
+- [Template Structure](#️-template-structure)
 - [YAML Front Matter](#-yaml-front-matter)
 - [Variable Usage](#-variable-usage)
 - [Macro Integration](#-macro-integration)
@@ -52,7 +52,7 @@ confluence:
 # {{ organization_name }} Document Title
 
 ## Content using variables and macros...
-```
+```text
 
 ## 📝 YAML Front Matter
 
@@ -64,7 +64,7 @@ Every template must include these required fields:
 ---
 varsFile: "vars/aap.yml"           # Path to variables file
 project_status: "Active"           # Status: Active, Draft, Deprecated, In Review
-```
+```text
 
 ### Confluence Configuration
 
@@ -76,7 +76,7 @@ confluence:
   space: "AH"                      # Confluence space key (e.g., AH, DOC, PROJ)
   category: "operations"           # Category from hierarchy (operations, administration, governance, etc.)
   imageFolder: "docs/images"       # Relative path to images
-```
+```text
 
 **Available Categories:**
 - `operations` - Operations & Maintenance
@@ -94,7 +94,7 @@ confluence:
   space: "AH"
   parentPageId: "123456"           # Direct parent page ID
   imageFolder: "docs/images"
-```
+```text
 
 ### Optional Fields
 
@@ -105,7 +105,7 @@ author: "Your Name"                # Document author
 version: "1.0"                     # Document version
 tags: ["automation", "platform"]   # Document tags
 lastUpdated: "2025-07-17"         # Last update date
-```
+```text
 
 ## 🔧 Variable Usage
 
@@ -124,7 +124,7 @@ Variables are defined in `vars/aap.yml` and referenced in templates using Jinja2
 
 # Complex variable usage
 {{ aap_security_and_compliance | join(', ') }}
-```
+```text
 
 ### Available Variables
 
@@ -165,7 +165,7 @@ Always import macros at the top of your template:
 
 ```jinja2
 {% import 'docs/macros/macros.j2' as macros %}
-```
+```text
 
 ### Available Macros
 
@@ -177,7 +177,7 @@ Creates grammatically correct lists with Oxford commas:
 {{ macros.oxford_comma_list(main_objectives) }}
 
 # Output: "Objective A, Objective B, and Objective C"
-```
+```text
 
 **Usage Examples:**
 ```jinja2
@@ -189,7 +189,7 @@ Our network technologies include {{ macros.oxford_comma_list(aap_network_tech) }
 
 # For compliance standards
 We adhere to {{ macros.oxford_comma_list(aap_security_and_compliance) }} standards.
-```
+```text
 
 ## 📚 Template Examples
 
@@ -228,7 +228,7 @@ This guide covers operations for {{ sub_organization_name }}'s automation platfo
 
 ## Compliance
 We maintain compliance with {{ macros.oxford_comma_list(aap_security_and_compliance) }}.
-```
+```text
 
 ### Advanced Template with Conditional Logic
 
@@ -270,7 +270,7 @@ Supported Windows versions: {{ macros.oxford_comma_list(windows_versions) }}
 ### Security Technologies
 {{ macros.oxford_comma_list(aap_security_tech) }}
 {% endif %}
-```
+```text
 
 ## ✅ Best Practices
 
@@ -281,7 +281,7 @@ Supported Windows versions: {{ macros.oxford_comma_list(windows_versions) }}
 
 # Bad - Hard-coded values
 My Company's platform runs on version 2.4.
-```
+```text
 
 ### 2. **Proper Macro Usage**
 ```jinja2
@@ -290,7 +290,7 @@ My Company's platform runs on version 2.4.
 
 # Bad - Manual list formatting
 {{ main_objectives[0] }}, {{ main_objectives[1] }}, and {{ main_objectives[2] }}
-```
+```text
 
 ### 3. **YAML Front Matter Validation**
 ```yaml
@@ -311,7 +311,7 @@ confluence:
 confluence:
   title: "Incomplete"
 ---
-```
+```text
 
 ### 4. **Template Organization**
 ```jinja2
@@ -325,7 +325,7 @@ Content with {{ variables }}
 
 ## Section 2
 More content with {{ macros.oxford_comma_list(array_variable) }}
-```
+```text
 
 ### 5. **Variable Validation**
 ```jinja2
@@ -338,11 +338,11 @@ More content with {{ macros.oxford_comma_list(array_variable) }}
 # Bad - Assuming variables exist
 ## Performance Metrics
 {{ macros.oxford_comma_list(aap_metrics) }}
-```
+```text
 
 ## 📁 Directory Structure
 
-```
+```text
 docs/
 ├── README.md                          # This guide
 ├── vars.yaml                          # Variable definitions
@@ -361,7 +361,7 @@ docs/
 ├── aap_policy_governance.j2           # Policy documentation
 └── images/                            # Image assets
     └── *.png, *.jpg, *.webp
-```
+```text
 
 ## 🔍 Template Validation
 
@@ -373,13 +373,13 @@ from jinja2 import Environment, FileSystemLoader
 env = Environment(loader=FileSystemLoader('docs'))
 template = env.get_template('your_template.j2')
 "
-```
+```text
 
 ### Variable Validation
 ```bash
 # Check for undefined variables
 grep -r "{{ [a-zA-Z_]" docs/ --include="*.j2" | grep -v "macros"
-```
+```text
 
 ### YAML Front Matter Validation
 ```bash
@@ -393,7 +393,7 @@ with open('docs/your_template.j2', 'r') as f:
         yaml_content = content[3:yaml_end]
         yaml.safe_load(yaml_content)
 "
-```
+```text
 
 ## 🚀 Getting Started
 
