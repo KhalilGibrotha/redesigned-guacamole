@@ -81,7 +81,7 @@ confluence:
 
 # {{ organization_name }} Documentation
 
-This document uses variables from vars.yaml like {{ organization_name }} 
+This document uses variables from vars.yaml like {{ organization_name }}
 and macros provided by our pipeline.
 
 {{ macros.info_box("This is an info box from our macro library") }}
@@ -207,7 +207,7 @@ graph TD
     G --> H[comprehensive-report]
     C --> I[notifications.yml]
     I --> J[GitHub Issue Creation]
-    
+
     style A fill:#e1f5fe
     style C fill:#f3e5f5
     style G fill:#e8f5e8
@@ -345,9 +345,9 @@ cd YOUR_REPOSITORY
 pip install -r requirements.txt
 
 # Test the documentation publisher locally
-python scripts/confluence_publisher.py 
-  --dry-run 
-  --docs-dir docs 
+python scripts/confluence_publisher.py
+  --dry-run
+  --docs-dir docs
   --vars-file docs/vars.yaml
 
 # Run local linting
@@ -371,8 +371,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Maintained by**: [Khalil Gibrotha](https://github.com/KhalilGibrotha)  
-**Created**: January 2025  
+**Maintained by**: [Khalil Gibrotha](https://github.com/KhalilGibrotha)
+**Created**: January 2025
 **License**: MIT
 
 **🚀 Ready to add comprehensive CI/CD to your repository? Start with the Quick Start guide above! 🎯**

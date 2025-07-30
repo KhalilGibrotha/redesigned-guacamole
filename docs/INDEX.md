@@ -27,7 +27,7 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 **🔧 Use this workflow in my repository**
 → [WORKFLOW_GUIDE.md - Remote Usage Guide](WORKFLOW_GUIDE.md#-remote-usage-guide)
 
-**📄 Create documentation templates**  
+**📄 Create documentation templates**
 → [README.md - Template Guide](README.md)
 
 **🌿 Understand branch naming**
@@ -48,7 +48,7 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 docs/
 ├── INDEX.md                                    # This file
 ├── WORKFLOW_GUIDE.md                           # 🚀 Main guide (START HERE)
-├── README.md                                   # 📄 Template documentation  
+├── README.md                                   # 📄 Template documentation
 ├── BRANCH_NAMING_GUIDE.md                      # 🌿 Branch naming reference
 ├── REMOTE_WORKFLOW_USAGE.md                    # 🌐 Remote usage guide
 ├── SUPER_LINTER_CONFIGURATION_REFERENCE.md     # ⚙️ Linter configuration

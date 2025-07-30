@@ -92,7 +92,7 @@ See [BRANCH_NAMING_GUIDE.md](BRANCH_NAMING_GUIDE.md) for complete details.
 The workflow can automatically fix:
 
 - **Python**: Code formatting (Black), import sorting (isort)
-- **Shell**: Script formatting (shfmt)  
+- **Shell**: Script formatting (shfmt)
 - **YAML**: Basic structure and whitespace
 - **JSON**: Formatting and validation
 - **Markdown**: Basic formatting and structure
@@ -104,7 +104,7 @@ All linter configuration files are automatically copied to remote repositories:
 ```bash
 # Core configurations copied to calling repositories
 .ansible-lint           # Ansible linting rules
-.yamllint              # YAML formatting rules  
+.yamllint              # YAML formatting rules
 .markdownlint.json     # Markdown linting rules
 .flake8                # Python linting rules
 .pylintrc              # Python code analysis
@@ -120,7 +120,7 @@ All linter configuration files are automatically copied to remote repositories:
 This repository uses a Jinja2-based documentation system:
 
 - **Templates**: `.j2` files in `docs/` directory
-- **Variables**: Defined in `vars/` directory  
+- **Variables**: Defined in `vars/` directory
 - **Macros**: Reusable components in `docs/macros/`
 - **Publishing**: Automated Confluence publishing
 
@@ -184,7 +184,7 @@ jobs:
 
 1. **Auto-fixes not committed**:
    - Add `contents: write` permission to calling workflow
-   
+
 2. **Confluence publishing fails**:
    - Ensure secrets are configured in calling repository
    - Or use `dry_run: true` for testing
@@ -232,12 +232,12 @@ The workflow provides:
 
 ### Recommended Development Process
 
-1. **Create Feature Branch**: 
+1. **Create Feature Branch**:
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
-2. **Develop & Test**: 
+2. **Develop & Test**:
    - Workflow runs automatically on push
    - Auto-fixes applied automatically
 
@@ -262,7 +262,7 @@ black --check scripts/
 ## 📚 Additional Documentation
 
 - **[Branch Naming Guide](BRANCH_NAMING_GUIDE.md)**: Supported branch patterns
-- **[Template Documentation](README.md)**: Complete Jinja2 template guide  
+- **[Template Documentation](README.md)**: Complete Jinja2 template guide
 - **[Remote Usage Guide](REMOTE_WORKFLOW_USAGE.md)**: Detailed remote usage instructions
 - **[Linter Reference](SUPER_LINTER_CONFIGURATION_REFERENCE.md)**: Complete linter documentation
 
