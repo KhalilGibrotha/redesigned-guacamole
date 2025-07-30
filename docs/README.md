@@ -2,6 +2,23 @@
 
 This directory contains Jinja2 templates for generating dynamic documentation using variables and macros. This guide explains how to create properly formatted template files that integrate with the Confluence publishing system.
 
+## 📖 Documentation Index
+
+### 📋 Template & Publishing Guides
+- **[Template Guide](README.md)** - This document: Creating Jinja2 templates
+- **[Workflow Guide](WORKFLOW_GUIDE.md)** - CI/CD pipeline and automation
+- **[Branch Naming Guide](BRANCH_NAMING_GUIDE.md)** - Git branch conventions
+
+### 🔧 Technical References
+- **[Super Linter Analysis](SUPER_LINTER_ANALYSIS.md)** - Code quality analysis and health scoring
+- **[Super Linter Configuration](SUPER_LINTER_CONFIGURATION_REFERENCE.md)** - Linter configuration reference
+
+### 📁 Template Categories
+- **[Automation Hub](automation_hub/)** - Hub-specific documentation templates
+- **[Security](security/)** - Security and compliance templates
+- **[CI/CD](ci-cd/)** - Pipeline and automation templates
+- **[Testing](testing/)** - Testing and validation templates
+
 ## � Table of Contents
 
 - [Template Structure](#-template-structure)
@@ -63,7 +80,7 @@ confluence:
 
 **Available Categories:**
 - `operations` - Operations & Maintenance
-- `administration` - Platform Administration  
+- `administration` - Platform Administration
 - `governance` - Policies & Governance
 - `automation_hub` - Automation Hub
 - `guides` - User Guides & Training
@@ -206,7 +223,7 @@ This guide covers operations for {{ sub_organization_name }}'s automation platfo
 ### Network Technologies
 {{ macros.oxford_comma_list(aap_network_tech) }}
 
-### Security Technologies  
+### Security Technologies
 {{ macros.oxford_comma_list(aap_security_tech) }}
 
 ## Compliance

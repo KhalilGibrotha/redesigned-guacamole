@@ -467,25 +467,64 @@ class SuperLinterAnalyzer:
         enabled_checks = sum(1 for check in checks.values() if check["enabled"])
         passed_checks = sum(1 for check in checks.values() if check["status"] == "✅ PASS" and check["enabled"])
 
-        # Calculate health score with more balanced approach
+        # Calculate health score with improved weighting system
         if enabled_checks == 0:
             health_score = 100
         else:
-            # Base score from passed checks percentage
-            base_score = (passed_checks / enabled_checks) * 100
+            # Multi-factor scoring system:
+            # 1. Base score from check results (70% of total score)
+            # 2. Error penalty (major impact)
+            # 3. Warning penalty (minor impact)
+            # 4. Bonus for clean code patterns
 
-            # More moderate penalty system:
-            # - Errors are serious: 3 points each, max 30 point penalty
-            # - Warnings are minor: 0.5 points each, max 15 point penalty
-            error_penalty = min(total_errors * 3, 30)
-            warning_penalty = min(total_warnings * 0.5, 15)
+            # Factor 1: Base score from check status distribution
+            failed_checks = sum(1 for check in checks.values() if check["status"] == "❌ FAIL" and check["enabled"])
+            warning_checks = sum(1 for check in checks.values() if check["status"] == "⚠️ WARN" and check["enabled"])
 
-            # Apply penalties but ensure reasonable minimum score
-            health_score = max(20, base_score - error_penalty - warning_penalty)
+            # Weight check results: Pass=100pts, Warning=75pts, Fail=0pts
+            check_score = (
+                ((passed_checks * 100) + (warning_checks * 75) + (failed_checks * 0)) / (enabled_checks * 100) * 70
+            )
 
-            # Bonus for having no errors (even with warnings)
-            if total_errors == 0 and total_warnings <= 10:
-                health_score = min(100, health_score + 10)  # Small bonus for clean code
+            # Factor 2: Error impact (scaled by file count for context)
+            # Fewer errors per file = less penalty
+            if total_files > 0:
+                error_rate = total_errors / total_files
+                error_penalty = min(error_rate * 25, 25)  # Max 25 point penalty
+            else:
+                error_penalty = 0
+
+            # Factor 3: Warning impact (much lighter penalty)
+            if total_files > 0:
+                warning_rate = total_warnings / total_files
+                warning_penalty = min(warning_rate * 8, 8)  # Max 8 point penalty
+            else:
+                warning_penalty = 0
+
+            # Factor 4: Quality bonuses
+            quality_bonus = 0
+
+            # Bonus for zero errors across all checks
+            if total_errors == 0:
+                quality_bonus += 10
+
+            # Bonus for minimal warnings (excellent code quality)
+            if total_warnings == 0:
+                quality_bonus += 5
+            elif total_warnings <= 5:
+                quality_bonus += 3
+
+            # Bonus for high check coverage (many linters enabled)
+            if enabled_checks >= 8:
+                quality_bonus += 5
+            elif enabled_checks >= 6:
+                quality_bonus += 3
+
+            # Calculate final score with proper weighting
+            health_score = check_score + (30 - error_penalty - warning_penalty) + quality_bonus
+
+            # Ensure score stays within reasonable bounds
+            health_score = max(15, min(100, health_score))
 
         summary = {
             "total_errors": total_errors,
@@ -532,13 +571,40 @@ class SuperLinterAnalyzer:
 
         lines.append("")
 
-        # Summary statistics
+        # Summary statistics with enhanced metrics
         lines.append("### 📊 Summary Statistics")
         lines.append(f"- **Total Files Checked**: {summary['total_files']}")
         lines.append(f"- **Active Linters**: {summary['enabled_checks']}")
-        lines.append(f"- **Passed Checks**: {summary['passed_checks']}/{summary['enabled_checks']}")
-        lines.append(f"- **Total Errors**: {summary['total_errors']}")
-        lines.append(f"- **Total Warnings**: {summary['total_warnings']}")
+        lines.append(
+            f"- **Passed Checks**: {summary['passed_checks']}/{summary['enabled_checks']} ({round(summary['passed_checks']/max(summary['enabled_checks'], 1)*100, 1)}%)"
+        )
+
+        # Calculate check distribution
+        failed_checks = sum(1 for check in checks.values() if check["status"] == "❌ FAIL" and check["enabled"])
+        warning_checks = sum(1 for check in checks.values() if check["status"] == "⚠️ WARN" and check["enabled"])
+
+        lines.append(
+            f"- **Check Results**: ✅ {summary['passed_checks']} pass, ⚠️ {warning_checks} warnings, ❌ {failed_checks} failed"
+        )
+        lines.append(f"- **Issue Summary**: {summary['total_errors']} errors, {summary['total_warnings']} warnings")
+
+        # Add quality metrics
+        if summary["total_files"] > 0:
+            error_rate = round(summary["total_errors"] / summary["total_files"] * 100, 2)
+            warning_rate = round(summary["total_warnings"] / summary["total_files"] * 100, 2)
+            lines.append(f"- **Quality Metrics**: {error_rate}% error rate, {warning_rate}% warning rate")
+
+        lines.append("")
+
+        # Scoring methodology explanation
+        lines.append("### 🧮 Health Score Methodology")
+        lines.append("The health score uses a weighted approach:")
+        lines.append("- **Check Results (70%)**: Pass=100pts, Warning=75pts, Fail=0pts")
+        lines.append("- **Error Penalty**: Scaled by error rate (max -25pts)")
+        lines.append("- **Warning Penalty**: Light penalty by warning rate (max -8pts)")
+        lines.append(
+            "- **Quality Bonuses**: Zero errors (+10pts), minimal warnings (+5pts), comprehensive linting (+5pts)"
+        )
         lines.append("")
 
         # Status indicator

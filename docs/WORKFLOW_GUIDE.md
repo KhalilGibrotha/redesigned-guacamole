@@ -216,7 +216,7 @@ For detailed troubleshooting, see [REMOTE_WORKFLOW_USAGE.md](REMOTE_WORKFLOW_USA
 ### Workflow Outputs
 
 The workflow provides:
-- **Health Score**: Overall code quality rating (0-100)
+- **Health Score**: Overall code quality rating (0-100) - see [Super Linter Analysis](SUPER_LINTER_ANALYSIS.md) for methodology
 - **Fix Count**: Number of issues automatically resolved
 - **Issue Summary**: Detailed breakdown by tool/language
 - **Security Report**: Security findings and recommendations

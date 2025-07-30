@@ -18,6 +18,7 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 | **[README.md](README.md)** | Jinja2 template documentation | Template creators |
 | **[BRANCH_NAMING_GUIDE.md](BRANCH_NAMING_GUIDE.md)** | Branch naming patterns | Developers |
 | **[REMOTE_WORKFLOW_USAGE.md](REMOTE_WORKFLOW_USAGE.md)** | Remote usage & troubleshooting | External repository users |
+| **[SUPER_LINTER_ANALYSIS.md](SUPER_LINTER_ANALYSIS.md)** | Code quality analysis & health scoring | Quality engineers, developers |
 | **[SUPER_LINTER_CONFIGURATION_REFERENCE.md](SUPER_LINTER_CONFIGURATION_REFERENCE.md)** | Linter configuration reference | Configuration managers |
 
 ## 🎯 **Quick Navigation**
@@ -39,6 +40,9 @@ Read this: **[README.md](README.md)** - Comprehensive Jinja2 template documentat
 **⚙️ Configure linting rules**
 → [SUPER_LINTER_CONFIGURATION_REFERENCE.md](SUPER_LINTER_CONFIGURATION_REFERENCE.md)
 
+**📊 Understand health scoring**
+→ [SUPER_LINTER_ANALYSIS.md](SUPER_LINTER_ANALYSIS.md)
+
 **🧪 See template examples**
 → [examples/](examples/) directory
 
@@ -51,6 +55,7 @@ docs/
 ├── README.md                                   # 📄 Template documentation
 ├── BRANCH_NAMING_GUIDE.md                      # 🌿 Branch naming reference
 ├── REMOTE_WORKFLOW_USAGE.md                    # 🌐 Remote usage guide
+├── SUPER_LINTER_ANALYSIS.md                    # 📊 Code quality analysis
 ├── SUPER_LINTER_CONFIGURATION_REFERENCE.md     # ⚙️ Linter configuration
 ├── examples/                                   # 🧪 Example templates
 │   ├── cool-test-feature.md                   # Feature documentation example
@@ -84,6 +89,7 @@ graph TD
 | README.md | ⭐⭐⭐⭐⭐ | Current | Template creators |
 | BRANCH_NAMING_GUIDE.md | ⭐⭐⭐⭐⭐ | Current | Developers |
 | REMOTE_WORKFLOW_USAGE.md | ⭐⭐⭐⭐ | Current | External users |
+| SUPER_LINTER_ANALYSIS.md | ⭐⭐⭐⭐⭐ | Current | Quality engineers |
 | SUPER_LINTER_CONFIGURATION_REFERENCE.md | ⭐⭐⭐⭐ | Current | Config managers |
 
 ## 🚀 **Next Steps**
