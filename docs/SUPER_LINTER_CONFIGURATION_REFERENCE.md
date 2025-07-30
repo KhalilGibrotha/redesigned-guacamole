@@ -81,7 +81,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
   - Valid data types
 
 ### 8. **Markdown Lint** 📄
-- **Purpose**: Ensures markdown files follow consistent style and formatting rules
+- **Purpose**: Ensures Markdown files follow consistent style and formatting rules
 - **Config File**: `.markdownlint.json`
 - **What it checks**:
   - Header hierarchy and structure
@@ -91,7 +91,7 @@ Our Super Linter configuration includes **11 core linters** that ensure code qua
   - Proper code block formatting
 
 ### 9. **textlint (Natural Language)** 📖
-- **Purpose**: Lints natural language in markdown and text files for writing quality
+- **Purpose**: Lints natural language in Markdown and text files for writing quality
 - **Config File**: `.textlintrc`
 - **What it checks**:
   - Writing quality (passive voice, weak words)

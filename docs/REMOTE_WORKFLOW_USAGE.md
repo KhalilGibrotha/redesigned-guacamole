@@ -262,7 +262,7 @@ jobs:
 The workflow automatically excludes these directories from auto-fix operations:
 - `.git/` - Git repository data
 - `.venv/`, `venv/` - Virtual environments
-- `node_modules/` - NPM dependencies
+- `node_modules/` - npm dependencies
 - `.mypy_cache/` - MyPy type checker cache
 - `.pytest_cache/` - Pytest cache
 - `__pycache__/` - Python bytecode cache

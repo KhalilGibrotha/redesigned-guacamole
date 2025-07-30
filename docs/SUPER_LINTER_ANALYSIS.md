@@ -10,7 +10,7 @@ The Super Linter Analysis script (`scripts/super_linter_analysis.py`) provides c
 - **Intelligent Health Scoring**: Weighted scoring system that rewards clean code and properly penalizes issues
 - **Security Scanning**: Built-in security pattern detection for common vulnerabilities
 - **GitHub Actions Integration**: Native support for GitHub Actions outputs and step summaries
-- **Comprehensive Reporting**: Rich markdown reports with quality metrics and methodology transparency
+- **Comprehensive Reporting**: Rich Markdown reports with quality metrics and methodology transparency
 
 ## 🧮 Health Score Methodology
 
@@ -87,7 +87,7 @@ This ensures that the scoring methodology accounts for different project context
 
 ### GitHub Actions Summary
 
-The script generates rich markdown summaries that include:
+The script generates rich Markdown summaries that include:
 
 - Overall health score with color-coded indicators
 - Detailed linting results table

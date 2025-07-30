@@ -6,7 +6,7 @@
 ### Detailed Execution Flow
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities capabilities (includes Ansible validation)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
@@ -102,7 +102,7 @@ and macros provided by our pipeline.
 ## 📋 Workflows
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
@@ -118,10 +118,10 @@ A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automat
 ## 🎯 Purpose
 
 This repository provides **reusable workflows** that any other repository can call to:
-- � **Intelligent Code Analysis**: Dynamic Super Linter with auto-fix capabilities
+- 📊 **Intelligent Code Analysis**: Dynamic Super Linter with autofix capabilities
 - 🛡️ **Security Scanning**: DevSkim, Trivy vulnerability scanning, and secret detection
 - 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting (integrated with Super Linter)
-- � **Documentation Publishing**: Process and publish documentation to Confluence
+- 📚 **Documentation Publishing**: Process and publish documentation to Confluence
 - 🚨 **Failure Notifications**: Automatic GitHub issue creation for CI/CD failures
 - 📊 **Comprehensive Reporting**: SARIF output and detailed execution summaries
 
@@ -224,8 +224,8 @@ graph TD
 
 ### Detailed Execution Flow:
 
-1. **� Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🎭 Ansible Syntax Check**: Validates Ansible playbooks and roles (if present)
 5. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
@@ -251,7 +251,7 @@ graph TD
 
 **Jobs**:
 - `detect-changes`: Analyzes file changes for optimized execution
-- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
+- `super-linter`: Intelligent linting with autofix capabilities (includes Ansible validation)
 - `security`: DevSkim, Trivy, and secret detection
 - `publish`: Documentation publishing to Confluence
 - `comprehensive-report`: Detailed execution summary

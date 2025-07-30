@@ -2,12 +2,12 @@
 
 ## 📚 Overview
 
-This repository provides a comprehensive, reusable CI/CD workflow system for code quality, linting, auto-fixing, and documentation publishing. The workflow can be used locally within this repository or called remotely from other repositories.
+This repository provides a comprehensive, reusable CI/CD workflow system for code quality, linting, autofixing, and documentation publishing. The workflow can be used locally within this repository or called remotely from other repositories.
 
 ## 🎯 Key Features
 
 - **🔍 Multi-Language Linting**: Supports Python, Shell, YAML, Markdown, JSON, and more
-- **🤖 Auto-Fix Capabilities**: Automatically fixes common code quality issues
+- **🤖 autofix Capabilities**: Automatically fixes common code quality issues
 - **📄 Documentation Publishing**: Automated Confluence publishing with Jinja2 templates
 - **🌐 Remote Usage**: Can be called from external repositories with full functionality
 - **🛡️ Security Scanning**: Integrated security analysis and secret detection
@@ -87,7 +87,7 @@ See [BRANCH_NAMING_GUIDE.md](BRANCH_NAMING_GUIDE.md) for complete details.
 | **flake8** | Python code analysis | `.flake8` |
 | **pylint** | Python code quality | `.pylintrc` |
 
-### Auto-Fix Capabilities
+### autofix Capabilities
 
 The workflow can automatically fix:
 
