@@ -472,7 +472,7 @@ class DocumentProcessor:
                 root_page_id = hierarchy.get("root", {}).get("pageId")
                 if root_page_id:
                     logger.info(f"🔗 Resolved root category to page ID: {root_page_id}")
-                    return str(root_page_id)
+                    return self._to_string_or_none(root_page_id)
                 else:
                     logger.error("❌ Root page ID not configured in hierarchy")
                 return None
