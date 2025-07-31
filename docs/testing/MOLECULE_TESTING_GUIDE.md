@@ -65,7 +65,7 @@ make test-molecule
 
 # Run full playbook test
 make test-playbook-molecule
-```
+```text
 
 ### Full Test Suite
 ```bash
@@ -74,7 +74,7 @@ make test-all
 
 # CI/CD testing
 make ci
-```
+```text
 
 ### Manual Molecule Commands
 ```bash
@@ -91,7 +91,7 @@ molecule destroy     # Clean up
 molecule converge -s playbook-test
 molecule login       # SSH into test container
 molecule verify      # Re-run verification
-```
+```text
 
 ## Test Environment
 
@@ -115,7 +115,7 @@ vars:
   confluence_url: "http://localhost:8080/mock"
   confluence_auth: "dGVzdDp0ZXN0"  # test:test
   project_name: "Test Project"
-```
+```text
 
 ### Sensitive Data Protection
 - Real credentials never in test code
@@ -130,20 +130,20 @@ vars:
   ansible.builtin.stat:
     path: "/tmp/{{ item }}.html"
   register: html_files
-```
+```text
 
 ### Content Validation
 ```yaml
 - name: "Check template processing"
   ansible.builtin.shell: grep -q "{{ project_name }}" /tmp/main.md.html
-```
+```text
 
 ### Security Scanning
 ```yaml
 - name: "Security check - no sensitive data"
   ansible.builtin.shell: |
     ! grep -i "password\|secret\|token" /tmp/*.html
-```
+```text
 
 ### Permission Verification
 ```yaml
@@ -151,7 +151,7 @@ vars:
   ansible.builtin.assert:
     that:
       - item.stat.mode == "0644"
-```
+```text
 
 ## CI/CD Integration
 
@@ -172,7 +172,7 @@ molecule-test:
   only:
     - merge_requests
     - main
-```
+```text
 
 ### GitHub Actions
 ```yaml
@@ -190,7 +190,7 @@ jobs:
       - run: |
           pip install molecule[docker]
           molecule test
-```
+```text
 
 ### Jenkins Pipeline
 ```groovy
@@ -219,7 +219,7 @@ pipeline {
         }
     }
 }
-```
+```text
 
 ## Best Practices
 
@@ -260,7 +260,7 @@ newgrp docker
 
 # Or run with sudo temporarily
 sudo molecule test
-```
+```text
 
 #### Container Startup Failures
 ```bash
@@ -270,7 +270,7 @@ sudo systemctl start docker
 
 # Verify container image
 docker pull quay.io/ansible/molecule-ubuntu:latest
-```
+```text
 
 #### Test Timeouts
 ```bash
@@ -278,7 +278,7 @@ docker pull quay.io/ansible/molecule-ubuntu:latest
 platforms:
   - name: instance
     docker_timeout: 300  # 5 minutes
-```
+```text
 
 #### Mock Server Issues
 ```bash
@@ -286,7 +286,7 @@ platforms:
 molecule converge
 molecule login
 curl http://localhost:8080/rest/api/content
-```
+```text
 
 ### Debug Mode
 ```bash
@@ -299,7 +299,7 @@ molecule converge
 molecule verify
 # Clean up when done
 molecule destroy
-```
+```text
 
 ## Monitoring and Reporting
 
@@ -333,7 +333,7 @@ molecule destroy
 ## Support and Training
 
 ### Resources
-- **Molecule Documentation**: https://ansible.readthedocs.io/projects/molecule/
+- **Molecule Documentation**: <https://ansible.readthedocs.io/projects/molecule/>
 - **Internal Wiki**: Link to team documentation
 - **Training Videos**: Team-specific tutorials
 

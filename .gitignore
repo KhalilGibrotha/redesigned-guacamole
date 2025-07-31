@@ -123,6 +123,27 @@ mypy-report/
 !.github/**
 confluence_test.code-workspace
 
+# Linting configuration symlinks (actual files are in .lint-configs/)
+.ansible-lint
+.editorconfig
+.editorconfig-checker.json
+.flake8
+.gitleaks.toml
+.jscpd.json
+.jsonlintrc
+.markdownlint.json
+.prettierrc.json
+.prettierrc.yml
+.pylintrc
+.shellcheckrc
+.shfmt
+.textlintrc
+.yamllint
+pyproject.toml
+
+# Keep the actual lint configuration directory
+!.lint-configs/
+
 # Cache and runtime files
 page_id_cache.json
 runtime.yml

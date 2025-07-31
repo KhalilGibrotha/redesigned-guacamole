@@ -31,7 +31,7 @@ You can manually trigger the pipeline with these options:
 
 ## 📊 Reporting Features
 
-The pipeline generates comprehensive markdown reports including:
+The pipeline generates comprehensive Markdown reports including:
 
 - Repository statistics (file counts by type)
 - Quality gate results with status indicators
@@ -60,7 +60,7 @@ The pipeline automatically detects:
 The pipeline enforces these quality standards:
 
 - ✅ Code syntax validation
-- ✅ Linting standards compliance  
+- ✅ Linting standards compliance
 - ✅ Security vulnerability scanning
 - ✅ Ansible best practices
 - ✅ Infrastructure testing (when enabled)

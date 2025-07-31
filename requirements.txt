@@ -2,7 +2,7 @@
 jinja2
 pyyaml
 requests
-markdown
+Markdown
 beautifulsoup4
 
 # Development and linting tools

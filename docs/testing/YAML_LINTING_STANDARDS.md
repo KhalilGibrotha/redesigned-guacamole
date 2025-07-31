@@ -34,7 +34,7 @@ line-length:
   level: warning
   allow-non-breakable-words: true
   allow-non-breakable-inline-mappings: true
-```
+```text
 - **Rationale**: Balance between readability and modern wide screens
 - **Best Practice**: Break long URLs and complex expressions across lines
 - **Example**:
@@ -43,7 +43,7 @@ line-length:
   url: >-
     {{ confluence_url }}/rest/api/content?title={{ project_name | urlencode }}
     &spaceKey={{ confluence_space }}&expand=version
-  
+
   # Avoid
   url: "{{ confluence_url }}/rest/api/content?title={{ project_name | urlencode }}&spaceKey={{ confluence_space }}&expand=version"
   ```
@@ -54,7 +54,7 @@ indentation:
   spaces: 2
   indent-sequences: true
   check-multi-line-strings: false
-```
+```text
 - **Rationale**: Ansible standard, good readability
 - **Best Practice**: Always use spaces, never tabs
 
@@ -63,7 +63,7 @@ indentation:
 truthy:
   allowed-values: ['true', 'false']
   check-keys: false
-```
+```text
 - **Rationale**: Consistency and clarity
 - **Best Practice**: Use `true`/`false` instead of `yes`/`no`
 
@@ -72,7 +72,7 @@ truthy:
 comments:
   min-spaces-from-content: 1
   require-starting-space: true
-```
+```text
 - **Best Practice**: Always include explanatory comments for complex logic
 
 ### Security Rules
@@ -80,7 +80,7 @@ comments:
 octal-values:
   forbid-implicit-octal: true
   forbid-explicit-octal: true
-```
+```text
 - **Rationale**: Prevents file permission security issues
 
 ## Integration with CI/CD
@@ -94,12 +94,12 @@ repos:
     hooks:
       - id: yamllint
         args: [-c, .yamllint]
-  
+
   - repo: https://github.com/ansible/ansible-lint
     rev: v6.20.0
     hooks:
       - id: ansible-lint
-```
+```text
 
 ### GitLab CI/CD
 ```yaml
@@ -115,7 +115,7 @@ lint:
   only:
     - merge_requests
     - main
-```
+```text
 
 ### GitHub Actions
 ```yaml
@@ -134,7 +134,7 @@ jobs:
           pip install yamllint ansible-lint
           yamllint -c .yamllint .
           ansible-lint
-```
+```text
 
 ## Exception Handling
 
@@ -145,7 +145,7 @@ jobs:
 ---
 # or for specific lines
 - name: "Long URL example"  # yamllint disable-line rule:line-length
-```
+```text
 
 ### Ansible-lint Skips
 ```yaml
@@ -153,7 +153,7 @@ jobs:
   command: /bin/true
   tags:
     - skip_ansible_lint
-```
+```text
 
 ## Team Guidelines
 
@@ -188,7 +188,7 @@ jobs:
   "yaml.validate": true,
   "yaml.completion": true
 }
-```
+```text
 
 ## Common Issues and Solutions
 
@@ -201,7 +201,7 @@ jobs:
 - name: >-
     Very long task name with lots of parameters
     that can be broken across multiple lines
-```
+```text
 
 ### 2. **Complex Conditionals**
 ```yaml
@@ -214,7 +214,7 @@ when:
   - condition2
   - condition3
   - condition4
-```
+```text
 
 ### 3. **URL Parameters**
 ```yaml
@@ -225,7 +225,7 @@ url: "https://api.example.com/v1/resource?param1=value1&param2=value2&param3=val
 url: >-
   https://api.example.com/v1/resource?param1=value1
   &param2=value2&param3=value3
-```
+```text
 
 ## Monitoring and Metrics
 
@@ -237,8 +237,8 @@ Track linting compliance across projects:
 ## Training Resources
 
 1. **Internal Documentation**: This guide
-2. **Ansible Best Practices**: https://docs.ansible.com/ansible/latest/tips_tricks/ansible_tips_tricks.html
-3. **YAML Specification**: https://yaml.org/spec/
+2. **Ansible Best Practices**: <https://docs.ansible.com/ansible/latest/tips_tricks/ansible_tips_tricks.html>
+3. **YAML Specification**: <https://yaml.org/spec/>
 4. **Team Workshops**: Monthly code review sessions
 
 ## Support

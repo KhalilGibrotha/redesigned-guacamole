@@ -1,0 +1,54 @@
+---
+# Test playbook to validate custom ansible-lint rules
+# This file should trigger CUSTOM001 rule violations
+
+- name: Test Playbook for Custom Rules
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    # This task should trigger CUSTOM001 - using yum instead of package
+    - name: Install Apache using yum (should trigger CUSTOM001)
+      yum:
+        name: httpd
+        state: present
+      tags:
+        - webserver
+        - bad-practice
+
+    # This task should trigger CUSTOM001 - using apt instead of package
+    - name: Install Apache using apt (should trigger CUSTOM001)
+      apt:
+        name: apache2
+        state: present
+      tags:
+        - webserver
+        - bad-practice
+
+    # This task should trigger CUSTOM001 - using dnf instead of package
+    - name: Install Apache using dnf (should trigger CUSTOM001)
+      dnf:
+        name: httpd
+        state: present
+      tags:
+        - webserver
+        - bad-practice
+
+    # This task should NOT trigger CUSTOM001 - correct usage
+    - name: Install Apache using package (correct)
+      package:
+        name: "{{ apache_package_name | default('httpd') }}"
+        state: present
+      tags:
+        - webserver
+        - best-practice
+
+    # This task should NOT trigger CUSTOM001 - different module
+    - name: Start and enable Apache service
+      service:
+        name: "{{ apache_service_name | default('httpd') }}"
+        state: started
+        enabled: true
+      tags:
+        - webserver
+        - service

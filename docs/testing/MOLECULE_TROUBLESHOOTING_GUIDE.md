@@ -7,7 +7,7 @@ The most common reason Molecule doesn't start is that one of its prerequisite jo
 
 ```yaml
 needs: [super-linter, security, ansible-syntax-check]
-```
+```text
 
 **Check these jobs first:**
 - 🔍 **Super Linter** - Code quality issues
@@ -21,7 +21,7 @@ If you manually triggered the workflow with `skip_molecule: true`:
 
 ```yaml
 if: ${{ github.event.inputs.skip_molecule != 'true' }}
-```
+```text
 
 **Check:** Look at your workflow dispatch inputs - did you set "Skip Molecule testing" to true?
 
@@ -34,7 +34,7 @@ on:
     branches: [main, develop, 'feature/*', 'release/*', 'hotfix/*']
   pull_request:
     branches: [main, develop, 'release/*', 'hotfix/*']
-```
+```text
 
 **Check:** Are you on a supported branch?
 
@@ -44,7 +44,7 @@ Molecule tests require Docker to be available on the runner:
 ```yaml
 driver:
   name: docker
-```
+```text
 
 **GitHub Actions:** Docker is available by default on `ubuntu-latest`
 **Self-hosted runners:** May need Docker installation
@@ -57,7 +57,7 @@ Check your molecule configuration files:
 molecule/default/molecule.yml
 molecule/default/converge.yml
 molecule/default/verify.yml
-```
+```text
 
 ## 🔍 Diagnostic Steps
 
@@ -66,7 +66,7 @@ molecule/default/verify.yml
 2. Click on the latest workflow run
 3. Check the status of jobs before Molecule:
    - ⚡ Quick Validation
-   - 🔍 Super Linter  
+   - 🔍 Super Linter
    - 🛡️ Security Scan
    - 🎭 Ansible Validation
 
@@ -74,27 +74,27 @@ molecule/default/verify.yml
 Look for these patterns in the workflow logs:
 
 #### ✅ All Prerequisites Passed
-```
+```text
 super-linter: success
-security: success  
+security: success
 ansible-syntax-check: success
-```
+```text
 ➡️ Molecule should start
 
 #### ❌ Prerequisite Failed
-```
+```text
 super-linter: failure
 security: success
 ansible-syntax-check: success
-```
+```text
 ➡️ Molecule will be skipped
 
 #### ⏸️ Prerequisites Skipped
-```
+```text
 super-linter: skipped
 security: skipped
 ansible-syntax-check: skipped
-```
+```text
 ➡️ Check workflow trigger conditions
 
 ### Step 3: Manual Testing
@@ -113,7 +113,7 @@ molecule list
 
 # Run molecule tests locally
 molecule test
-```
+```text
 
 ## 🛠️ Common Fixes
 
@@ -124,20 +124,20 @@ molecule test
 # Check for common linting issues
 yamllint .
 ansible-lint .
-```
+```text
 
 #### Security Scan Issues
 ```bash
 # Check for hardcoded secrets
 grep -r "password\|secret\|token" . --include="*.yml"
-```
+```text
 
 #### Ansible Validation Issues
 ```bash
 # Check ansible syntax
 ansible-playbook --syntax-check playbook.yml
 ansible-lint playbook.yml
-```
+```text
 
 ### Fix 2: Molecule Configuration
 
@@ -159,7 +159,7 @@ provisioner:
   name: ansible
 verifier:
   name: ansible
-```
+```text
 
 #### Missing converge.yml
 Create basic converge playbook:
@@ -172,7 +172,7 @@ Create basic converge playbook:
     - name: "Include your_role_name"
       include_role:
         name: "your_role_name"
-```
+```text
 
 #### Missing verify.yml
 Create basic verification:
@@ -185,7 +185,7 @@ Create basic verification:
     - name: Example assertion
       assert:
         that: true
-```
+```text
 
 ### Fix 3: Requirements Issues
 
@@ -197,7 +197,7 @@ yamllint
 molecule>=3.6.1
 molecule-docker~=1.1.0
 docker
-```
+```text
 
 ### Fix 4: Docker Issues (Self-hosted runners)
 ```bash
@@ -209,7 +209,7 @@ sudo usermod -aG docker $USER
 # Start Docker service
 sudo systemctl start docker
 sudo systemctl enable docker
-```
+```text
 
 ## 🔧 Enhanced Debugging
 
@@ -243,7 +243,7 @@ When Molecule doesn't start, check:
 
 ## 📊 Workflow Visualization
 
-```
+```text
 setup-security ✅
      ↓
 quick-validation ✅
@@ -258,7 +258,7 @@ quick-validation ✅
               🚀 publish (starts only if molecule ✅)
                      ↓
               📋 summary (always runs)
-```
+```text
 
 ## 📞 Getting Help
 

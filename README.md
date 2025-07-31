@@ -1,11 +1,22 @@
 # Comprehensive CI/CD Pipeline with Documentation Publishing
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+2. **🔍 Super Linter**: Runs intelligent linting with au```
+
+### Detailed Execution Flow
+
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
 6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
+
+## 📚 **Documentation**
+
+📖 **[Complete Documentation](docs/INDEX.md)** - Start here for guides, setup, and usage instructions
+
+🚀 **[Workflow Guide](docs/WORKFLOW_GUIDE.md)** - Main guide for using this CI/CD system
 
 ## 📁 Repository Dependencies
 
@@ -13,17 +24,17 @@
 
 The CI/CD pipeline is designed to work with **minimal dependencies** from your repository. Here's what you need:
 
-#### For Basic CI/CD (Always Required):
-```
+#### For Basic CI/CD (Always Required)
+```text
 your-repo/
 ├── .github/
 │   └── workflows/
 │       └── ci-cd.yml        # Your workflow that calls our pipeline
 └── [your code files]        # Python, YAML, Ansible, etc.
-```
+```text
 
-#### For Documentation Publishing (Optional):
-```
+#### For Documentation Publishing (Optional)
+```text
 your-repo/
 └── docs/
     ├── vars.yaml            # Variables and Confluence hierarchy config
@@ -32,13 +43,13 @@ your-repo/
     └── images/              # Images referenced in your documentation
         ├── diagram.png
         └── screenshot.jpg
-```
+```text
 
 ### What We Automatically Provide
 
 **No need to copy these to your repository** - our pipeline automatically handles:
 
-```
+```text
 redesigned-guacamole/
 ├── scripts/
 │   ├── confluence_publisher.py     # ✅ Documentation publishing script
@@ -51,7 +62,7 @@ redesigned-guacamole/
 │   ├── publish-docs.yml            # ✅ Documentation publishing
 │   └── notifications.yml           # ✅ Failure notifications
 └── requirements.txt                # ✅ Python dependencies
-```
+```text
 
 ### Documentation Template Example
 
@@ -75,27 +86,29 @@ confluence:
 
 # {{ organization_name }} Documentation
 
-This document uses variables from vars.yaml like {{ organization_name }} 
+This document uses variables from vars.yaml like {{ organization_name }}
 and macros provided by our pipeline.
 
 {{ macros.info_box("This is an info box from our macro library") }}
-```
+```text
 
-### Key Benefits:
+### Key Benefits
 
 - ✅ **Zero Infrastructure Dependencies**: No need to copy our scripts or templates
 - ✅ **Automatic Updates**: Pipeline improvements benefit all repositories immediately
 - ✅ **Minimal Setup**: Only need your content and configuration
 - ✅ **Centralized Maintenance**: All pipeline logic maintained in one place
 
-## 📋 Workflows:
+## 📋 Workflows
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
-6. **🚨 Failure Notifications**: Creates GitHub issues for any failureslow.svg)](https://opensource.org/license/MIT)
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
+
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
@@ -105,10 +118,10 @@ A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automat
 ## 🎯 Purpose
 
 This repository provides **reusable workflows** that any other repository can call to:
-- � **Intelligent Code Analysis**: Dynamic Super Linter with auto-fix capabilities
+- 📊 **Intelligent Code Analysis**: Dynamic Super Linter with autofix capabilities
 - 🛡️ **Security Scanning**: DevSkim, Trivy vulnerability scanning, and secret detection
 - 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting (integrated with Super Linter)
-- � **Documentation Publishing**: Process and publish documentation to Confluence
+- 📚 **Documentation Publishing**: Process and publish documentation to Confluence
 - 🚨 **Failure Notifications**: Automatic GitHub issue creation for CI/CD failures
 - 📊 **Comprehensive Reporting**: SARIF output and detailed execution summaries
 
@@ -155,7 +168,7 @@ jobs:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
-```
+```text
 
 ### 2. Set Up Repository Secrets
 
@@ -168,7 +181,7 @@ In your repository settings → Secrets and variables → Actions, add:
 
 The pipeline works with various project types and will automatically detect and validate:
 
-```
+```text
 your-repo/
 ├── docs/                     # Documentation files (if any)
 │   ├── *.md                 # Markdown files
@@ -183,7 +196,7 @@ your-repo/
 └── .github/
     └── workflows/
         └── ci-cd.yml        # Your CI/CD workflow
-```
+```text
 
 ## 🔄 Workflow Execution Flow
 
@@ -201,18 +214,18 @@ graph TD
     G --> H[comprehensive-report]
     C --> I[notifications.yml]
     I --> J[GitHub Issue Creation]
-    
+
     style A fill:#e1f5fe
     style C fill:#f3e5f5
     style G fill:#e8f5e8
     style I fill:#fff3e0
     style J fill:#ffebee
-```
+```text
 
 ### Detailed Execution Flow:
 
-1. **� Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities
+1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities
 3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
 4. **🎭 Ansible Syntax Check**: Validates Ansible playbooks and roles (if present)
 5. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
@@ -238,7 +251,7 @@ graph TD
 
 **Jobs**:
 - `detect-changes`: Analyzes file changes for optimized execution
-- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
+- `super-linter`: Intelligent linting with autofix capabilities (includes Ansible validation)
 - `security`: DevSkim, Trivy, and secret detection
 - `publish`: Documentation publishing to Confluence
 - `comprehensive-report`: Detailed execution summary
@@ -264,7 +277,7 @@ graph TD
 - Only triggers on failure or non-success status
 - Prevents duplicate issues for the same failure type
 - Provides detailed troubleshooting information
-```
+```text
 
 ## 📝 File Format Examples
 
@@ -281,7 +294,7 @@ confluence:
 # Getting Started
 
 Welcome to our documentation...
-```
+```text
 
 ### Jinja2 Template
 
@@ -301,7 +314,7 @@ Version: {{ version }}
 ## Prerequisites
 
 ...
-```
+```text
 
 ## 🔧 Available Workflows
 
@@ -339,16 +352,16 @@ cd YOUR_REPOSITORY
 pip install -r requirements.txt
 
 # Test the documentation publisher locally
-python scripts/confluence_publisher.py 
-  --dry-run 
-  --docs-dir docs 
+python scripts/confluence_publisher.py
+  --dry-run
+  --docs-dir docs
   --vars-file docs/vars.yaml
 
 # Run local linting
 python -m py_compile scripts/*.py
 yamllint .
 # Note: ansible-lint is now handled by Super Linter in CI/CD
-```
+```text
 
 ## 📋 Requirements
 
@@ -365,8 +378,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Maintained by**: [Khalil Gibrotha](https://github.com/KhalilGibrotha)  
-**Created**: January 2025  
+**Maintained by**: [Khalil Gibrotha](https://github.com/KhalilGibrotha)
+**Created**: January 2025
 **License**: MIT
 
 **🚀 Ready to add comprehensive CI/CD to your repository? Start with the Quick Start guide above! 🎯**

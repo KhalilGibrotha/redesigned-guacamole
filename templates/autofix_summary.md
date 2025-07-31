@@ -13,7 +13,7 @@
 This summary provides a comprehensive overview of the CI/CD pipeline execution results.
 
 - **Linting**: Code quality and style validation using Super Linter
-- **Security**: Security vulnerability scanning and secret detection  
+- **Security**: Security vulnerability scanning and secret detection
 - **Ansible**: Syntax validation and linting for Ansible playbooks
 
 ---

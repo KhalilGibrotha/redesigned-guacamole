@@ -31,7 +31,9 @@ import yaml
 from jinja2 import Environment, FileSystemLoader
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Supported image formats for Confluence
@@ -51,7 +53,9 @@ SUPPORTED_IMAGE_FORMATS = {
 class ConfluencePublisher:
     """Main class for publishing documentation to Confluence"""
 
-    def __init__(self, confluence_url: str, username: str, api_token: str, dry_run: bool = False):
+    def __init__(
+        self, confluence_url: str, username: str, api_token: str, dry_run: bool = False
+    ):
         """
         Initialize the Confluence publisher
 
@@ -67,7 +71,9 @@ class ConfluencePublisher:
         self.dry_run = dry_run
         self.session = requests.Session()
         self.session.auth = (username, api_token)
-        self.session.headers.update({"Content-Type": "application/json", "Accept": "application/json"})
+        self.session.headers.update(
+            {"Content-Type": "application/json", "Accept": "application/json"}
+        )
 
         # Test connection if not in dry run mode
         if not dry_run:
@@ -79,14 +85,20 @@ class ConfluencePublisher:
             response = self.session.get(f"{self.confluence_url}/rest/api/user/current")
             response.raise_for_status()
             user_info = response.json()
-            logger.info(f"✅ Connected to Confluence as {user_info.get('displayName', self.username)}")
+            logger.info(
+                f"✅ Connected to Confluence as {user_info.get('displayName', self.username)}"
+            )
             return True
         except Exception as e:
             logger.error(f"❌ Failed to connect to Confluence: {e}")
             return False
 
     def create_or_update_page(
-        self, space_key: str, title: str, content: str, parent_page_id: Optional[str] = None
+        self,
+        space_key: str,
+        title: str,
+        content: str,
+        parent_page_id: Optional[str] = None,
     ) -> Optional[str]:
         """
         Create or update a Confluence page
@@ -105,7 +117,9 @@ class ConfluencePublisher:
             return None
 
         if self.dry_run:
-            logger.info(f"🧪 [DRY RUN] Would create/update page: {title} in space {space_key}")
+            logger.info(
+                f"🧪 [DRY RUN] Would create/update page: {title} in space {space_key}"
+            )
             if parent_page_id:
                 logger.info(f"🧪 [DRY RUN] Would set parent page ID: {parent_page_id}")
             logger.info(f"🧪 [DRY RUN] Content length: {len(content)} characters")
@@ -124,30 +138,39 @@ class ConfluencePublisher:
                     "version": {"number": version},
                     "title": title,
                     "type": "page",
-                    "body": {"storage": {"value": content, "representation": "storage"}},
+                    "body": {
+                        "storage": {"value": content, "representation": "storage"}
+                    },
                 }
 
-                response = self.session.put(f"{self.confluence_url}/rest/api/content/{page_id}", json=update_data)
+                response = self.session.put(
+                    f"{self.confluence_url}/rest/api/content/{page_id}",
+                    json=update_data,
+                )
                 response.raise_for_status()
                 logger.info(f"✅ Updated page: {title} (ID: {page_id})")
-                return page_id
+                return str(page_id)
 
             else:
                 # Create new page
-                create_data = {
+                create_data: Dict[str, Any] = {
                     "type": "page",
                     "title": title,
                     "space": {"key": space_key},
-                    "body": {"storage": {"value": content, "representation": "storage"}},
+                    "body": {
+                        "storage": {"value": content, "representation": "storage"}
+                    },
                 }
 
                 if parent_page_id:
                     create_data["ancestors"] = [{"id": parent_page_id}]
 
-                response = self.session.post(f"{self.confluence_url}/rest/api/content", json=create_data)
+                response = self.session.post(
+                    f"{self.confluence_url}/rest/api/content", json=create_data
+                )
                 response.raise_for_status()
                 page_data = response.json()
-                page_id = page_data["id"]
+                page_id = str(page_data["id"])
                 logger.info(f"✅ Created page: {title} (ID: {page_id})")
                 return page_id
 
@@ -166,7 +189,7 @@ class ConfluencePublisher:
             results = response.json()
 
             if results["results"]:
-                return results["results"][0]
+                return dict(results["results"][0])
             return None
 
         except Exception as e:
@@ -177,10 +200,11 @@ class ConfluencePublisher:
         """Get page by ID"""
         try:
             response = self.session.get(
-                f"{self.confluence_url}/rest/api/content/{page_id}", params={"expand": "version,space"}
+                f"{self.confluence_url}/rest/api/content/{page_id}",
+                params={"expand": "version,space"},
             )
             response.raise_for_status()
-            return response.json()
+            return dict(response.json())
 
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 404:
@@ -193,7 +217,9 @@ class ConfluencePublisher:
             logger.error(f"❌ Failed to get page by ID {page_id}: {e}")
             return None
 
-    def _validate_parent_page(self, parent_page_id: Optional[str], space_key: str) -> bool:
+    def _validate_parent_page(
+        self, parent_page_id: Optional[str], space_key: str
+    ) -> bool:
         """
         Validate that the parent page exists
 
@@ -215,7 +241,8 @@ class ConfluencePublisher:
         if not parent_page:
             logger.error("❌ Parent page with ID %s does not exist!", parent_page_id)
             logger.error(
-                "🚨 Cannot create child page without valid parent. " "Please ensure parent page exists in Confluence."
+                "🚨 Cannot create child page without valid parent. "
+                "Please ensure parent page exists in Confluence."
             )
             return False
 
@@ -228,10 +255,14 @@ class ConfluencePublisher:
             )
             logger.warning("⚠️  This may cause issues with page hierarchy")
 
-        logger.info(f"✅ Parent page validated: {parent_page.get('title', 'Unknown Title')} (ID: {parent_page_id})")
+        logger.info(
+            f"✅ Parent page validated: {parent_page.get('title', 'Unknown Title')} (ID: {parent_page_id})"
+        )
         return True
 
-    def upload_attachment(self, page_id: str, file_path: Path, file_name: Optional[str] = None) -> Optional[Dict]:
+    def upload_attachment(
+        self, page_id: str, file_path: Path, file_name: Optional[str] = None
+    ) -> Optional[Dict]:
         """
         Upload an attachment to a Confluence page
 
@@ -266,25 +297,37 @@ class ConfluencePublisher:
                 files = {"file": (attachment_name, f, mime_type)}
 
                 # Remove Content-Type header for file uploads
-                headers = {k: v for k, v in self.session.headers.items() if k.lower() != "content-type"}
+                headers = {
+                    k: v
+                    for k, v in self.session.headers.items()
+                    if k.lower() != "content-type"
+                }
 
                 response = self.session.post(
-                    f"{self.confluence_url}/rest/api/content/{page_id}/child/attachment", files=files, headers=headers
+                    f"{self.confluence_url}/rest/api/content/{page_id}/child/attachment",
+                    files=files,
+                    headers=headers,
                 )
 
                 if response.status_code == 200:
                     attachment_data = response.json()
-                    attachment_info = attachment_data["results"][0]
+                    attachment_info = dict(attachment_data["results"][0])
                     logger.info(f"✅ Uploaded attachment: {attachment_name}")
                     return attachment_info
                 else:
-                    response.raise_for_status()
+                    logger.error(
+                        f"❌ Failed to upload attachment, status: {response.status_code}"
+                    )
+                    response.raise_for_status()  # Propagate the exception for HTTP errors
+                    return None  # This line should never be reached, but satisfies mypy
 
         except Exception as e:
             logger.error(f"❌ Failed to upload attachment {file_path.name}: {e}")
             return None
 
-    def process_images_in_content(self, content: str, page_id: str, base_path: Path) -> str:
+    def process_images_in_content(
+        self, content: str, page_id: str, base_path: Path
+    ) -> str:
         """
         Process images in content, upload them as attachments, and update references
 
@@ -353,7 +396,11 @@ class ConfluencePublisher:
         content = re.sub(img_pattern, replace_image_reference, content)
 
         # Replace Markdown image syntax
-        content = re.sub(markdown_img_pattern, lambda m: replace_image_reference(m, is_markdown=True), content)
+        content = re.sub(
+            markdown_img_pattern,
+            lambda m: replace_image_reference(m, is_markdown=True),
+            content,
+        )
 
         return content
 
@@ -389,7 +436,9 @@ class DocumentProcessor:
             if self.vars_file.exists():
                 with open(self.vars_file, "r", encoding="utf-8") as f:
                     variables = yaml.safe_load(f) or {}
-                logger.info(f"✅ Loaded {len(variables)} variables from {self.vars_file}")
+                logger.info(
+                    f"✅ Loaded {len(variables)} variables from {self.vars_file}"
+                )
                 return variables
             else:
                 logger.warning(f"⚠️  Variables file not found: {self.vars_file}")
@@ -413,7 +462,9 @@ class DocumentProcessor:
 
             if not hierarchy:
                 logger.warning("⚠️  No confluence_hierarchy found in variables")
-                logger.warning("💡 Add confluence_hierarchy section to your vars file for hierarchical page management")
+                logger.warning(
+                    "💡 Add confluence_hierarchy section to your vars file for hierarchical page management"
+                )
                 return None
 
             # Check if it's a direct reference to root
@@ -421,9 +472,10 @@ class DocumentProcessor:
                 root_page_id = hierarchy.get("root", {}).get("pageId")
                 if root_page_id:
                     logger.info(f"🔗 Resolved root category to page ID: {root_page_id}")
+                    return self._to_string_or_none(root_page_id)
                 else:
                     logger.error("❌ Root page ID not configured in hierarchy")
-                return root_page_id
+                return None
 
             # Look up category in hierarchy
             categories = hierarchy.get("categories", {})
@@ -439,23 +491,39 @@ class DocumentProcessor:
             if parent_ref == "root":
                 root_page_id = hierarchy.get("root", {}).get("pageId")
                 if root_page_id:
-                    logger.info(f"🔗 Resolved category '{category_key}' -> root page ID: {root_page_id}")
+                    logger.info(
+                        f"🔗 Resolved category '{category_key}' -> root page ID: {root_page_id}"
+                    )
+                    return str(root_page_id)
                 else:
-                    logger.error(f"❌ Root page ID not configured for category '{category_key}'")
-                return root_page_id
+                    logger.error(
+                        f"❌ Root page ID not configured for category '{category_key}'"
+                    )
+                return None
             elif parent_ref in categories:
                 # For nested categories, you could implement recursive resolution here
                 # For now, just handle root-level categories
-                logger.warning(f"⚠️  Nested category resolution not implemented for '{parent_ref}'")
-                logger.warning(f"💡 Falling back to root page for category '{category_key}'")
-                return hierarchy.get("root", {}).get("pageId")
+                logger.warning(
+                    f"⚠️  Nested category resolution not implemented for '{parent_ref}'"
+                )
+                logger.warning(
+                    f"💡 Falling back to root page for category '{category_key}'"
+                )
+                root_page_id = hierarchy.get("root", {}).get("pageId")
+                return str(root_page_id) if root_page_id else None
             else:
-                logger.error(f"❌ Unknown parent reference '{parent_ref}' for category '{category_key}'")
-                logger.error("💡 Parent reference should be 'root' or another category name")
+                logger.error(
+                    f"❌ Unknown parent reference '{parent_ref}' for category '{category_key}'"
+                )
+                logger.error(
+                    "💡 Parent reference should be 'root' or another category name"
+                )
                 return None
 
         except Exception as e:
-            logger.error(f"❌ Failed to resolve hierarchy parent for '{category_key}': {e}")
+            logger.error(
+                f"❌ Failed to resolve hierarchy parent for '{category_key}': {e}"
+            )
             return None
 
     def find_documentation_files(self) -> List[Path]:
@@ -468,7 +536,9 @@ class DocumentProcessor:
 
         # Find .j2 files (but not macro files)
         j2_files = [
-            f for f in self.docs_dir.rglob("*.j2") if not f.name.startswith("macros") and "macros" not in str(f)
+            f
+            for f in self.docs_dir.rglob("*.j2")
+            if not f.name.startswith("macros") and "macros" not in str(f)
         ]
         files.extend(j2_files)
 
@@ -530,9 +600,13 @@ class DocumentProcessor:
                 resolved_parent_id = self.resolve_hierarchy_parent(category)
                 if resolved_parent_id:
                     confluence_config["parentPageId"] = resolved_parent_id
-                    logger.info(f"🔗 Resolved category '{category}' to parent page ID: {resolved_parent_id}")
+                    logger.info(
+                        f"🔗 Resolved category '{category}' to parent page ID: {resolved_parent_id}"
+                    )
                 else:
-                    logger.warning(f"⚠️  Could not resolve parent for category '{category}'")
+                    logger.warning(
+                        f"⚠️  Could not resolve parent for category '{category}'"
+                    )
 
             # Load additional variables if specified
             vars_file = frontmatter.get("varsFile")
@@ -546,7 +620,9 @@ class DocumentProcessor:
                     template_vars.update(additional_vars)
 
             # Add frontmatter variables
-            template_vars.update({k: v for k, v in frontmatter.items() if k != "confluence"})
+            template_vars.update(
+                {k: v for k, v in frontmatter.items() if k != "confluence"}
+            )
 
             # Render content if it's a Jinja2 template
             if file_path.suffix == ".j2":
@@ -557,7 +633,9 @@ class DocumentProcessor:
 
             # Convert Markdown to HTML if needed
             if file_path.suffix in [".md", ".j2"]:
-                html_content = markdown.markdown(rendered_content, extensions=["tables", "fenced_code", "toc"])
+                html_content = markdown.markdown(
+                    rendered_content, extensions=["tables", "fenced_code", "toc"]
+                )
             else:
                 html_content = rendered_content
 
@@ -578,10 +656,20 @@ class DocumentProcessor:
 def main():
     """Main function"""
     parser = argparse.ArgumentParser(description="Publish documentation to Confluence")
-    parser.add_argument("--dry-run", action="store_true", help="Perform a dry run without actually publishing")
-    parser.add_argument("--docs-dir", default="docs", help="Directory containing documentation files (default: docs)")
     parser.add_argument(
-        "--vars-file", default="docs/vars.yaml", help="Path to variables file (default: docs/vars.yaml)"
+        "--dry-run",
+        action="store_true",
+        help="Perform a dry run without actually publishing",
+    )
+    parser.add_argument(
+        "--docs-dir",
+        default="docs",
+        help="Directory containing documentation files (default: docs)",
+    )
+    parser.add_argument(
+        "--vars-file",
+        default="docs/vars.yaml",
+        help="Path to variables file (default: docs/vars.yaml)",
     )
     parser.add_argument(
         "--confluence-url",
@@ -604,7 +692,9 @@ def main():
     # Validate required parameters for non-dry-run mode
     if not args.dry_run:
         if not all([args.confluence_url, args.confluence_user, args.confluence_token]):
-            logger.error("❌ Confluence URL, user, and API token are required for live publishing")
+            logger.error(
+                "❌ Confluence URL, user, and API token are required for live publishing"
+            )
             logger.error("   Use --dry-run for testing without Confluence access")
             sys.exit(1)
 
@@ -648,7 +738,10 @@ def main():
 
         # First create/update the page
         page_id = publisher.create_or_update_page(
-            space_key=space_key, title=title, content=file_info["html_content"], parent_page_id=parent_page_id
+            space_key=space_key,
+            title=title,
+            content=file_info["html_content"],
+            parent_page_id=parent_page_id,
         )
 
         if page_id:
@@ -657,13 +750,18 @@ def main():
             base_path = file_info["file_path"].parent
 
             # Process images in the content
-            updated_content = publisher.process_images_in_content(original_content, page_id, base_path)
+            updated_content = publisher.process_images_in_content(
+                original_content, page_id, base_path
+            )
 
             # If content was updated with image attachments, update the page again
             if updated_content != original_content:
                 logger.info(f"🖼️  Updating page with image attachments: {title}")
                 final_page_id = publisher.create_or_update_page(
-                    space_key=space_key, title=title, content=updated_content, parent_page_id=parent_page_id
+                    space_key=space_key,
+                    title=title,
+                    content=updated_content,
+                    parent_page_id=parent_page_id,
                 )
                 if final_page_id:
                     published_count += 1
@@ -674,12 +772,18 @@ def main():
 
     # Summary
     if args.dry_run:
-        logger.info(f"🧪 DRY RUN COMPLETE: Would have published {published_count}/{len(processed_files)} files")
+        logger.info(
+            f"🧪 DRY RUN COMPLETE: Would have published {published_count}/{len(processed_files)} files"
+        )
     else:
-        logger.info(f"✅ PUBLISHING COMPLETE: Successfully published {published_count}/{len(processed_files)} files")
+        logger.info(
+            f"✅ PUBLISHING COMPLETE: Successfully published {published_count}/{len(processed_files)} files"
+        )
 
     if published_count < len(processed_files):
-        logger.warning(f"⚠️  {len(processed_files) - published_count} files failed to publish")
+        logger.warning(
+            f"⚠️  {len(processed_files) - published_count} files failed to publish"
+        )
         sys.exit(1)
 
 

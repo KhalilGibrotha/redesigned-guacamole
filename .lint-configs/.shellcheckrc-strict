@@ -1,0 +1,39 @@
+# ShellCheck configuration for standalone shell scripts
+# https://github.com/koalaman/shellcheck
+
+# Shell dialect to target (bash for modern scripts, sh for maximum compatibility)
+shell=bash
+
+# Production Script Considerations:
+# Standalone shell scripts should follow strict standards for reliability,
+# security, and maintainability. This configuration enables maximum checking
+# while excluding only the most problematic false positives.
+
+# Exclude only unavoidable false positives
+# SC1091: Not following sourced files (can't find include files)
+# SC2034: Variable appears unused (false positives with complex scripts)
+# SC2154: Variable is referenced but not assigned (false positives with inherited variables)
+
+exclude=SC1091,SC2034,SC2154
+
+# Keep ALL other checks enabled for maximum safety:
+# ✅ SC2086: Quoting issues (IMPORTANT for security)
+# ✅ SC2129: Redirect patterns (style and performance)
+# ✅ SC2038: Find with xargs (reliability)
+# ✅ SC2015: A && B || C patterns (logic errors)
+# ✅ SC2044: For loops over find (reliability)
+# ✅ SC2193: Comparison issues (logic errors)
+# ✅ SC2081: Glob matching (correctness)
+
+# Optional: Include directories for sourced files
+# source-path=.:lib:scripts:../common
+
+# Enable all available checks for production scripts
+# enable=all
+
+# Severity levels: error, warning, info, style
+# Consider treating warnings as errors in production environments
+# severity=error
+
+# Output format for CI integration
+# format=gcc

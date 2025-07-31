@@ -4,7 +4,6 @@ Dynamic documentation structure discovery script with nested folder support.
 Discovers main pages, their child pages, and nested sub-sections from the docs/ folder structure.
 """
 
-import glob
 import json
 import os
 import sys
@@ -21,7 +20,7 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
     Returns:
         dict: Structure with main pages, children, and nested sub-sections
     """
-    structure = {}
+    structure: dict[str, dict] = {}
 
     # Find all subdirectories in docs/
     if not os.path.exists(docs_path):
@@ -51,9 +50,16 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
                     if os.path.isfile(child_path) and child_item.endswith(".j2"):
                         # Direct child template
                         if child_item not in [f"{main_page_name}.j2", "macros.j2"]:
-                            title = child_item.replace(".j2", "").replace("_", " ").title()
+                            title = (
+                                child_item.replace(".j2", "").replace("_", " ").title()
+                            )
                             section_info["children"].append(
-                                {"file": child_item, "title": title, "path": child_path, "type": "template"}
+                                {
+                                    "file": child_item,
+                                    "title": title,
+                                    "path": child_path,
+                                    "type": "template",
+                                }
                             )
 
                     elif os.path.isdir(child_path):
@@ -90,10 +96,15 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
                             if (
                                 os.path.isfile(nested_child_path)
                                 and nested_child.endswith(".j2")
-                                and nested_child not in [f"{nested_name}.j2", "macros.j2"]
+                                and nested_child
+                                not in [f"{nested_name}.j2", "macros.j2"]
                             ):
 
-                                title = nested_child.replace(".j2", "").replace("_", " ").title()
+                                title = (
+                                    nested_child.replace(".j2", "")
+                                    .replace("_", " ")
+                                    .title()
+                                )
                                 nested_info["children"].append(
                                     {
                                         "file": nested_child,
@@ -141,14 +152,25 @@ def generate_makefile_targets(structure):
 
     for main_name, main_info in structure.items():
         # Main page
-        targets.append({"source": main_info["main_page_path"], "dest": f"~/tmp/{main_name}.md", "type": "main"})
+        targets.append(
+            {
+                "source": main_info["main_page_path"],
+                "dest": f"~/tmp/{main_name}.md",
+                "type": "main",
+            }
+        )
 
         # Direct children
         for child in main_info["children"]:
             if child["type"] == "template":
                 child_name = child["file"].replace(".j2", "")
                 targets.append(
-                    {"source": child["path"], "dest": f"~/tmp/{child_name}.md", "type": "child", "parent": main_name}
+                    {
+                        "source": child["path"],
+                        "dest": f"~/tmp/{child_name}.md",
+                        "type": "child",
+                        "parent": main_name,
+                    }
                 )
             elif child["type"] == "nested_section":
                 # Nested section main page
@@ -183,12 +205,22 @@ if __name__ == "__main__":
     import argparse
 
     # Enhanced argument parsing to support --format flag
-    parser = argparse.ArgumentParser(description="Enhanced documentation discovery script")
+    parser = argparse.ArgumentParser(
+        description="Enhanced documentation discovery script"
+    )
     parser.add_argument(
-        "command", nargs="?", default="structure", help="Command: structure|children|nested|main-pages|makefile-targets"
+        "command",
+        nargs="?",
+        default="structure",
+        help="Command: structure|children|nested|main-pages|makefile-targets",
     )
     parser.add_argument("args", nargs="*", help="Additional arguments for commands")
-    parser.add_argument("--format", choices=["json", "text"], default="json", help="Output format (json or text)")
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="Output format (json or text)",
+    )
 
     args = parser.parse_args()
     command = args.command

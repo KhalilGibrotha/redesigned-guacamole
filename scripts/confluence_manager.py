@@ -13,7 +13,9 @@ from pathlib import Path
 import requests
 import yaml
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -24,7 +26,9 @@ class ConfluenceManager:
         self.space_key = self.config["confluence_space"]
         self.auth_header = f"Basic {self.config['confluence_auth']}"
         self.session = requests.Session()
-        self.session.headers.update({"Authorization": self.auth_header, "Content-Type": "application/json"})
+        self.session.headers.update(
+            {"Authorization": self.auth_header, "Content-Type": "application/json"}
+        )
         self.page_id_cache = self.load_or_create_page_id_cache()
 
     def _load_config(self, config_file):
@@ -35,7 +39,11 @@ class ConfluenceManager:
     def find_page_by_title(self, title, parent_id=None):
         """Find page by title, optionally under a specific parent"""
         url = f"{self.base_url}/rest/api/content"
-        params = {"spaceKey": self.space_key, "title": title, "expand": "version,body.storage,ancestors"}
+        params = {
+            "spaceKey": self.space_key,
+            "title": title,
+            "expand": "version,body.storage,ancestors",
+        }
 
         if parent_id:
             params["parentId"] = parent_id
@@ -54,7 +62,11 @@ class ConfluenceManager:
         # First, try with parent constraint if provided (fastest)
         if parent_id:
             url = f"{self.base_url}/rest/api/content"
-            params = {"spaceKey": space_key, "title": title, "expand": "version,body.storage,ancestors"}
+            params = {
+                "spaceKey": space_key,
+                "title": title,
+                "expand": "version,body.storage,ancestors",
+            }
             params["parentId"] = parent_id
 
             response = self.session.get(url, params=params)
@@ -67,7 +79,11 @@ class ConfluenceManager:
         # Fallback: Search space-wide (slower but more reliable)
         logger.info(f"🔍 Parent search failed, searching space-wide for '{title}'...")
         url = f"{self.base_url}/rest/api/content"
-        params = {"spaceKey": space_key, "title": title, "expand": "version,body.storage,ancestors"}
+        params = {
+            "spaceKey": space_key,
+            "title": title,
+            "expand": "version,body.storage,ancestors",
+        }
 
         response = self.session.get(url, params=params)
         response.raise_for_status()
@@ -91,7 +107,9 @@ class ConfluenceManager:
         content = response.json()["body"]["storage"]["value"]
         return hashlib.md5(content.encode()).hexdigest()
 
-    def create_or_update_page(self, title, content, parent_id=None, labels=None, page_id_cache=None):
+    def create_or_update_page(
+        self, title, content, parent_id=None, labels=None, page_id_cache=None
+    ):
         """Create a new page or update existing one with change detection and caching"""
         # Initialize cache if not provided
         if page_id_cache is None:
@@ -115,7 +133,9 @@ class ConfluenceManager:
                     existing_page = response.json()
                     logger.info(f"✅ Found page using cached ID: {cached_page_id}")
                 else:
-                    logger.warning(f"⚠️ Cached page ID {cached_page_id} no longer valid, removing from cache")
+                    logger.warning(
+                        f"⚠️ Cached page ID {cached_page_id} no longer valid, removing from cache"
+                    )
                     del page_id_cache[cache_key]
             except Exception as e:
                 logger.warning(f"⚠️ Failed to fetch cached page {cached_page_id}: {e}")
@@ -181,7 +201,10 @@ class ConfluenceManager:
             "title": title,
             "version": result["version"]["number"],
             "url": f"{self.base_url}/wiki{result['_links']['webui']}",
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={result['id']}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/"
+                f"viewpagestorage.action?pageId={result['id']}"
+            ),
         }
 
     def _update_page(self, existing_page, content, content_hash, labels):
@@ -197,7 +220,9 @@ class ConfluenceManager:
 
         # Check if content actually changed
         if current_hash == content_hash:
-            logger.info(f"⏩ No changes detected for: {existing_page['title']} (ID: {page_id})")
+            logger.info(
+                f"⏩ No changes detected for: {existing_page['title']} (ID: {page_id})"
+            )
             return {
                 "action": "skipped",
                 "page_id": page_id,
@@ -205,7 +230,10 @@ class ConfluenceManager:
                 "version": current_version,
                 "reason": "no-content-changes",
                 "url": f"{self.base_url}/wiki{existing_page['_links']['webui']}",
-                "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+                "storage_view_url": (
+                    f"{self.base_url}/wiki/plugins/viewstorage/"
+                    f"viewpagestorage.action?pageId={page_id}"
+                ),
             }
 
         # Update the page
@@ -249,7 +277,10 @@ class ConfluenceManager:
             "previous_hash": current_hash,
             "new_hash": content_hash,
             "url": f"{self.base_url}/wiki{result['_links']['webui']}",
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/"
+                f"viewpagestorage.action?pageId={page_id}"
+            ),
         }
 
     def validate_page_content(self, page_id, expected_hash=None):
@@ -271,21 +302,30 @@ class ConfluenceManager:
             "content_hash": current_hash,
             "content_length": len(current_content),
             "last_modified": page_data["version"]["when"],
-            "storage_view_url": f"{self.base_url}/wiki/plugins/viewstorage/viewpagestorage.action?pageId={page_id}",
+            "storage_view_url": (
+                f"{self.base_url}/wiki/plugins/viewstorage/"
+                f"viewpagestorage.action?pageId={page_id}"
+            ),
             "view_url": f"{self.base_url}/wiki{page_data['_links']['webui']}",
         }
 
         # Check metadata properties if they exist
         properties = page_data.get("metadata", {}).get("properties", {})
         if "automation-timestamp" in properties:
-            validation_result["automation_timestamp"] = properties["automation-timestamp"]["value"]
+            validation_result["automation_timestamp"] = properties[
+                "automation-timestamp"
+            ]["value"]
         if "content-hash" in properties:
             validation_result["stored_hash"] = properties["content-hash"]["value"]
-            validation_result["hash_matches"] = current_hash == properties["content-hash"]["value"]
+            validation_result["hash_matches"] = (
+                current_hash == properties["content-hash"]["value"]
+            )
 
         if expected_hash:
             validation_result["expected_hash"] = expected_hash
-            validation_result["content_matches_expected"] = current_hash == expected_hash
+            validation_result["content_matches_expected"] = (
+                current_hash == expected_hash
+            )
 
         return validation_result
 
@@ -332,7 +372,9 @@ class ConfluenceManager:
                     )
                 else:
                     main_page_id = None
-                    logger.warning("⚠️ No existing main page found - child pages will be orphaned")
+                    logger.warning(
+                        "⚠️ No existing main page found - child pages will be orphaned"
+                    )
                     results.append(
                         {
                             "action": "error",
@@ -387,16 +429,24 @@ class ConfluenceManager:
 
         return results
 
-    def _publish_single_page(self, title, content_file, parent_id=None, labels=None, page_id_cache=None):
+    def _publish_single_page(
+        self, title, content_file, parent_id=None, labels=None, page_id_cache=None
+    ):
         """Publish a single page from a markdown file with caching support"""
         content_path = Path(content_file)
 
         if not content_path.exists():
             logger.error(f"❌ Content file not found: {content_file}")
-            return {"action": "error", "title": title, "error": f"Content file not found: {content_file}"}
+            return {
+                "action": "error",
+                "title": title,
+                "error": f"Content file not found: {content_file}",
+            }
 
         content = content_path.read_text()
-        result = self.create_or_update_page(title, content, parent_id, labels, page_id_cache)
+        result = self.create_or_update_page(
+            title, content, parent_id, labels, page_id_cache
+        )
 
         # Validate the published content
         if "page_id" in result:
@@ -436,7 +486,10 @@ def main():
 
     parser = argparse.ArgumentParser(description="Enhanced Confluence page management")
     parser.add_argument(
-        "--action", choices=["publish", "validate", "find"], default="publish", help="Action to perform"
+        "--action",
+        choices=["publish", "validate", "find"],
+        default="publish",
+        help="Action to perform",
     )
     parser.add_argument("--title", help="Page title to find or validate")
     parser.add_argument("--page-id", help="Page ID to validate")
@@ -480,7 +533,11 @@ def main():
             # Default discovery
             import subprocess
 
-            result = subprocess.run(["python3", "scripts/discover_docs_enhanced.py"], capture_output=True, text=True)
+            result = subprocess.run(
+                ["python3", "scripts/discover_docs_enhanced.py"],
+                capture_output=True,
+                text=True,
+            )
             docs_structure = json.loads(result.stdout)
 
         results = manager.publish_documentation_hierarchy(docs_structure)

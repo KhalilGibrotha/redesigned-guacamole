@@ -1,0 +1,35 @@
+# ShellCheck configuration for Ansible shell tasks
+# https://github.com/koalaman/shellcheck
+
+# Shell dialect to target (bash is most common in Ansible)
+shell=bash
+
+# Ansible-Specific Considerations:
+# Shell tasks in Ansible playbooks often use variables and patterns that
+# trigger false positives in shellcheck. This configuration strikes a balance
+# between safety and practicality for Ansible environments.
+
+# Exclude specific warnings/errors that are common in Ansible shell tasks
+# SC1091: Not following sourced files (can't find include files)
+# SC2034: Variable appears unused (false positives with Ansible variables)
+# SC2154: Variable is referenced but not assigned (Ansible injects variables)
+# SC2086: Double quote to prevent globbing (often intentional in Ansible tasks)
+
+exclude=SC1091,SC2034,SC2154,SC2086
+
+# Keep important checks enabled:
+# - Command injection vulnerabilities
+# - Logic errors in conditionals
+# - Proper exit code handling
+# - Array handling issues
+# - Arithmetic errors
+
+# Optional: Include directories for sourced files
+# source-path=.:scripts:roles/*/files:roles/*/templates
+
+# Enable warnings for security-critical issues
+# These should not be excluded even in Ansible contexts
+# enable=security
+
+# Output format for CI integration
+# format=gcc
