@@ -1412,180 +1412,14 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
-  # Comprehensive report - always runs to provide summary
-  comprehensive-report:
-    name: 📊 Generate Comprehensive Report
-    # This job runs after all checks are complete, including publish which now runs in parallel
+  # Simple execution summary - lightweight reporting without environment setup
+  execution-summary:
+    name: 📊 Execution Summary
     needs: [super-linter, security, detect-changes, publish]
     if: always()  # Always run to report on success or failure
     runs-on: ubuntu-latest
     steps:
-      - name: � Checkout Code (for scripts)
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.branch_name || github.ref }}
-
-      - name: �📥 Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          # Download all artifacts into a 'reports' directory
-          path: ./reports
-        continue-on-error: true
-
-      - name: 🐍 Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-          # Don't use cache to avoid dependency on calling repo's requirements
-
-      - name: 📦 Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          # Only install dependencies if they exist in the calling repository
-          if [ -f requirements.txt ]; then
-            echo "Found requirements.txt in calling repository, installing dependencies..."
-            pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then
-            echo "Found pyproject.toml in calling repository, installing dependencies..."
-            pip install -e .
-          else
-            echo "No requirements.txt or pyproject.toml found in calling repository"
-            echo "Installing minimal dependencies for workflow functionality..."
-          fi
-
-          # Always install tools needed for auto-fixing and analysis
-          echo "Installing workflow tools..."
-          pip install black isort PyYAML requests
-
-      - name: 📝 Generate SARIF Security Reports Summary
-        if: always()
-        run: |
-          python3 << 'EOF'
-          import json
-          import os
-          import glob
-          import sys
-
-          def parse_sarif(file_path):
-              if not os.path.exists(file_path):
-                  return '| N/A | No report found | This scan may have failed to produce a report. | N/A |\n', 0
-
-              report_md = ''
-              results = {}
-              total_issues = 0
-
-              try:
-                  with open(file_path, 'r', encoding='utf-8') as f:
-                      sarif_data = json.load(f)
-                      for run in sarif_data.get('runs', []):
-                          for result in run.get('results', []):
-                              total_issues += 1
-                              rule_id = result.get('ruleId', 'unknown')
-                              message = result.get('message', {}).get('text', 'No description available')
-                              level = result.get('level', 'warning').upper()
-                              key = (level, rule_id, message)
-                              results[key] = results.get(key, 0) + 1
-              except (json.JSONDecodeError, KeyError, TypeError) as e:
-                  return f'| ERROR | PARSE_ERROR | Failed to parse SARIF file: {str(e)} | N/A |\n', 0
-
-              if not results:
-                  report_md += '| ✅ | None | No issues found! | 0 |\n'
-              else:
-                  for (level, rule, msg), count in sorted(results.items()):
-                      msg_escaped = msg.replace('|', '\\|').replace('\n', ' ').replace('\r', '').replace('`', '\\`')
-                      report_md += f'| {level} | \\`{rule}\\` | {msg_escaped} | {count} |\n'
-
-              return report_md, total_issues
-
-          # Main execution
-          summary_file = os.getenv('GITHUB_STEP_SUMMARY')
-          if not summary_file:
-              print('ERROR: GITHUB_STEP_SUMMARY environment variable not set', file=sys.stderr)
-              sys.exit(1)
-
-          reports_dir = './reports'
-          overall_total = 0
-
-          # Dynamically discover all SARIF reports
-          all_reports = {}
-          for p in glob.glob(os.path.join(reports_dir, '**', '*.sarif'), recursive=True):
-              name = os.path.basename(os.path.dirname(p)).replace('-', ' ').replace('_', ' ').title()
-              if name:
-                  all_reports[name] = p
-
-          print(f'Processing {len(all_reports)} report types...')
-          print(f'Reports directory: {reports_dir}')
-          print(f'Summary will be written to: {summary_file}')
-
-          # Check if reports directory exists
-          if not os.path.exists(reports_dir):
-              print(f'WARNING: Reports directory {reports_dir} does not exist')
-              print('This is normal if no artifacts were generated or downloaded.')
-              with open(summary_file, 'a') as f:
-                  f.write('## 📊 Security & Quality Reports Summary\n\n')
-                  f.write('### ⚠️ No Reports Found\n\n')
-                  f.write('The reports directory was not found. This may indicate:\n')
-                  f.write('- No artifacts were generated by the scanning jobs\n')
-                  f.write('- All scans passed without issues (no SARIF files created)\n')
-                  f.write('- Artifact download failed or was skipped\n\n')
-                  f.write('**This is often normal** - it means no security or linting issues were detected!\n\n')
-              print('✅ Summary generated with no reports found message')
-              sys.exit(0)
-
-          # Check if directory is empty
-          all_files = glob.glob(os.path.join(reports_dir, '**', '*'), recursive=True)
-          report_files = [f for f in all_files if f.endswith('.sarif')]
-
-          if not report_files:
-              print(f'INFO: Reports directory exists but contains no SARIF files')
-              print(f'Found {len(all_files)} total files in reports directory')
-              with open(summary_file, 'a') as f:
-                  f.write('## 📊 Security & Quality Reports Summary\n\n')
-                  f.write('### ✅ No Issues Found\n\n')
-                  f.write('Reports directory exists but no SARIF reports were found.\n')
-                  f.write('This typically means all security and linting scans passed successfully!\n\n')
-                  if len(all_files) > 0:
-                      f.write(f'📁 **Files found in reports directory**: {len(all_files)}\n')
-                      f.write('(These may be log files or other artifacts)\n\n')
-              print('✅ Summary generated with no issues found message')
-              sys.exit(0)
-
-          # Process each report
-          with open(summary_file, 'a') as f:
-              f.write('## 📊 Security & Quality Reports Summary\n\n')
-
-          for tool_name, report_path in all_reports.items():
-              print(f'Processing {tool_name} report: {report_path}')
-
-              with open(summary_file, 'a') as f:
-                  f.write(f'### {tool_name} Report\n')
-                  f.write('| Severity | Rule ID | Description | Total |\n')
-                  f.write('|----------|---------|-------------|-------|\n')
-
-              report_content, issue_count = parse_sarif(report_path)
-              overall_total += issue_count
-
-              with open(summary_file, 'a') as f:
-                  f.write(report_content)
-                  f.write('\n')
-
-              print(f'  - Found {issue_count} issues in {tool_name}')
-
-          # Final summary
-          with open(summary_file, 'a') as f:
-              f.write('\n---\n\n')
-              if overall_total == 0:
-                  f.write('### 🎉 Excellent! No Issues Found\n\n')
-                  f.write('All security and quality scans completed successfully with no issues detected.\n')
-              else:
-                  f.write(f'### 📊 Total Issues Found: {overall_total}\n\n')
-                  f.write('Please review the individual reports above for detailed information.\n')
-
-          print(f'✅ Summary generation complete. Total issues across all tools: {overall_total}')
-          EOF
-
-      - name: 📊 Execution Summary
-        if: always()
+      - name: 📊 Workflow Summary
         run: |
           {
             echo "## 🚀 Workflow Execution Summary"
@@ -1603,4 +1437,6 @@ jobs:
             echo "- **Super Linter**: ${{ needs.super-linter.result }}"
             echo "- **Security Scan**: ${{ needs.security.result }}"
             echo "- **Publishing**: ${{ needs.publish.result || 'skipped (no docs changes or not main branch)' }}"
+            echo ""
+            echo "� **Note**: Detailed linting results and analysis are available in the Super Linter job step summaries."
           } >> "$GITHUB_STEP_SUMMARY"
