@@ -653,42 +653,7 @@ jobs:
           rm -rf .lint-configs
           echo "✅ Cleanup completed"
 
-      - name: 📊 Super Linter Analysis Summary
-        if: always()
-        run: |
-          {
-            echo "## 🔍 Super Linter Analysis Results"
-            echo ""
-            echo "### 🏥 Overall Health Score"
-            echo "**Score**: ${{ steps.enhanced-analysis.outputs.health_score || 'N/A' }}/100"
-            echo ""
-            echo "### 📋 Linting Results Summary"
-            echo "- **Total Files Checked**: ${{ steps.enhanced-analysis.outputs.total_files || '0' }}"
-            echo "- **Active Linters**: ${{ steps.enhanced-analysis.outputs.enabled_checks || '0' }}"
-            echo "- **Passed Checks**: ${{ steps.enhanced-analysis.outputs.passed_checks || '0' }}/${{ steps.enhanced-analysis.outputs.enabled_checks || '0' }}"
-            echo "- **Total Errors**: ${{ steps.enhanced-analysis.outputs.total_errors || '0' }}"
-            echo "- **Total Warnings**: ${{ steps.enhanced-analysis.outputs.total_warnings || '0' }}"
-            echo ""
-            echo "### 🔍 Analysis Coverage"
-            echo "- YAML syntax and formatting validation"
-            echo "- Ansible best practices and security checks"
-            echo "- Python code quality and style"
-            echo "- Shell script analysis with ShellCheck"
-            echo "- Markdown structure and content validation"
-            echo "- JSON syntax validation"
-            echo "- Docker and Terraform file analysis"
-            echo "- Security vulnerability scanning"
-            echo ""
-            if [ "${{ steps.enhanced-analysis.outputs.total_errors }}" = "0" ] && [ "${{ steps.enhanced-analysis.outputs.total_warnings }}" = "0" ]; then
-              echo "🎉 **Excellent! No issues found.**"
-            elif [ "${{ steps.enhanced-analysis.outputs.total_errors }}" = "0" ]; then
-              echo "⚠️ **Good! Only ${{ steps.enhanced-analysis.outputs.total_warnings }} warnings found.**"
-            else
-              echo "❌ **Issues found: ${{ steps.enhanced-analysis.outputs.total_errors }} errors, ${{ steps.enhanced-analysis.outputs.total_warnings }} warnings.**"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: 🐛 Debug Auto-fix Conditions
+      - name:  Debug Auto-fix Conditions
         if: always()
         run: |
           echo "🐛 Debugging auto-fix step conditions:"
