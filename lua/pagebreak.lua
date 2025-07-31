@@ -11,7 +11,7 @@ end
 
 function Para(el)
   -- Match paragraphs containing only \newpage or similar
-  if #el.content == 1 and el.content[1].tag == 'Str' and el.content[1].text == '\\newpage' then
+  if #el.content == 1 and el.content[1] and el.content[1].tag == 'Str' and el.content[1].text == '\\newpage' then
     return newpage()
   end
   return el
