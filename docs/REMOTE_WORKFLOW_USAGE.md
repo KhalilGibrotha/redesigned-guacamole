@@ -67,10 +67,10 @@ The CI workflow (`ci-optimizAll autofix tools are checked with `command -v` befo
 - **General**: `prettier`, `yamllint`
 
 ### Graceful Degradation
-All auto-fix tools are checked with `command -v` before use. If a tool is not available:
-- The workflow continues without that specific auto-fix
+All autofix tools are checked with `command -v` before use. If a tool is not available:
+- The workflow continues without that specific autofix
 - No errors are thrown
-- Other auto-fixes still work
+- Other autofixes still work
 
 ## Confluence Publishing
 
@@ -258,11 +258,11 @@ jobs:
 - **Cause**: Autofix tools trying to modify read-only cache files (`.mypy_cache`, `__pycache__`, etc.)
 - **Solution**: Already fixed - cache directories are excluded from autofix operations
 - **Effect**: Permission denied errors during JSON/Python autofixes
-- **Solution**: Workflow now excludes cache directories from auto-fix operations
+- **Solution**: Workflow now excludes cache directories from autofix operations
 
 ## Excluded Directories
 
-The workflow automatically excludes these directories from auto-fix operations:
+The workflow automatically excludes these directories from autofix operations:
 - `.git/` - Git repository data
 - `.venv/`, `venv/` - Virtual environments
 - `node_modules/` - npm dependencies

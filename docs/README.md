@@ -19,15 +19,15 @@ This directory contains Jinja2 templates for generating dynamic documentation us
 - **[CI/CD](ci-cd/)** - Pipeline and automation templates
 - **[Testing](testing/)** - Testing and validation templates
 
-## � Table of Contents
+## 📋 Table of Contents
 
-- [Template Structure](#️-template-structure)
-- [YAML Front Matter](#-yaml-front-matter)
-- [Variable Usage](#-variable-usage)
-- [Macro Integration](#-macro-integration)
-- [Template Examples](#-template-examples)
-- [Best Practices](#-best-practices)
-- [Directory Structure](#-directory-structure)
+- [Template Structure](#template-structure)
+- [YAML Front Matter](#yaml-front-matter)
+- [Variable Usage](#variable-usage)
+- [Macro Integration](#macro-integration)
+- [Template Examples](#template-examples)
+- [Best Practices](#best-practices)
+- [Directory Structure](#directory-structure)
 
 ## 🏗️ Template Structure
 

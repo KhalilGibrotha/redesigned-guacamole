@@ -1,9 +1,13 @@
 # Comprehensive CI/CD Pipeline with Documentation Publishing
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with au```
+2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
+5. **📊 Comprehensive Report**: Generates detailed execution summary
+6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
 
-### Detailed Execution Flow
+## Detailed Execution Flow
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
 2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)

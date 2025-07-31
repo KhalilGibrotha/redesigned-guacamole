@@ -2,6 +2,10 @@
 -- A pandoc filter to handle list formatting in templates
 -- This complements the Jinja2 oxford_comma_list macro
 
+-- luacheck: globals FORMAT pandoc BulletList OrderedList Code Table
+-- Pandoc provides these globals: FORMAT, pandoc
+-- Filter functions are exported as globals: BulletList, OrderedList, Code, Table
+
 function BulletList(elem)
   -- Handle bullet lists in a more structured way
   if FORMAT == 'docx' then

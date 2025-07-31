@@ -64,10 +64,10 @@ jobs:
           # For workflow_call, determine if we need to check out both repos
           if [[ "${{ github.event_name }}" == "workflow_call" ]]; then
             # When called externally, we always need to checkout the target (this) repo for scripts
-            echo "same-repo=false" >> $GITHUB_OUTPUT
+            echo "same-repo=false" >> "$GITHUB_OUTPUT"
             echo "🔄 External workflow call - need separate checkouts"
           else
-            echo "same-repo=true" >> $GITHUB_OUTPUT
+            echo "same-repo=true" >> "$GITHUB_OUTPUT"
             echo "🏠 Running within same repository - optimized checkout"
           fi
 
@@ -166,11 +166,13 @@ jobs:
           mkdir -p output/confluence
 
           # Set environment variables (with defaults for missing secrets)
-          echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}" >> $GITHUB_ENV
-          echo "CONFLUENCE_USER=${{ secrets.CONFLUENCE_USER || 'not-configured' }}" >> $GITHUB_ENV
-          echo "CONFLUENCE_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}" >> $GITHUB_ENV
-          echo "DRY_RUN=${{ inputs.dry_run }}" >> $GITHUB_ENV
-          echo "TARGET_ENV=${{ inputs.target_environment }}" >> $GITHUB_ENV
+          {
+            echo "CONFLUENCE_URL=${{ secrets.CONFLUENCE_URL || 'https://your-confluence.atlassian.net' }}"
+            echo "CONFLUENCE_USER=${{ secrets.CONFLUENCE_USER || 'not-configured' }}"
+            echo "CONFLUENCE_TOKEN=${{ secrets.CONFLUENCE_API_TOKEN || 'not-configured' }}"
+            echo "DRY_RUN=${{ inputs.dry_run }}"
+            echo "TARGET_ENV=${{ inputs.target_environment }}"
+          } >> "$GITHUB_ENV"
 
           echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
 
@@ -273,22 +275,28 @@ jobs:
       - name: 🔔 Publishing Summary
         if: always()
         run: |
-          echo "## 📚 Confluence Publishing Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Target Environment**: ${{ inputs.target_environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Dry Run**: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Git Reference**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## 📚 Confluence Publishing Summary"
+            echo ""
+            echo "### 📋 Details"
+            echo "- **Target Environment**: ${{ inputs.target_environment }}"
+            echo "- **Dry Run**: ${{ inputs.dry_run }}"
+            echo "- **Git Reference**: ${{ github.ref_name }}"
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
-            echo "### 🧪 Dry Run Results" >> $GITHUB_STEP_SUMMARY
-            echo "- No actual changes were made to Confluence" >> $GITHUB_STEP_SUMMARY
-            echo "- Documentation processing completed successfully" >> $GITHUB_STEP_SUMMARY
-            echo "- Ready for live publishing when needed" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### 🧪 Dry Run Results"
+              echo "- No actual changes were made to Confluence"
+              echo "- Documentation processing completed successfully"
+              echo "- Ready for live publishing when needed"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### ✅ Publishing Results" >> $GITHUB_STEP_SUMMARY
-            echo "- Documentation has been published to Confluence" >> $GITHUB_STEP_SUMMARY
-            echo "- Check Confluence space for updated content" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### ✅ Publishing Results"
+              echo "- Documentation has been published to Confluence"
+              echo "- Check Confluence space for updated content"
+            } >> "$GITHUB_STEP_SUMMARY"
           fi

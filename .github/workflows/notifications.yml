@@ -15,7 +15,7 @@ jobs:
     name: 📧 Notify Workflow Status
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion != 'success'
-    
+
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -28,27 +28,27 @@ jobs:
             const title = `🚨 CI/CD Pipeline Failed - ${context.payload.workflow_run.head_branch}`;
             const body = `
             ## 🚨 Workflow Failure Alert
-            
+
             **Workflow**: ${context.payload.workflow_run.name}
             **Branch**: ${context.payload.workflow_run.head_branch}
             **Commit**: ${context.payload.workflow_run.head_sha.substring(0, 7)}
             **Run ID**: ${context.payload.workflow_run.id}
             **Conclusion**: ${context.payload.workflow_run.conclusion}
-            
+
             ### 🔗 Quick Links
             - [Failed Workflow Run](${context.payload.workflow_run.html_url})
             - [Commit Details](${context.payload.workflow_run.repository.html_url}/commit/${context.payload.workflow_run.head_sha})
-            
+
             ### 🔍 Troubleshooting Steps
             1. Check the workflow logs for specific error messages
             2. Review recent changes that might have caused the failure
             3. Verify all required secrets are properly configured
             4. Check if external dependencies are available
-            
+
             ### 🏷️ Labels
             This issue was automatically created due to a CI/CD pipeline failure.
             `;
-            
+
             // Check if a similar issue already exists
             const existingIssues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -56,7 +56,7 @@ jobs:
               labels: 'ci-failure,automated',
               state: 'open'
             });
-            
+
             // Only create a new issue if there isn't already an open CI failure issue
             if (existingIssues.data.length === 0) {
               await github.rest.issues.create({
@@ -66,7 +66,7 @@ jobs:
                 body: body,
                 labels: ['ci-failure', 'automated', 'bug']
               });
-              
+
               console.log('Created new issue for CI failure');
             } else {
               console.log('CI failure issue already exists, skipping creation');
@@ -75,18 +75,20 @@ jobs:
       - name: 📊 Generate Failure Summary
         if: always()
         run: |
-          echo "## 📧 Notification Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔍 Workflow Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Workflow**: ${{ github.event.workflow_run.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch**: ${{ github.event.workflow_run.head_branch }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ${{ github.event.workflow_run.conclusion }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Run ID**: ${{ github.event.workflow_run.id }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎯 Actions Taken" >> $GITHUB_STEP_SUMMARY
-          
+          {
+            echo "## 📧 Notification Summary"
+            echo ""
+            echo "### 🔍 Workflow Details"
+            echo "- **Workflow**: ${{ github.event.workflow_run.name }}"
+            echo "- **Branch**: ${{ github.event.workflow_run.head_branch }}"
+            echo "- **Status**: ${{ github.event.workflow_run.conclusion }}"
+            echo "- **Run ID**: ${{ github.event.workflow_run.id }}"
+            echo ""
+            echo "### 🎯 Actions Taken"
+          } >> "$GITHUB_STEP_SUMMARY"
+
           if [[ "${{ github.event.workflow_run.conclusion }}" == "failure" ]]; then
-            echo "- ✅ Failure notification issue created (if not already exists)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Failure notification issue created (if not already exists)" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "- ℹ️ Non-failure status detected, no issue created" >> $GITHUB_STEP_SUMMARY
+            echo "- ℹ️ Non-failure status detected, no issue created" >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -41,7 +41,7 @@ To add a new custom rule:
 1. Create a new Python file in this directory (e.g., `my_custom_rule.py`)
 2. Inherit from `AnsibleLintRule` class
 3. Implement the required methods (`matchtask`, `matchplay`, etc.)
-4. Define rule metadata (id, shortdesc, description, severity, tags)
+4. Define rule metadata (ID, shortdesc, description, severity, tags)
 
 Example template:
 ```python

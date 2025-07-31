@@ -1,6 +1,10 @@
 -- pagebreak.lua
 -- A pandoc filter to implement page breaks in docx output
 
+-- luacheck: globals FORMAT pandoc newpage Para Header
+-- Pandoc provides these globals: FORMAT, pandoc
+-- Filter functions are exported as globals: newpage, Para, Header
+
 function newpage()
   if FORMAT == 'docx' then
     return pandoc.RawBlock('openxml',

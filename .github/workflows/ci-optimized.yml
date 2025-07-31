@@ -241,7 +241,8 @@ jobs:
           echo "Event name: ${{ github.event_name }}"
 
           # Check if we're in the redesigned-guacamole repo or being called remotely
-          if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
+          REPO_NAME="${{ github.repository }}"
+          if [[ "$REPO_NAME" == *"redesigned-guacamole" ]]; then
             echo "🏠 Running within redesigned-guacamole repository"
             echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
@@ -583,12 +584,14 @@ jobs:
           else
             echo "⚠️ Analysis script not found - using fallback analysis"
             # Fallback analysis - set reasonable default outputs
-            echo "health_score=85" >> "$GITHUB_OUTPUT"
-            echo "total_files=0" >> "$GITHUB_OUTPUT"
-            echo "enabled_checks=0" >> "$GITHUB_OUTPUT"
-            echo "passed_checks=0" >> "$GITHUB_OUTPUT"
-            echo "total_errors=0" >> "$GITHUB_OUTPUT"
-            echo "total_warnings=0" >> "$GITHUB_OUTPUT"
+            {
+              echo "health_score=85"
+              echo "total_files=0"
+              echo "enabled_checks=0"
+              echo "passed_checks=0"
+              echo "total_errors=0"
+              echo "total_warnings=0"
+            } >> "$GITHUB_OUTPUT"
           fi
 
           echo "✅ Analysis completed"
@@ -1043,7 +1046,8 @@ jobs:
           echo "Event name: ${{ github.event_name }}"
 
           # Check if we're in the redesigned-guacamole repo or being called remotely
-          if [[ "${{ github.repository }}" == *"redesigned-guacamole" ]]; then
+          REPO_NAME="${{ github.repository }}"
+          if [[ "$REPO_NAME" == *"redesigned-guacamole" ]]; then
             echo "🏠 Running within redesigned-guacamole repository"
             echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
@@ -1051,7 +1055,7 @@ jobs:
             echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "🐛 Debug: same-repo detection result: $([[ "${{ github.repository }}" == *"redesigned-guacamole" ]] && echo "true" || echo "false")"
+          echo "🐛 Debug: same-repo detection result: $([[ "$REPO_NAME" == *"redesigned-guacamole" ]] && echo "true" || echo "false")"
 
       - name: 📥 Checkout Redesigned-Guacamole (Scripts)
         uses: actions/checkout@v4
