@@ -99,7 +99,6 @@ def discover_documentation_structure(docs_path="docs", max_depth=3):
                                 and nested_child
                                 not in [f"{nested_name}.j2", "macros.j2"]
                             ):
-
                                 title = (
                                     nested_child.replace(".j2", "")
                                     .replace("_", " ")
