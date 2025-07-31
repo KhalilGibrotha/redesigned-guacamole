@@ -10,7 +10,7 @@ import os
 import re
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 
 class SuperLinterAnalyzer:
@@ -548,16 +548,7 @@ class SuperLinterAnalyzer:
             # 4. Bonus for clean code patterns
 
             # Factor 1: Base score from check status distribution
-            failed_checks = sum(
-                1
-                for check in checks.values()
-                if check["status"] == "❌ FAIL" and check["enabled"]
-            )
-            warning_checks = sum(
-                1
-                for check in checks.values()
-                if check["status"] == "⚠️ WARN" and check["enabled"]
-            )
+            failed_checks, warning_checks = self._calculate_check_distribution(checks)
 
             # Weight check results: Pass=100pts, Warning=75pts, Fail=0pts
             check_score = (
@@ -626,6 +617,28 @@ class SuperLinterAnalyzer:
 
         return self.results
 
+    def _calculate_check_distribution(self, checks: Dict[str, Any]) -> Tuple[int, int]:
+        """
+        Calculate the distribution of failed and warning checks.
+
+        Args:
+            checks: Dictionary of check results
+
+        Returns:
+            Tuple of (failed_checks_count, warning_checks_count)
+        """
+        failed_checks = sum(
+            1
+            for check in checks.values()
+            if check["status"] == "❌ FAIL" and check["enabled"]
+        )
+        warning_checks = sum(
+            1
+            for check in checks.values()
+            if check["status"] == "⚠️ WARN" and check["enabled"]
+        )
+        return failed_checks, warning_checks
+
     def generate_github_summary(self) -> str:
         """Generate GitHub Step Summary markdown"""
         checks: Dict[str, Any] = self.results["checks"]
@@ -670,16 +683,7 @@ class SuperLinterAnalyzer:
         )
 
         # Calculate check distribution
-        failed_checks = sum(
-            1
-            for check in checks.values()
-            if check["status"] == "❌ FAIL" and check["enabled"]
-        )
-        warning_checks = sum(
-            1
-            for check in checks.values()
-            if check["status"] == "⚠️ WARN" and check["enabled"]
-        )
+        failed_checks, warning_checks = self._calculate_check_distribution(checks)
 
         lines.append(
             f"- **Check Results**: ✅ {summary['passed_checks']} pass, ⚠️ {warning_checks} warnings, ❌ {failed_checks} failed"

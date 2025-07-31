@@ -1,11 +1,6 @@
 # Comprehensive CI/CD Pipeline with Documentation Publishing
 
-1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
-3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
-4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
-5. **📊 Comprehensive Report**: Generates detailed execution summary
-6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
+A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automated code quality checks, security scanning, and documentation publishing to Confluence for any repository.
 
 ## Detailed Execution Flow
 
@@ -103,21 +98,10 @@ and macros provided by our pipeline.
 - ✅ **Minimal Setup**: Only need your content and configuration
 - ✅ **Centralized Maintenance**: All pipeline logic maintained in one place
 
-## 📋 Workflows
-
-1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
-3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
-4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
-5. **📊 Comprehensive Report**: Generates detailed execution summary
-6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
-
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](https://github.com/features/actions)
 [![Confluence](https://img.shields.io/badge/Confluence-172B4D?logo=atlassian&logoColor=white)](https://www.atlassian.com/software/confluence)
-
-A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automated code quality checks, security scanning, and documentation publishing to Confluence for any repository.
 
 ## 🎯 Purpose
 
@@ -225,16 +209,6 @@ graph TD
     style I fill:#fff3e0
     style J fill:#ffebee
 ```text
-
-### Detailed Execution Flow:
-
-1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities
-3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
-4. **🎭 Ansible Syntax Check**: Validates Ansible playbooks and roles (if present)
-5. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
-6. **📊 Comprehensive Report**: Generates detailed execution summary
-7. **🚨 Failure Notifications**: Creates GitHub issues for any failures
 
 ## 📋 Available Workflows
 
