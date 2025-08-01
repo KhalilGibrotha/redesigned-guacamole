@@ -1010,15 +1010,63 @@ jobs:
         with:
           ref: ${{ inputs.branch_name || github.ref }}
 
-      - name: 🔍 Run DevSkim Scanner
+      - name: �️ Check GitHub Advanced Security Availability
+        id: security-check
+        continue-on-error: true
+        run: |
+          echo "🔍 Checking GitHub Advanced Security availability..."
+
+          # Try to access repository security settings
+          response=$(curl -s -w "%{http_code}" -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}" \
+            -o /tmp/repo_info.json)
+
+          http_code="${response: -3}"
+
+          if [ "$http_code" != "200" ]; then
+            echo "⚠️ Unable to access repository information (HTTP $http_code)"
+            echo "🔓 GitHub Advanced Security may not be available for this repository"
+            echo "security-available=false" >> "$GITHUB_OUTPUT"
+            echo "skip-reason=Cannot access repository security settings" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Check if security_and_analysis block exists and Advanced Security is enabled
+          security_block=$(jq -r '.security_and_analysis // empty' /tmp/repo_info.json)
+
+          if [ -z "$security_block" ] || [ "$security_block" = "null" ]; then
+            echo "⚠️ GitHub Advanced Security is not available for this repository"
+            echo "ℹ️ This typically means:"
+            echo "   • Organization has reached the 40-seat limit for GitHub Advanced Security"
+            echo "   • Repository is not enabled for security features"
+            echo "   • Running on a plan that doesn't include Advanced Security"
+            echo "security-available=false" >> "$GITHUB_OUTPUT"
+            echo "skip-reason=GitHub Advanced Security not available (possibly due to licensing limits)" >> "$GITHUB_OUTPUT"
+          else
+            advanced_security_status=$(echo "$security_block" | jq -r '.advanced_security.status // "disabled"')
+            if [ "$advanced_security_status" = "enabled" ]; then
+              echo "✅ GitHub Advanced Security is enabled and available"
+              echo "security-available=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "⚠️ GitHub Advanced Security is disabled for this repository"
+              echo "security-available=false" >> "$GITHUB_OUTPUT"
+              echo "skip-reason=GitHub Advanced Security is disabled" >> "$GITHUB_OUTPUT"
+            fi
+          fi
+
+      - name: �🔍 Run DevSkim Scanner
+        if: steps.security-check.outputs.security-available == 'true'
         uses: microsoft/DevSkim-Action@v1
 
       - name: 📤 Upload DevSkim SARIF
+        if: steps.security-check.outputs.security-available == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: devskim-results.sarif
 
       - name: ☢️ Run Trivy Vulnerability Scanner
+        if: steps.security-check.outputs.security-available == 'true'
         uses: aquasecurity/trivy-action@0.32.0
         with:
           scan-type: 'fs'
@@ -1028,10 +1076,28 @@ jobs:
           severity: 'CRITICAL,HIGH'
 
       - name: 📤 Upload Trivy Scan Results
+        if: steps.security-check.outputs.security-available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: trivy-results
           path: trivy-results.sarif
+
+      - name: ⚠️ Security Scan Skipped
+        if: steps.security-check.outputs.security-available != 'true'
+        run: |
+          echo "🔓 Security scanning was skipped for this repository"
+          echo "📋 Reason: ${{ steps.security-check.outputs.skip-reason || 'Security features not available' }}"
+          echo ""
+          echo "ℹ️ To enable security scanning:"
+          echo "   • Ensure GitHub Advanced Security is available for your organization"
+          echo "   • Check if you've reached the licensing limit (40 seats for organizations)"
+          echo "   • Verify repository has security features enabled"
+          echo "   • For enterprise accounts, contact your GitHub administrator"
+          echo ""
+          echo "🔍 Manual security scanning alternatives:"
+          echo "   • Run 'npm audit' for Node.js projects"
+          echo "   • Run 'pip-audit' for Python projects"
+          echo "   • Use local security scanners like bandit, semgrep, or codeql CLI"
 
       - name: 🔐 Advanced Secret Detection
         run: |

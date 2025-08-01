@@ -1,12 +1,12 @@
 # Comprehensive CI/CD Pipeline with Documentation Publishing
 
-A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automated code quality checks, security scanning, and documentation publishing to Confluence for any repository.
+A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automated code quality checks, security scanning, and documentation publishing to Confluence for any repository. Supports enterprise GitHub, forks, and handles GitHub Advanced Security licensing constraints gracefully.
 
 ## Detailed Execution Flow
 
 1. **📊 Change Detection**: Analyzes which file types changed (docs, ansible, Python, workflows)
-2. **🔍 Super Linter**: Runs intelligent linting with autofix capabilities (includes Ansible validation)
-3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection
+2. **🔍 Super Linter**: Runs intelligent linting with auto-fix capabilities (includes Ansible validation)
+3. **🛡️ Security Scan**: Performs vulnerability scanning and secret detection with GitHub Advanced Security detection
 4. **🚀 Documentation Publishing**: Publishes docs to Confluence (main/release/hotfix branches only)
 5. **📊 Comprehensive Report**: Generates detailed execution summary
 6. **🚨 Failure Notifications**: Creates GitHub issues for any failures
@@ -107,12 +107,13 @@ and macros provided by our pipeline.
 ## 🎯 Purpose
 
 This repository provides **reusable workflows** that any other repository can call to:
-- 📊 **Intelligent Code Analysis**: Dynamic Super Linter with autofix capabilities
-- 🛡️ **Security Scanning**: DevSkim, Trivy vulnerability scanning, and secret detection
+- 📊 **Intelligent Code Analysis**: Dynamic Super Linter with auto-fix capabilities
+- 🛡️ **Enterprise Security Scanning**: DevSkim, Trivy vulnerability scanning, secret detection, and GitHub Advanced Security detection
 - 🎭 **Ansible Validation**: Comprehensive Ansible syntax checking and linting (integrated with Super Linter)
 - 📚 **Documentation Publishing**: Process and publish documentation to Confluence
 - 🚨 **Failure Notifications**: Automatic GitHub issue creation for CI/CD failures
 - 📊 **Comprehensive Reporting**: SARIF output and detailed execution summaries
+- 🏢 **Enterprise Ready**: Supports GitHub Enterprise, licensing constraints, and fork management
 
 ## 🚀 Quick Start for Remote Repositories
 
@@ -139,9 +140,13 @@ on:
         description: 'Run full codebase scan'
         type: boolean
         default: true
+      auto_fix:
+        description: 'Enable automatic code fixing'
+        type: boolean
+        default: true
 
 permissions:
-  contents: read
+  contents: write      # Required for auto-fix commits
   packages: read
   statuses: write
   security-events: write
@@ -152,6 +157,7 @@ jobs:
     uses: YOUR_USERNAME/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
     with:
       full_scan: ${{ inputs.full_scan || true }}
+      auto_fix: ${{ inputs.auto_fix || true }}
       branch_name: ${{ github.ref_name }}
       # Optional: Specify custom repository name for forks
       # repository_name: 'my-forked-repo-name'
@@ -170,9 +176,10 @@ If you've forked this repository with a different name, specify your repository 
 ```yaml
 jobs:
   ci-cd-pipeline:
-    uses: YOUR_USERNAME/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    uses: YOUR_USERNAME/your-forked-repo-name/.github/workflows/ci-optimized.yml@main
     with:
       full_scan: ${{ inputs.full_scan || true }}
+      auto_fix: ${{ inputs.auto_fix || true }}
       branch_name: ${{ github.ref_name }}
       repository_name: 'your-forked-repo-name'  # Important for forks!
       source_branch: 'main'  # Or specify a version tag like 'v2.0.0'
@@ -184,7 +191,16 @@ jobs:
 
 #### For Enterprise GitHub
 
-No additional configuration needed! The workflow automatically handles enterprise GitHub authentication when you provide the secrets above.text
+No additional configuration needed! The workflow automatically handles enterprise GitHub authentication when you provide the secrets above.
+
+#### Security Scanning with GitHub Advanced Security
+
+The workflow automatically detects GitHub Advanced Security availability:
+
+- ✅ **License Detection**: Checks if your organization has available GitHub Advanced Security licenses
+- ✅ **Graceful Handling**: If you've reached the 40-seat limit, security scanning is skipped with informative messages
+- ✅ **Alternative Guidance**: Provides manual security scanning options when automated scanning isn't available
+- ✅ **No Workflow Failures**: Licensing constraints don't break your CI/CD pipeline
 
 ### 2. Set Up Repository Secrets
 
@@ -224,7 +240,18 @@ This workflow is **fully compatible with GitHub Enterprise** environments:
 ✅ **Automatic Authentication**: Uses `GITHUB_TOKEN` for secure cross-repository access
 ✅ **Private Repository Support**: Handles private repositories within enterprise environments
 ✅ **Enterprise Security**: Follows enterprise GitHub security best practices
+✅ **GitHub Advanced Security Integration**: Automatically detects and handles licensing constraints
 ✅ **No Additional Configuration**: Works out-of-the-box with standard enterprise setups
+
+### GitHub Advanced Security Support
+
+The workflow intelligently handles GitHub Advanced Security licensing:
+
+- 🔍 **Automatic Detection**: Checks if Advanced Security is available for your repository
+- 📊 **License Management**: Handles the 40-seat limit for organizations gracefully
+- ⚠️ **Graceful Skipping**: Security scanning is skipped when licenses aren't available
+- 📋 **Alternative Guidance**: Provides manual security scanning options
+- ✅ **No Pipeline Failures**: Licensing constraints don't break your CI/CD
 
 ### Fork Support
 
@@ -233,9 +260,9 @@ If you've forked this repository with a different name, simply specify the `repo
 ```yaml
 jobs:
   ci-cd-pipeline:
-    uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    uses: your-org/your-forked-repo-name/.github/workflows/ci-optimized.yml@main
     with:
-      repository_name: 'my-custom-fork-name'
+      repository_name: 'your-forked-repo-name'
       # ... other parameters
 ```
 
@@ -284,12 +311,28 @@ secrets:
   CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
 ```
 
+**Problem**: Security scanning fails due to GitHub Advanced Security licensing
+**Solution**: ✅ **Already Fixed!** The workflow automatically detects licensing constraints and skips security scanning gracefully with informative messages.
+
+**Problem**: Auto-fix commits not being created
+**Solution**: Ensure your workflow has `contents: write` permission:
+
+```yaml
+permissions:
+  contents: write  # Required for auto-fix commits
+  packages: read
+  statuses: write
+  security-events: write
+  actions: read
+```
+
 ### Workflow Debugging
 
 1. **Check GitHub Actions logs** for detailed error messages
-2. **Verify repository permissions** (contents: read, actions: read)
+2. **Verify repository permissions** (contents: write for auto-fix, security-events: write for security scanning)
 3. **Confirm secret availability** in repository settings
 4. **Test with dry-run mode** first: `dry_run: true`
+5. **Check GitHub Advanced Security availability** if security scanning is being skipped
 
 ## �🔄 Workflow Execution Flow
 
@@ -325,20 +368,24 @@ graph TD
 
 **Inputs**:
 - `full_scan` (boolean): Run full codebase scan vs. changed files only (default: true)
-- `branch_name` (string): Branch name to checkout (default: '')
+- `auto_fix` (boolean): Enable automatic code fixing and commits (default: true)
+- `dry_run` (boolean): Run in dry-run mode for testing (default: false)
+- `branch_name` (string): Branch name to checkout (default: current branch)
 - `repository_name` (string): Name of the source repository for forks (default: 'redesigned-guacamole')
 - `source_branch` (string): Branch or tag to use from the source repository (default: 'main')
+- `target_repository` (string): Target repository for documentation publishing (optional)
+- `target_environment` (string): Target environment for publishing (default: 'production')
 
 **Secrets**:
-- `CONFLUENCE_URL`: Confluence base URL (optional)
-- `CONFLUENCE_USER`: Confluence username (optional)
-- `CONFLUENCE_API_TOKEN`: Confluence API token (optional)
+- `CONFLUENCE_URL`: Confluence base URL (optional - enables dry-run if missing)
+- `CONFLUENCE_USER`: Confluence username (optional - enables dry-run if missing)
+- `CONFLUENCE_API_TOKEN`: Confluence API token (optional - enables dry-run if missing)
 
 **Jobs**:
 - `detect-changes`: Analyzes file changes for optimized execution
-- `super-linter`: Intelligent linting with autofix capabilities (includes Ansible validation)
-- `security`: DevSkim, Trivy, and secret detection
-- `publish`: Documentation publishing to Confluence (renamed from "Publish AAP Documentation" for general use)
+- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
+- `security`: DevSkim, Trivy, secret detection, and GitHub Advanced Security detection
+- `publish`: Documentation publishing to Confluence (main/release/hotfix branches only)
 - `execution-summary`: Detailed execution summary
 
 ### 2. Documentation Publishing (`publish-docs.yml`)
@@ -348,6 +395,8 @@ graph TD
 **Inputs**:
 - `dry_run` (boolean): Run without actual publishing (default: false)
 - `target_environment` (string): Target environment (default: 'production')
+- `repository_name` (string): Source repository name for configurations (default: 'redesigned-guacamole')
+- `source_branch` (string): Branch or tag to use from source repository (default: 'main')
 
 **Secrets**:
 - `CONFLUENCE_URL`: Confluence base URL
@@ -401,28 +450,59 @@ Version: {{ version }}
 ...
 ```text
 
-## 🔧 Available Workflows
+## � Available Workflows
 
-### 1. Documentation Publishing (`publish-docs.yml`)
+### 1. Main CI/CD Pipeline (`ci-optimized.yml`)
 
-**Purpose**: Process and publish documentation to Confluence
+**Purpose**: Complete CI/CD pipeline with code quality, security, and documentation publishing
+
+**Triggers**: Called by remote repositories via `workflow_call`
+
+**Inputs**:
+- `full_scan` (boolean): Run full codebase scan vs. changed files only (default: true)
+- `auto_fix` (boolean): Enable automatic code fixing and commits (default: true)
+- `dry_run` (boolean): Run in dry-run mode for testing (default: false)
+- `branch_name` (string): Branch name to checkout (default: current branch)
+- `repository_name` (string): Name of the source repository for forks (default: 'redesigned-guacamole')
+- `source_branch` (string): Branch or tag to use from the source repository (default: 'main')
+- `target_repository` (string): Target repository for documentation publishing (optional)
+- `target_environment` (string): Target environment for publishing (default: 'production')
+
+**Secrets**:
+- `CONFLUENCE_URL`: Confluence base URL (optional - enables dry-run if missing)
+- `CONFLUENCE_USER`: Confluence username (optional - enables dry-run if missing)
+- `CONFLUENCE_API_TOKEN`: Confluence API token (optional - enables dry-run if missing)
+
+**Jobs**:
+- `detect-changes`: Analyzes file changes for optimized execution
+- `super-linter`: Intelligent linting with auto-fix capabilities (includes Ansible validation)
+- `security`: DevSkim, Trivy, secret detection, and GitHub Advanced Security detection
+- `publish`: Documentation publishing to Confluence (main/release/hotfix branches only)
+- `execution-summary`: Detailed execution summary
+
+### 2. Documentation Publishing (`publish-docs.yml`)
+
+**Purpose**: Standalone documentation publishing workflow
 
 **Inputs**:
 - `dry_run` (boolean): Run without actual publishing (default: false)
 - `target_environment` (string): Target environment (default: 'production')
+- `repository_name` (string): Source repository name for configurations (default: 'redesigned-guacamole')
+- `source_branch` (string): Branch or tag to use from source repository (default: 'main')
 
 **Secrets**:
 - `CONFLUENCE_URL`: Confluence base URL
 - `CONFLUENCE_USER`: Confluence username
 - `CONFLUENCE_API_TOKEN`: Confluence API token
 
-### 2. CI/CD Pipeline (`ci-optimized.yml`)
+### 3. Failure Notifications (`notifications.yml`)
 
-**Purpose**: Comprehensive CI/CD pipeline with linting, security, and documentation publishing
+**Purpose**: Automatically create GitHub issues when CI/CD pipeline fails
 
-**Inputs**:
-- `full_scan` (boolean): Run full codebase scan (default: true)
-- `branch_name` (string): Branch to checkout
+**Triggers**: Runs after "🚀 CI/CD Pipeline" workflow completion
+- Only triggers on failure or non-success status
+- Prevents duplicate issues for the same failure type
+- Provides detailed troubleshooting information
 
 ## 🛠️ Local Development
 
@@ -448,7 +528,32 @@ yamllint .
 # Note: ansible-lint is now handled by Super Linter in CI/CD
 ```text
 
-## 📋 Requirements
+## 📋 System Requirements
+
+**Repository Requirements:**
+- GitHub repository (public or private, including GitHub Enterprise)
+- Standard file types: Python, YAML, Ansible, Markdown, Shell scripts, JSON
+
+**For Documentation Publishing:**
+- Confluence instance (Cloud or Server)
+- API token with page creation permissions
+- Documentation files with YAML frontmatter
+
+**Permissions Required:**
+- `contents: read` (minimum) / `contents: write` (for auto-fix)
+- `security-events: write` (for security scanning)
+- `actions: read` and `packages: read`
+
+## 🎉 Key Features Summary
+
+✅ **Zero Setup Overhead**: Works with any repository structure
+✅ **Enterprise Ready**: GitHub Enterprise, forks, and licensing constraints supported
+✅ **Intelligent Processing**: Only runs relevant checks based on changed files
+✅ **Auto-Fix Capabilities**: Automatically fixes and commits code style issues
+✅ **Security Aware**: Handles GitHub Advanced Security licensing gracefully
+✅ **Documentation Pipeline**: Seamless Confluence integration
+✅ **Comprehensive Reporting**: Detailed execution summaries and SARIF output
+✅ **Failure Management**: Automatic GitHub issue creation for failures
 
 ## 📋 Support
 
