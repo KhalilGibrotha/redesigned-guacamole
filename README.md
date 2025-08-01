@@ -24,6 +24,7 @@ A **comprehensive reusable GitHub Actions CI/CD pipeline** that provides automat
 The CI/CD pipeline is designed to work with **minimal dependencies** from your repository. Here's what you need:
 
 #### For Basic CI/CD (Always Required)
+
 ```text
 your-repo/
 ├── .github/
@@ -120,7 +121,7 @@ This repository provides **reusable workflows** that any other repository can ca
 Create `.github/workflows/ci-cd.yml` in your repository:
 
 ```yaml
-name: � CI/CD Pipeline
+name: 🚀 CI/CD Pipeline
 
 on:
   push:
@@ -148,19 +149,44 @@ permissions:
 
 jobs:
   ci-cd-pipeline:
-    uses: YOUR_USERNAME/YOUR_REPOSITORY/.github/workflows/ci-optimized.yml@main
+    uses: YOUR_USERNAME/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
     with:
       full_scan: ${{ inputs.full_scan || true }}
       branch_name: ${{ github.ref_name }}
+      # Optional: Specify custom repository name for forks
+      # repository_name: 'my-forked-repo-name'
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
       CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
-```text
+```
+
+#### For Forked Repositories
+
+If you've forked this repository with a different name, specify your repository name:
+
+```yaml
+jobs:
+  ci-cd-pipeline:
+    uses: YOUR_USERNAME/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    with:
+      full_scan: ${{ inputs.full_scan || true }}
+      branch_name: ${{ github.ref_name }}
+      repository_name: 'your-forked-repo-name'  # Important for forks!
+    secrets:
+      CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+      CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+      CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+```
+
+#### For Enterprise GitHub
+
+No additional configuration needed! The workflow automatically handles enterprise GitHub authentication when you provide the secrets above.text
 
 ### 2. Set Up Repository Secrets
 
 In your repository settings → Secrets and variables → Actions, add:
+
 - `CONFLUENCE_URL`: Your Confluence base URL (e.g., `https://company.atlassian.net`)
 - `CONFLUENCE_USER`: Your Confluence username/email
 - `CONFLUENCE_API_TOKEN`: Your Confluence API token
@@ -186,7 +212,65 @@ your-repo/
         └── ci-cd.yml        # Your CI/CD workflow
 ```text
 
-## 🔄 Workflow Execution Flow
+## 🏢 Enterprise GitHub & Fork Support
+
+### Enterprise GitHub Compatibility
+
+This workflow is **fully compatible with GitHub Enterprise** environments:
+
+✅ **Automatic Authentication**: Uses `GITHUB_TOKEN` for secure cross-repository access
+✅ **Private Repository Support**: Handles private repositories within enterprise environments
+✅ **Enterprise Security**: Follows enterprise GitHub security best practices
+✅ **No Additional Configuration**: Works out-of-the-box with standard enterprise setups
+
+### Fork Support
+
+If you've forked this repository with a different name, simply specify the `repository_name` parameter:
+
+```yaml
+jobs:
+  ci-cd-pipeline:
+    uses: your-org/redesigned-guacamole/.github/workflows/ci-optimized.yml@main
+    with:
+      repository_name: 'my-custom-fork-name'
+      # ... other parameters
+```
+
+This ensures the workflow correctly locates scripts and configurations from your fork.
+
+## � Troubleshooting
+
+### Common Enterprise GitHub Issues
+
+**Problem**: `fatal: could not read Username for 'https://github.com': terminal prompts not supported`
+**Solution**: ✅ **Already Fixed!** This workflow includes proper authentication tokens for all enterprise GitHub environments.
+
+**Problem**: `repository not found` when calling from forks
+**Solution**: Add the `repository_name` parameter with your fork's name:
+
+```yaml
+with:
+  repository_name: 'your-fork-name'
+```
+
+**Problem**: Secrets not being passed to the workflow
+**Solution**: Ensure your calling workflow includes all required secrets:
+
+```yaml
+secrets:
+  CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
+  CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
+  CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+```
+
+### Workflow Debugging
+
+1. **Check GitHub Actions logs** for detailed error messages
+2. **Verify repository permissions** (contents: read, actions: read)
+3. **Confirm secret availability** in repository settings
+4. **Test with dry-run mode** first: `dry_run: true`
+
+## �🔄 Workflow Execution Flow
 
 Here's how the complete workflow executes:
 
@@ -221,6 +305,7 @@ graph TD
 **Inputs**:
 - `full_scan` (boolean): Run full codebase scan vs. changed files only (default: true)
 - `branch_name` (string): Branch name to checkout (default: '')
+- `repository_name` (string): Name of the source repository for forks (default: 'redesigned-guacamole')
 
 **Secrets**:
 - `CONFLUENCE_URL`: Confluence base URL (optional)
@@ -231,8 +316,8 @@ graph TD
 - `detect-changes`: Analyzes file changes for optimized execution
 - `super-linter`: Intelligent linting with autofix capabilities (includes Ansible validation)
 - `security`: DevSkim, Trivy, and secret detection
-- `publish`: Documentation publishing to Confluence
-- `comprehensive-report`: Detailed execution summary
+- `publish`: Documentation publishing to Confluence (renamed from "Publish AAP Documentation" for general use)
+- `execution-summary`: Detailed execution summary
 
 ### 2. Documentation Publishing (`publish-docs.yml`)
 
@@ -323,16 +408,16 @@ If you want to contribute to this repository or run components locally:
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/YOUR_REPOSITORY.git
-cd YOUR_REPOSITORY
+git clone https://github.com/KhalilGibrotha/redesigned-guacamole.git
+cd redesigned-guacamole
 
 # Install dependencies
 pip install -r requirements.txt
 
 # Test the documentation publisher locally
-python scripts/confluence_publisher.py
-  --dry-run
-  --docs-dir docs
+python scripts/confluence_publisher.py \
+  --dry-run \
+  --docs-dir docs \
   --vars-file docs/vars.yaml
 
 # Run local linting
@@ -343,11 +428,11 @@ yamllint .
 
 ## 📋 Requirements
 
-## �� Support
+## 📋 Support
 
 - 📖 Check the [examples](docs/) in this repository
-- 🐛 [Open an issue](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/issues) for bugs
-- 💡 [Request features](https://github.com/YOUR_USERNAME/YOUR_REPOSITORY/discussions) via discussions
+- 🐛 [Open an issue](https://github.com/KhalilGibrotha/redesigned-guacamole/issues) for bugs
+- 💡 [Request features](https://github.com/KhalilGibrotha/redesigned-guacamole/discussions) via discussions
 - 📚 Review workflow logs in GitHub Actions for detailed debugging
 
 ## 📄 License

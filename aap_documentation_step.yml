@@ -1,0 +1,69 @@
+- name: 📝 Process AAP Documentation
+  env:
+    CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
+  run: |
+    echo "📝 Processing documentation from content repository..."
+    echo "🔍 Repository context: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'External Repository' }}"
+
+    # Determine content directory based on repository context
+    if [ "${{ steps.context.outputs.same-repo }}" == "true" ]; then
+      # Same repository - use calling-repo (which could be a symlink or actual checkout)
+      if [ -d "calling-repo" ]; then
+        CONTENT_DIR="$(realpath calling-repo)"
+        echo "🏠 Using calling-repo directory for same repository scenario"
+      else
+        CONTENT_DIR="$(realpath redesigned-guacamole)"
+        echo "🏠 Using redesigned-guacamole directory (no calling-repo found)"
+      fi
+    else
+      # External repository - use content-repo
+      if [ -d "content-repo" ]; then
+        CONTENT_DIR="$(realpath content-repo)"
+        echo "🌐 Using content-repo directory for external repository scenario"
+      else
+        echo "❌ Error: content-repo directory not found for external repository"
+        echo "🐛 Available directories: $(ls -la)"
+        exit 1
+      fi
+    fi
+
+    SCRIPTS_DIR="$(realpath redesigned-guacamole/scripts)"
+
+    echo "📂 Content directory: $CONTENT_DIR"
+    echo "📂 Scripts directory: $SCRIPTS_DIR"
+
+    # Verify directories exist
+    if [ ! -d "$CONTENT_DIR" ]; then
+      echo "❌ Error: Content directory does not exist: $CONTENT_DIR"
+      exit 1
+    fi
+
+    if [ ! -d "$SCRIPTS_DIR" ]; then
+      echo "❌ Error: Scripts directory does not exist: $SCRIPTS_DIR"
+      exit 1
+    fi
+
+    # Check if confluence_manager.py exists
+    if [ -f "$SCRIPTS_DIR/confluence_manager.py" ]; then
+      echo "✅ Found confluence_manager.py in redesigned-guacamole/scripts"
+      cd "$CONTENT_DIR"
+      python3 "$SCRIPTS_DIR/confluence_manager.py" \
+        --content-dir "$CONTENT_DIR" \
+        --dry-run="${{ env.EFFECTIVE_DRY_RUN }}"
+    else
+      echo "⚠️ confluence_manager.py not found - using fallback processing"
+      echo "🔍 Available files in scripts directory:"
+      ls -la "$SCRIPTS_DIR/" || echo "Scripts directory not accessible"
+
+      # Simple fallback - just validate the content structure
+      cd "$CONTENT_DIR"
+      echo "📁 Content structure validation:"
+      echo "  - Docs directory: $([ -d docs ] && echo 'EXISTS' || echo 'MISSING')"
+      echo "  - Vars directory: $([ -d vars ] && echo 'EXISTS' || echo 'MISSING')"
+      echo "  - Templates directory: $([ -d templates ] && echo 'EXISTS' || echo 'MISSING')"
+
+      if [ -d docs ]; then
+        echo "📄 Documentation files found:"
+        find docs -name "*.md" -o -name "*.j2" | head -10
+      fi
+    fi

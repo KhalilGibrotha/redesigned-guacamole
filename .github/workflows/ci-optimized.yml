@@ -29,6 +29,16 @@ on:
         required: false
         type: boolean
         default: false
+      repository_name:
+        description: 'Repository name for forks (e.g., "my-forked-repo" instead of "redesigned-guacamole")'
+        required: false
+        type: string
+        default: 'redesigned-guacamole'
+      target_repository:
+        description: 'Target repository name when publishing to a different repository'
+        required: false
+        type: string
+        default: ''
 
   # Remote trigger - allows being called by other workflows
   workflow_call:
@@ -58,8 +68,18 @@ on:
         required: false
         type: boolean
         default: false
+      repository_name:
+        description: 'Repository name for forks (e.g., "my-forked-repo" instead of "redesigned-guacamole")'
+        required: false
+        type: string
+        default: 'redesigned-guacamole'
+      target_repository:
+        description: 'Target repository name when publishing to a different repository'
+        required: false
+        type: string
+        default: ''
 
-  # Remote trigger - allows being called by other workflows
+    # Remote trigger - allows being called by other workflows
     secrets:
       CONFLUENCE_URL:
         required: false
@@ -240,24 +260,28 @@ jobs:
           echo "Current repository: ${{ github.repository }}"
           echo "Event name: ${{ github.event_name }}"
 
-          # Check if we're in the redesigned-guacamole repo or being called remotely
+          # Check if we're in the specified repository (supports forks) or being called remotely
           REPO_NAME="${{ github.repository }}"
-          if [[ "$REPO_NAME" == *"redesigned-guacamole" ]]; then
-            echo "🏠 Running within redesigned-guacamole repository"
+          TARGET_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
+          echo "🔍 Checking if '$REPO_NAME' contains '$TARGET_REPO_NAME'"
+
+          if [[ "$REPO_NAME" == *"$TARGET_REPO_NAME" ]]; then
+            echo "🏠 Running within $TARGET_REPO_NAME repository"
             echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
             echo "🌐 Being called from external repository: ${{ github.repository }}"
             echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 📥 Checkout Redesigned-Guacamole (Lint Configs)
+      - name: 📥 Checkout Source Repository (Lint Configs)
         if: steps.context.outputs.same-repo != 'true'
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/redesigned-guacamole
+          repository: ${{ github.repository_owner }}/${{ inputs.repository_name || 'redesigned-guacamole' }}
           ref: develop
           fetch-depth: 1
           path: .lint-configs
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: 📋 Copy Lint Configuration Files
         if: steps.context.outputs.same-repo != 'true'
@@ -653,7 +677,7 @@ jobs:
           rm -rf .lint-configs
           echo "✅ Cleanup completed"
 
-      - name:  Debug Auto-fix Conditions
+      - name: 🐛 Debug Auto-fix Conditions
         if: always()
         run: |
           echo "🐛 Debugging auto-fix step conditions:"
@@ -1043,7 +1067,7 @@ jobs:
 
   # Publish job - runs on main/release/hotfix branches when docs change, regardless of linting results
   publish:
-    name: 🚀 Publish to Confluence
+    name: 🚀 Publish Documentation
     runs-on: ubuntu-latest
 
     permissions:
@@ -1068,26 +1092,28 @@ jobs:
             echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: 📥 Checkout Redesigned-Guacamole (Scripts)
+      - name: 📥 Checkout Source Repository (Scripts)
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/redesigned-guacamole
+          repository: ${{ github.repository_owner }}/${{ inputs.repository_name || 'redesigned-guacamole' }}
           ref: main
           fetch-depth: 0
-          path: redesigned-guacamole
+          path: ${{ inputs.repository_name || 'redesigned-guacamole' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: � Debug After Redesigned-Guacamole Checkout
+      - name: 🐛 Debug After Source Repository Checkout
         run: |
-          echo "🐛 After redesigned-guacamole checkout:"
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
+          echo "🐛 After $SOURCE_REPO_NAME checkout:"
           echo "  - Working directory: $(pwd)"
           echo "  - Contents: $(ls -la)"
-          echo "  - Redesigned-guacamole exists: $([ -d redesigned-guacamole ] && echo 'YES' || echo 'NO')"
-          if [ -d redesigned-guacamole ]; then
-            echo "  - Redesigned-guacamole contents: $(ls -la redesigned-guacamole/)"
-            echo "  - Scripts directory exists: $([ -d redesigned-guacamole/scripts ] && echo 'YES' || echo 'NO')"
-            if [ -d redesigned-guacamole/scripts ]; then
-              echo "  - Scripts directory contents: $(ls -la redesigned-guacamole/scripts/)"
-              echo "  - confluence_publisher.py exists: $([ -f redesigned-guacamole/scripts/confluence_publisher.py ] && echo 'YES' || echo 'NO')"
+          echo "  - $SOURCE_REPO_NAME exists: $([ -d $SOURCE_REPO_NAME ] && echo 'YES' || echo 'NO')"
+          if [ -d $SOURCE_REPO_NAME ]; then
+            echo "  - $SOURCE_REPO_NAME contents: $(ls -la $SOURCE_REPO_NAME/)"
+            echo "  - Scripts directory exists: $([ -d $SOURCE_REPO_NAME/scripts ] && echo 'YES' || echo 'NO')"
+            if [ -d $SOURCE_REPO_NAME/scripts ]; then
+              echo "  - Scripts directory contents: $(ls -la $SOURCE_REPO_NAME/scripts/)"
+              echo "  - confluence_publisher.py exists: $([ -f $SOURCE_REPO_NAME/scripts/confluence_publisher.py ] && echo 'YES' || echo 'NO')"
             fi
           fi
 
@@ -1098,6 +1124,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.branch_name || github.ref }}
           path: content-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: � Checkout Target Repository (Content)
         if: steps.context.outputs.same-repo == 'true' && inputs.target_repository != ''
@@ -1107,6 +1134,7 @@ jobs:
           ref: ${{ inputs.branch_name || 'main' }}
           fetch-depth: 0
           path: calling-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: �🐛 Debug After Calling Repository Checkout
         if: steps.context.outputs.same-repo != 'true'
@@ -1139,10 +1167,11 @@ jobs:
       - name: 🔗 Create Content Symlink (Same Repository)
         if: steps.context.outputs.same-repo == 'true' && inputs.target_repository == ''
         run: |
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
           echo "🐛 Creating symlink for same repository scenario"
           # When running in the same repo, create a symlink to avoid duplication
-          ln -s redesigned-guacamole calling-repo
-          echo "✅ Created symlink: calling-repo -> redesigned-guacamole"
+          ln -s $SOURCE_REPO_NAME calling-repo
+          echo "✅ Created symlink: calling-repo -> $SOURCE_REPO_NAME"
           echo "🐛 Symlink verification: $(ls -la calling-repo/)"
 
       - name: �️ Prevent Python Setup Auto-Detection
@@ -1178,21 +1207,22 @@ jobs:
 
       - name: 📦 Install Dependencies
         run: |
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
           echo "🐛 Debug: Current working directory: $(pwd)"
           echo "🐛 Debug: Directory contents: $(ls -la)"
-          echo "🐛 Debug: Redesigned-guacamole directory: $(ls -la redesigned-guacamole/ 2>/dev/null || echo 'Not found')"
+          echo "🐛 Debug: $SOURCE_REPO_NAME directory: $(ls -la $SOURCE_REPO_NAME/ 2>/dev/null || echo 'Not found')"
           echo "🐛 Debug: Calling-repo directory: $(ls -la calling-repo/ 2>/dev/null || echo 'Not found')"
 
           python -m pip install --upgrade pip
 
           echo "📦 Installing dependencies for Confluence publishing..."
 
-          # Try to install from redesigned-guacamole requirements first
-          if [ -f redesigned-guacamole/requirements.txt ]; then
-            echo "✅ Found redesigned-guacamole/requirements.txt, installing..."
-            pip install -r redesigned-guacamole/requirements.txt
+          # Try to install from source repository requirements first
+          if [ -f $SOURCE_REPO_NAME/requirements.txt ]; then
+            echo "✅ Found $SOURCE_REPO_NAME/requirements.txt, installing..."
+            pip install -r $SOURCE_REPO_NAME/requirements.txt
           else
-            echo "⚠️ No redesigned-guacamole/requirements.txt found"
+            echo "⚠️ No $SOURCE_REPO_NAME/requirements.txt found"
             echo "🐛 Debug: Checking for requirements.txt in other locations:"
             find . -name "requirements.txt" -type f 2>/dev/null || echo "No requirements.txt found anywhere"
           fi
@@ -1305,30 +1335,62 @@ jobs:
 
           echo "✅ Environment prepared for ${{ inputs.dry_run == true && 'DRY RUN' || 'LIVE' }} mode"
 
-      - name: 📝 Process AAP Documentation
+      - name: 📝 Process Documentation
         env:
           CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
         run: |
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
           echo "📝 Processing documentation from content repository..."
-          echo "� Debug: Using content from $(realpath content-repo)"
+          echo "🔍 Repository context: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'External Repository' }}"
 
-          # Set up paths
-          CONTENT_DIR="$(realpath content-repo)"
-          SCRIPTS_DIR="$(realpath redesigned-guacamole/scripts)"
+          # Determine content directory based on repository context
+          if [ "${{ steps.context.outputs.same-repo }}" == "true" ]; then
+            # Same repository - use calling-repo (which could be a symlink or actual checkout)
+            if [ -d "calling-repo" ]; then
+              CONTENT_DIR="$(realpath calling-repo)"
+              echo "🏠 Using calling-repo directory for same repository scenario"
+            else
+              CONTENT_DIR="$(realpath $SOURCE_REPO_NAME)"
+              echo "🏠 Using $SOURCE_REPO_NAME directory (no calling-repo found)"
+            fi
+          else
+            # External repository - use content-repo
+            if [ -d "content-repo" ]; then
+              CONTENT_DIR="$(realpath content-repo)"
+              echo "🌐 Using content-repo directory for external repository scenario"
+            else
+              echo "❌ Error: content-repo directory not found for external repository"
+              echo "🐛 Available directories: $(ls -la)"
+              exit 1
+            fi
+          fi
+
+          SCRIPTS_DIR="$(realpath $SOURCE_REPO_NAME/scripts)"
 
           echo "📂 Content directory: $CONTENT_DIR"
           echo "📂 Scripts directory: $SCRIPTS_DIR"
 
+          # Verify directories exist
+          if [ ! -d "$CONTENT_DIR" ]; then
+            echo "❌ Error: Content directory does not exist: $CONTENT_DIR"
+            exit 1
+          fi
+
+          if [ ! -d "$SCRIPTS_DIR" ]; then
+            echo "❌ Error: Scripts directory does not exist: $SCRIPTS_DIR"
+            exit 1
+          fi
+
           # Check if confluence_manager.py exists
           if [ -f "$SCRIPTS_DIR/confluence_manager.py" ]; then
-            echo "✅ Found confluence_manager.py in redesigned-guacamole/scripts"
+            echo "✅ Found confluence_manager.py in $SOURCE_REPO_NAME/scripts"
             cd "$CONTENT_DIR"
             python3 "$SCRIPTS_DIR/confluence_manager.py" \
               --content-dir "$CONTENT_DIR" \
               --dry-run="${{ env.EFFECTIVE_DRY_RUN }}"
           else
             echo "⚠️ confluence_manager.py not found - using fallback processing"
-            echo "� Available files in scripts directory:"
+            echo "🔍 Available files in scripts directory:"
             ls -la "$SCRIPTS_DIR/" || echo "Scripts directory not accessible"
 
             # Simple fallback - just validate the content structure
@@ -1377,21 +1439,23 @@ jobs:
           cat output/confluence/publishing_report.md
 
 
-      - name: � Publishing Summary
+      - name: 📊 Publishing Summary
         if: always()
         run: |
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
           {
-            echo "## � Confluence Publishing Summary"
+            echo "## 📊 Documentation Publishing Summary"
             echo ""
             echo "### Configuration"
             echo "- **Repository**: ${{ github.repository }}"
+            echo "- **Source Repository**: $SOURCE_REPO_NAME"
             echo "- **Same repository**: ${{ steps.context.outputs.same-repo }}"
             echo "- **Branch**: ${{ inputs.branch_name || github.ref_name }}"
             echo "- **Dry run mode**: ${{ env.EFFECTIVE_DRY_RUN }}"
             echo ""
             echo "### Content Source"
             if [[ "${{ steps.context.outputs.same-repo }}" == "true" ]]; then
-              echo "📁 Using redesigned-guacamole's own documentation"
+              echo "📁 Using $SOURCE_REPO_NAME's own documentation"
             else
               echo "📁 Using documentation from calling repository: ${{ github.repository }}"
             fi
