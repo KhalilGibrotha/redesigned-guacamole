@@ -34,6 +34,11 @@ on:
         required: false
         type: string
         default: 'redesigned-guacamole'
+      source_branch:
+        description: 'Branch or tag to use from the source repository (default: main)'
+        required: false
+        type: string
+        default: 'main'
       target_repository:
         description: 'Target repository name when publishing to a different repository'
         required: false
@@ -73,6 +78,11 @@ on:
         required: false
         type: string
         default: 'redesigned-guacamole'
+      source_branch:
+        description: 'Branch or tag to use from the source repository (default: main)'
+        required: false
+        type: string
+        default: 'main'
       target_repository:
         description: 'Target repository name when publishing to a different repository'
         required: false
@@ -278,7 +288,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.repository_name || 'redesigned-guacamole' }}
-          ref: develop
+          ref: ${{ inputs.source_branch || 'main' }}
           fetch-depth: 1
           path: .lint-configs
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -286,7 +296,7 @@ jobs:
       - name: 📋 Copy Lint Configuration Files
         if: steps.context.outputs.same-repo != 'true'
         run: |
-          echo "📋 Copying lint configuration files from redesigned-guacamole..."
+          echo "📋 Copying lint configuration files from ${{ inputs.repository_name || 'redesigned-guacamole' }}..."
 
           # List of lint configuration files to copy
           LINT_FILES=(
@@ -320,7 +330,7 @@ jobs:
               # Only copy if the file doesn't already exist in the calling repo
               if [ ! -f "$config_file" ]; then
                 cp ".lint-configs/$config_file" "$config_file"
-                echo "  ✅ Copied $config_file from redesigned-guacamole"
+                echo "  ✅ Copied $config_file from ${{ inputs.repository_name || 'redesigned-guacamole' }}"
                 copied_count=$((copied_count + 1))
               else
                 echo "  ℹ️  Skipped $config_file (already exists in calling repository)"
@@ -332,7 +342,7 @@ jobs:
           if [ -d ".lint-configs/custom_rules" ]; then
             if [ ! -d "custom_rules" ]; then
               cp -r ".lint-configs/custom_rules" "custom_rules"
-              echo "  ✅ Copied custom_rules/ directory from redesigned-guacamole"
+              echo "  ✅ Copied custom_rules/ directory from ${{ inputs.repository_name || 'redesigned-guacamole' }}"
               copied_count=$((copied_count + 1))
             else
               echo "  ℹ️  Skipped custom_rules/ (already exists in calling repository)"
@@ -344,7 +354,7 @@ jobs:
             mkdir -p .github
             if [ ! -f ".github/super-linter.env" ]; then
               cp ".lint-configs/.github/super-linter.env" ".github/super-linter.env"
-              echo "  ✅ Copied .github/super-linter.env from redesigned-guacamole"
+              echo "  ✅ Copied .github/super-linter.env from ${{ inputs.repository_name || 'redesigned-guacamole' }}"
               copied_count=$((copied_count + 1))
             else
               echo "  ℹ️  Skipped .github/super-linter.env (already exists in calling repository)"
@@ -356,7 +366,7 @@ jobs:
             mkdir -p scripts
             if [ ! -f "scripts/super_linter_analysis.py" ]; then
               cp ".lint-configs/scripts/super_linter_analysis.py" "scripts/super_linter_analysis.py"
-              echo "  ✅ Copied scripts/super_linter_analysis.py from redesigned-guacamole"
+              echo "  ✅ Copied scripts/super_linter_analysis.py from ${{ inputs.repository_name || 'redesigned-guacamole' }}"
               copied_count=$((copied_count + 1))
             else
               echo "  ℹ️  Skipped scripts/super_linter_analysis.py (already exists in calling repository)"
@@ -585,7 +595,7 @@ jobs:
         id: super-linter
         uses: super-linter/super-linter@v5
         env:
-          # Use static configuration file if it exists (only in redesigned-guacamole repo)
+          # Use static configuration file if it exists (only in ${{ inputs.repository_name || 'redesigned-guacamole' }} repo)
           ENV_FILE: ${{ hashFiles('.github/super-linter.env') != '' && '.github/super-linter.env' || '' }}
 
           # GitHub token (required for API access)
@@ -672,7 +682,7 @@ jobs:
       - name: 🧹 Cleanup Temporary Files
         if: always() && steps.context.outputs.same-repo != 'true'
         run: |
-          echo "🧹 Cleaning up temporary files from redesigned-guacamole checkout..."
+          echo "🧹 Cleaning up temporary files from ${{ inputs.repository_name || 'redesigned-guacamole' }} checkout..."
           # Remove the temporary .lint-configs directory
           rm -rf .lint-configs
           echo "✅ Cleanup completed"
@@ -1082,10 +1092,11 @@ jobs:
           echo "Event name: ${{ github.event_name }}"
           echo "Branch name: ${{ inputs.branch_name || github.ref_name }}"
 
-          # Check if we're in the redesigned-guacamole repo or being called remotely
+          # Check if we're in the source repo or being called remotely
           REPO_NAME="${{ github.repository }}"
-          if [[ "$REPO_NAME" == *"redesigned-guacamole" ]]; then
-            echo "🏠 Running within redesigned-guacamole repository - using own docs"
+          SOURCE_REPO_NAME="${{ inputs.repository_name || 'redesigned-guacamole' }}"
+          if [[ "$REPO_NAME" == *"$SOURCE_REPO_NAME" ]]; then
+            echo "🏠 Running within $SOURCE_REPO_NAME repository - using own docs"
             echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
             echo "🌐 Called from external repository: ${{ github.repository }} - using caller's docs"
@@ -1096,7 +1107,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/${{ inputs.repository_name || 'redesigned-guacamole' }}
-          ref: main
+          ref: ${{ inputs.source_branch || 'main' }}
           fetch-depth: 0
           path: ${{ inputs.repository_name || 'redesigned-guacamole' }}
           token: ${{ secrets.GITHUB_TOKEN }}

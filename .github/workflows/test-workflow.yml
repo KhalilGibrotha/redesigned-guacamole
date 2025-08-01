@@ -1,4 +1,5 @@
 # .github/workflows/test-publisher.yml
+---
 name: Automated Test CI and Documentation CD
 
 # Trigger on pull requests made to this repository
@@ -40,6 +41,7 @@ jobs:
     uses: ./.github/workflows/ci-optimized.yml
     with:
       branch_name: ${{ github.ref_name }}
+      source_branch: ${{ github.ref_name }}
       full_scan: true
       auto_fix: true
     secrets:

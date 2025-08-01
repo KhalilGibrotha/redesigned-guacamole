@@ -155,6 +155,8 @@ jobs:
       branch_name: ${{ github.ref_name }}
       # Optional: Specify custom repository name for forks
       # repository_name: 'my-forked-repo-name'
+      # Optional: Specify branch/version of the source repository
+      # source_branch: 'v2.0.0'  # Use a specific tag or branch
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
@@ -173,6 +175,7 @@ jobs:
       full_scan: ${{ inputs.full_scan || true }}
       branch_name: ${{ github.ref_name }}
       repository_name: 'your-forked-repo-name'  # Important for forks!
+      source_branch: 'main'  # Or specify a version tag like 'v2.0.0'
     secrets:
       CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
       CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
@@ -237,6 +240,24 @@ jobs:
 ```
 
 This ensures the workflow correctly locates scripts and configurations from your fork.
+
+### Version/Branch Control
+
+You can specify which version or branch of the source repository to use for scripts and configurations:
+
+```yaml
+with:
+  source_branch: 'v2.0.0'    # Use a specific release tag
+  # OR
+  source_branch: 'develop'   # Use a specific branch
+  # OR
+  source_branch: 'main'      # Use main branch (default)
+```
+
+This is useful for:
+- **Stable Releases**: Pin to a specific version tag for production
+- **Testing**: Use develop branch for testing new features
+- **Custom Forks**: Use your own branch with modifications
 
 ## � Troubleshooting
 
@@ -306,6 +327,7 @@ graph TD
 - `full_scan` (boolean): Run full codebase scan vs. changed files only (default: true)
 - `branch_name` (string): Branch name to checkout (default: '')
 - `repository_name` (string): Name of the source repository for forks (default: 'redesigned-guacamole')
+- `source_branch` (string): Branch or tag to use from the source repository (default: 'main')
 
 **Secrets**:
 - `CONFLUENCE_URL`: Confluence base URL (optional)
