@@ -1381,15 +1381,33 @@ jobs:
             exit 1
           fi
 
-          # Check if confluence_manager.py exists
-          if [ -f "$SCRIPTS_DIR/confluence_manager.py" ]; then
-            echo "✅ Found confluence_manager.py in $SOURCE_REPO_NAME/scripts"
+          # Check if confluence_publisher.py exists
+          if [ -f "$SCRIPTS_DIR/confluence_publisher.py" ]; then
+            echo "✅ Found confluence_publisher.py in $SOURCE_REPO_NAME/scripts"
             cd "$CONTENT_DIR"
-            python3 "$SCRIPTS_DIR/confluence_manager.py" \
-              --content-dir "$CONTENT_DIR" \
-              --dry-run="${{ env.EFFECTIVE_DRY_RUN }}"
+
+            # Build the command with appropriate arguments
+            PUBLISHER_CMD="python3 '$SCRIPTS_DIR/confluence_publisher.py'"
+
+            # Add dry-run flag if enabled
+            if [[ "${{ env.EFFECTIVE_DRY_RUN }}" == "true" ]]; then
+              PUBLISHER_CMD="$PUBLISHER_CMD --dry-run"
+            fi
+
+            # Add docs directory (use relative path from content directory)
+            PUBLISHER_CMD="$PUBLISHER_CMD --docs-dir docs"
+
+            # Add vars file if it exists
+            if [ -f "docs/vars.yaml" ]; then
+              PUBLISHER_CMD="$PUBLISHER_CMD --vars-file docs/vars.yaml"
+            elif [ -f "vars/vars.yaml" ]; then
+              PUBLISHER_CMD="$PUBLISHER_CMD --vars-file vars/vars.yaml"
+            fi
+
+            echo "🚀 Running: $PUBLISHER_CMD"
+            eval "$PUBLISHER_CMD"
           else
-            echo "⚠️ confluence_manager.py not found - using fallback processing"
+            echo "⚠️ confluence_publisher.py not found - using fallback processing"
             echo "🔍 Available files in scripts directory:"
             ls -la "$SCRIPTS_DIR/" || echo "Scripts directory not accessible"
 
