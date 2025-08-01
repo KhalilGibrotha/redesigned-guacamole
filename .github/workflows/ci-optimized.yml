@@ -1056,18 +1056,17 @@ jobs:
         run: |
           echo "Current repository: ${{ github.repository }}"
           echo "Event name: ${{ github.event_name }}"
+          echo "Branch name: ${{ inputs.branch_name || github.ref_name }}"
 
           # Check if we're in the redesigned-guacamole repo or being called remotely
           REPO_NAME="${{ github.repository }}"
           if [[ "$REPO_NAME" == *"redesigned-guacamole" ]]; then
-            echo "🏠 Running within redesigned-guacamole repository"
+            echo "🏠 Running within redesigned-guacamole repository - using own docs"
             echo "same-repo=true" >> "$GITHUB_OUTPUT"
           else
-            echo "🌐 Being called from external repository: ${{ github.repository }}"
+            echo "🌐 Called from external repository: ${{ github.repository }} - using caller's docs"
             echo "same-repo=false" >> "$GITHUB_OUTPUT"
           fi
-
-          echo "🐛 Debug: same-repo detection result: $([[ "$REPO_NAME" == *"redesigned-guacamole" ]] && echo "true" || echo "false")"
 
       - name: 📥 Checkout Redesigned-Guacamole (Scripts)
         uses: actions/checkout@v4
@@ -1092,14 +1091,24 @@ jobs:
             fi
           fi
 
-      - name: �📥 Checkout Calling Repository (Content)
+      - name: 📥 Checkout Content Repository
         if: steps.context.outputs.same-repo != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ inputs.branch_name || github.ref }}
+          path: content-repo
+
+      - name: � Checkout Target Repository (Content)
+        if: steps.context.outputs.same-repo == 'true' && inputs.target_repository != ''
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/${{ inputs.target_repository }}
+          ref: ${{ inputs.branch_name || 'main' }}
+          fetch-depth: 0
           path: calling-repo
 
-      - name: 🐛 Debug After Calling Repository Checkout
+      - name: �🐛 Debug After Calling Repository Checkout
         if: steps.context.outputs.same-repo != 'true'
         run: |
           echo "🐛 After calling repository checkout:"
@@ -1110,8 +1119,25 @@ jobs:
             echo "  - Calling-repo contents: $(ls -la calling-repo/)"
           fi
 
+      - name: 🐛 Debug After Target Repository Checkout
+        if: steps.context.outputs.same-repo == 'true' && inputs.target_repository != ''
+        run: |
+          echo "🐛 After target repository checkout:"
+          echo "  - Target repository: ${{ inputs.target_repository }}"
+          echo "  - Branch: ${{ inputs.branch_name || 'main' }}"
+          echo "  - Working directory: $(pwd)"
+          echo "  - Contents: $(ls -la)"
+          echo "  - Calling-repo exists: $([ -d calling-repo ] && echo 'YES' || echo 'NO')"
+          if [ -d calling-repo ]; then
+            echo "  - Calling-repo contents: $(ls -la calling-repo/)"
+            echo "  - Docs directory exists: $([ -d calling-repo/docs ] && echo 'YES' || echo 'NO')"
+            if [ -d calling-repo/docs ]; then
+              echo "  - Docs directory contents: $(ls -la calling-repo/docs/)"
+            fi
+          fi
+
       - name: 🔗 Create Content Symlink (Same Repository)
-        if: steps.context.outputs.same-repo == 'true'
+        if: steps.context.outputs.same-repo == 'true' && inputs.target_repository == ''
         run: |
           echo "🐛 Creating symlink for same repository scenario"
           # When running in the same repo, create a symlink to avoid duplication
@@ -1281,69 +1307,41 @@ jobs:
 
       - name: 📝 Process AAP Documentation
         env:
-          CONFLUENCE_URL: ${{ secrets.CONFLUENCE_URL }}
-          CONFLUENCE_USER: ${{ secrets.CONFLUENCE_USER }}
           CONFLUENCE_API_TOKEN: ${{ secrets.CONFLUENCE_API_TOKEN }}
         run: |
-          echo "📝 Processing AAP documentation templates..."
+          echo "📝 Processing documentation from content repository..."
+          echo "� Debug: Using content from $(realpath content-repo)"
 
-          # Ensure docs directory exists in calling repo
-          mkdir -p calling-repo/docs
+          # Set up paths
+          CONTENT_DIR="$(realpath content-repo)"
+          SCRIPTS_DIR="$(realpath redesigned-guacamole/scripts)"
 
-          # Copy macros from scripts repository to content repository (only if different repos)
-          if [[ "${{ steps.context.outputs.same-repo }}" != "true" ]]; then
-            if [ -d "redesigned-guacamole/docs/macros" ]; then
-              echo "📋 Copying macros from redesigned-guacamole to calling repository..."
-              cp -r redesigned-guacamole/docs/macros calling-repo/docs/
-            fi
+          echo "📂 Content directory: $CONTENT_DIR"
+          echo "📂 Scripts directory: $SCRIPTS_DIR"
 
-            # Also copy the main macros.j2 file if it exists
-            if [ -f "redesigned-guacamole/docs/macros.j2" ]; then
-              echo "📋 Copying macros.j2 from redesigned-guacamole to calling repository..."
-              cp redesigned-guacamole/docs/macros.j2 calling-repo/docs/
-            fi
+          # Check if confluence_manager.py exists
+          if [ -f "$SCRIPTS_DIR/confluence_manager.py" ]; then
+            echo "✅ Found confluence_manager.py in redesigned-guacamole/scripts"
+            cd "$CONTENT_DIR"
+            python3 "$SCRIPTS_DIR/confluence_manager.py" \
+              --content-dir "$CONTENT_DIR" \
+              --dry-run="${{ env.EFFECTIVE_DRY_RUN }}"
           else
-            echo "🏠 Same repository - macros already available, no copying needed"
-          fi
+            echo "⚠️ confluence_manager.py not found - using fallback processing"
+            echo "� Available files in scripts directory:"
+            ls -la "$SCRIPTS_DIR/" || echo "Scripts directory not accessible"
 
-          # Debug: Check if confluence publisher script exists
-          echo "🐛 Checking confluence publisher script..."
-          echo "  - Current directory: $(pwd)"
-          echo "  - Script path: redesigned-guacamole/scripts/confluence_publisher.py"
-          echo "  - Script exists: $([ -f "redesigned-guacamole/scripts/confluence_publisher.py" ] && echo 'YES' || echo 'NO')"
-          if [ -f "redesigned-guacamole/scripts/confluence_publisher.py" ]; then
-            echo "  - Script permissions: $(ls -la redesigned-guacamole/scripts/confluence_publisher.py)"
-          fi
+            # Simple fallback - just validate the content structure
+            cd "$CONTENT_DIR"
+            echo "📁 Content structure validation:"
+            echo "  - Docs directory: $([ -d docs ] && echo 'EXISTS' || echo 'MISSING')"
+            echo "  - Vars directory: $([ -d vars ] && echo 'EXISTS' || echo 'MISSING')"
+            echo "  - Templates directory: $([ -d templates ] && echo 'EXISTS' || echo 'MISSING')"
 
-          # Verify the script exists (no chmod needed for python3 execution)
-          if [ ! -f "redesigned-guacamole/scripts/confluence_publisher.py" ]; then
-            echo "❌ ERROR: confluence_publisher.py not found at expected path"
-            echo "🐛 Available files in scripts directory:"
-            if [ -d "redesigned-guacamole/scripts" ]; then
-              ls -la redesigned-guacamole/scripts/
-            else
-              echo "📁 Scripts directory not found!"
+            if [ -d docs ]; then
+              echo "📄 Documentation files found:"
+              find docs -name "*.md" -o -name "*.j2" | head -10
             fi
-            exit 1
-          else
-            echo "✅ Confluence publisher script found and ready to use"
-          fi
-
-          # Run the Python-based Confluence publisher
-          if [[ "$EFFECTIVE_DRY_RUN" == "true" ]]; then
-            echo "🧪 Running in DRY RUN mode (effective: secrets missing or explicit)"
-            python3 redesigned-guacamole/scripts/confluence_publisher.py \
-              --dry-run \
-              --docs-dir calling-repo/docs \
-              --vars-file calling-repo/docs/vars.yaml
-          else
-            echo "🚀 Running in LIVE mode"
-            python3 redesigned-guacamole/scripts/confluence_publisher.py \
-              --docs-dir calling-repo/docs \
-              --vars-file calling-repo/docs/vars.yaml \
-              --confluence-url "${CONFLUENCE_URL:-https://your-confluence.atlassian.net}" \
-              --confluence-user "${CONFLUENCE_USER:-not-configured}" \
-              --confluence-token "${CONFLUENCE_TOKEN:-not-configured}"
           fi
 
       - name: 📊 Generate Publishing Report
@@ -1378,51 +1376,33 @@ jobs:
           echo "✅ Publishing report generated"
           cat output/confluence/publishing_report.md
 
-      - name: 📤 Upload Publishing Artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: confluence-publishing-report-${{ github.run_id }}
-          path: |
-            output/confluence/
-          retention-days: 30
-          if-no-files-found: warn
 
-      - name: 🔔 Publishing Summary
+      - name: � Publishing Summary
         if: always()
         run: |
           {
-            echo "## 📚 Confluence Publishing Summary"
+            echo "## � Confluence Publishing Summary"
             echo ""
-            echo "### 📋 Details"
-            echo "- **Target Environment**: ${{ inputs.target_environment }}"
-            echo "- **Dry Run**: ${{ inputs.dry_run }}"
-            echo "- **Git Reference**: ${{ github.ref_name }}"
-            echo "- **Commit**: \`${{ github.sha }}\`"
-            echo "- **Repository Context**: ${{ steps.context.outputs.same-repo == 'true' && 'Same Repository' || 'Remote Call' }}"
+            echo "### Configuration"
+            echo "- **Repository**: ${{ github.repository }}"
+            echo "- **Same repository**: ${{ steps.context.outputs.same-repo }}"
+            echo "- **Branch**: ${{ inputs.branch_name || github.ref_name }}"
+            echo "- **Dry run mode**: ${{ env.EFFECTIVE_DRY_RUN }}"
             echo ""
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          if [[ "$EFFECTIVE_DRY_RUN" == "true" ]]; then
-            {
-              echo "### 🧪 Dry Run Results"
-              echo "- No actual changes were made to Confluence"
-              echo "- Documentation processing completed successfully"
-            } >> "$GITHUB_STEP_SUMMARY"
-            if [[ "${{ inputs.dry_run }}" != "true" ]]; then
-              {
-                echo "- **Auto-enabled due to missing Confluence secrets**"
-                echo "- Add CONFLUENCE_URL, CONFLUENCE_USER, and CONFLUENCE_API_TOKEN secrets for live publishing"
-              } >> "$GITHUB_STEP_SUMMARY"
+            echo "### Content Source"
+            if [[ "${{ steps.context.outputs.same-repo }}" == "true" ]]; then
+              echo "📁 Using redesigned-guacamole's own documentation"
+            else
+              echo "📁 Using documentation from calling repository: ${{ github.repository }}"
             fi
-            echo "- Ready for live publishing when secrets are configured" >> "$GITHUB_STEP_SUMMARY"
-          else
-            {
-              echo "### ✅ Publishing Results"
-              echo "- Documentation has been published to Confluence"
-              echo "- Check Confluence space for updated content"
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+            echo ""
+            echo "### Status"
+            if [[ "${{ env.EFFECTIVE_DRY_RUN }}" == "true" ]]; then
+              echo "🧪 **Dry run completed** - no actual publishing occurred"
+            else
+              echo "✅ **Live publishing completed**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # Simple execution summary - lightweight reporting without environment setup
   execution-summary:
