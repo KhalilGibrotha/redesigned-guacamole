@@ -1113,6 +1113,10 @@ jobs:
 #!/bin/bash
 # scripts/run-tests.sh
 
+# Enable strict error handling:
+# -e: exit immediately if a command exits with a non-zero status
+# -u: treat unset variables as an error and exit immediately
+# -o pipefail: return the exit code of the last command in a pipeline that failed
 set -euo pipefail
 
 # Configuration
