@@ -1,0 +1,100 @@
+---
+title: "PSRP/WinRM HTTPS Connection Flow"
+description: "Secure Windows automation connectivity flow diagram"
+---
+
+```mermaid
+graph TB
+    subgraph "Development Environment"
+        DEV[Developer Workspace<br/>Dev Spaces]
+        EE[Execution Environment<br/>ee-windows:2025.10.01]
+        DEV --> EE
+    end
+    
+    subgraph "AAP Controller"
+        JT[Job Template<br/>Windows Automation]
+        CRED[Credentials<br/>Kerberos/CredSSP]
+        JT --> CRED
+        JT --> EE
+    end
+    
+    subgraph "Network Controls"
+        FW[Firewall Rules<br/>Block 5985, Allow 5986]
+        VLAN[Network Segmentation<br/>Automation VLAN]
+        FW --> VLAN
+    end
+    
+    subgraph "Windows Environment"
+        AD[Active Directory<br/>test.company.local]
+        WIN1[Windows Server 2022<br/>win-test-01]
+        WIN2[Windows Server 2019<br/>win-test-02]
+        AD --> WIN1
+        AD --> WIN2
+    end
+    
+    subgraph "Security Controls"
+        TLS[TLS 1.2+ Encryption]
+        CERT[SSL Certificate<br/>Validation Required]
+        AUTH[Authentication<br/>Kerberos > CredSSP > NTLM]
+        TLS --> CERT
+        CERT --> AUTH
+    end
+    
+    %% Connection Flow
+    EE -->|HTTPS:5986| FW
+    FW -->|Allowed| VLAN
+    VLAN -->|Secure Channel| TLS
+    TLS --> WIN1
+    TLS --> WIN2
+    
+    %% Authentication Flow
+    EE -->|Kerberos Ticket| AD
+    AD -->|Authentication| AUTH
+    AUTH -->|Validated| WIN1
+    AUTH -->|Validated| WIN2
+    
+    %% Monitoring
+    VLAN -->|Connection Logs| SIEM[SIEM/Splunk<br/>Audit Trail]
+    AUTH -->|Auth Events| SIEM
+    
+    %% Policy Enforcement
+    JT -.->|Policy Check| POLICY[Policy Enforcement<br/>ansible-lint rules]
+    POLICY -.->|Compliance| CRED
+    
+    classDef secure fill:#d4edda,stroke:#155724
+    classDef blocked fill:#f8d7da,stroke:#721c24
+    classDef monitoring fill:#fff3cd,stroke:#856404
+    
+    class TLS,CERT,AUTH,AD secure
+    class SIEM,POLICY monitoring
+    
+    %% Notes
+    note1[Note: HTTP port 5985 is blocked<br/>Only HTTPS port 5986 allowed]
+    note2[Note: Certificate validation is enforced<br/>Self-signed certificates rejected]
+    note3[Note: All connections logged for audit]
+```
+
+## Connection Security Details
+
+### Protocol Preferences
+1. **PSRP (PowerShell Remoting Protocol)** - Preferred
+2. **WinRM over HTTPS** - Acceptable with security controls
+3. **WinRM over HTTP** - Blocked by firewall
+
+### Authentication Methods (Priority Order)
+1. **Kerberos** - Integrated with Active Directory
+2. **CredSSP** - For credential delegation scenarios
+3. **NTLM** - Legacy fallback only
+
+### Security Requirements
+- TLS 1.2 or higher encryption
+- Certificate validation enforced
+- Port 5985 (HTTP) blocked by firewall
+- Port 5986 (HTTPS) allowed with restrictions
+- All connections logged to SIEM
+
+### Network Security
+- Dedicated automation VLAN
+- Firewall rules enforce HTTPS-only
+- Network segmentation between environments
+- Connection monitoring and alerting

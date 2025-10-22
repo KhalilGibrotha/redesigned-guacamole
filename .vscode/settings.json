@@ -1,0 +1,36 @@
+{
+    "python-envs.pythonProjects": [
+        {
+            "path": "",
+            "envManager": "ms-python.python:system",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
+    "cSpell.customDictionaries": {
+        "aap-technical-terms": {
+            "name": "AAP Technical Dictionary",
+            "description": "Technical terms for Ansible Automation Platform documentation",
+            "path": "./.vscode/spellcheck-dictionary.txt",
+            "addWords": true
+        }
+    },
+    "cSpell.dictionaries": [
+        "aap-technical-terms"
+    ],
+    "cSpell.enabledFileTypes": {
+        "markdown": true,
+        "yaml": true,
+        "python": true,
+        "shellscript": true,
+        "json": true,
+        "jsonc": true,
+        "plaintext": true
+    },
+    "cSpell.ignorePaths": [
+        "node_modules",
+        ".vscode",
+        ".git",
+        "*.min.js",
+        "package-lock.json"
+    ]
+}
