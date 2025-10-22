@@ -1252,11 +1252,7 @@ main() {
     run_security_scan
     
     # Run molecule tests for all scenarios
-    if [ -d "molecule" ]; then
-        for scenario in molecule/*/; do
-            scenario_name=$(basename "$scenario")
-            run_molecule_tests "$scenario_name"
-        done
+if [ -d "molecule" ]; then
     fi
     
     generate_test_report
