@@ -1,0 +1,129 @@
+---
+title: "Dev Spaces to Remote EE Execution Flow"
+description: "Development environment to remote execution flow diagram"
+---
+
+```mermaid
+graph TB
+    subgraph "Developer Workstation"
+        DEV[Developer<br/>Local IDE/Browser]
+    end
+    
+    subgraph "OpenShift Dev Spaces"
+        WORKSPACE[Dev Spaces Workspace<br/>Containerized Environment]
+        TERMINAL[Terminal/VS Code<br/>ansible-navigator]
+        REPO[Git Repository<br/>Ansible Content]
+        
+        DEV --> WORKSPACE
+        WORKSPACE --> TERMINAL
+        WORKSPACE --> REPO
+    end
+    
+    subgraph "Container Registry"
+        REG[registry.company.com<br/>Execution Environments]
+        EE_BASE[ee-base:2025.10.01]
+        EE_WIN[ee-windows:2025.10.01]
+        EE_NET[ee-network:2025.10.01]
+        
+        REG --> EE_BASE
+        REG --> EE_WIN
+        REG --> EE_NET
+    end
+    
+    subgraph "Execution Environment Runtime"
+        PODMAN[Podman/Docker<br/>Container Runtime]
+        EE_CONTAINER[Running EE Container<br/>Isolated Execution]
+        ANSIBLE[Ansible Core<br/>Playbook Execution]
+        
+        PODMAN --> EE_CONTAINER
+        EE_CONTAINER --> ANSIBLE
+    end
+    
+    subgraph "Target Infrastructure"
+        LINUX[Linux Hosts<br/>SSH Connection]
+        WINDOWS[Windows Hosts<br/>PSRP/WinRM]
+        NETWORK[Network Devices<br/>API/SSH]
+        CLOUD[Cloud Platforms<br/>API Calls]
+    end
+    
+    subgraph "Security & Secrets"
+        SECRETS[OpenShift Secrets<br/>Mounted in Dev Spaces]
+        VAULT[External Vault<br/>Credential Management]
+        CERTS[SSL Certificates<br/>CA Bundle]
+        
+        SECRETS --> VAULT
+        SECRETS --> CERTS
+    end
+    
+    %% Development Flow
+    TERMINAL -->|ansible-navigator run| PODMAN
+    PODMAN -->|Pull if needed| REG
+    REG -->|Image Download| EE_CONTAINER
+    
+    %% Secret Mounting
+    SECRETS -->|Mount| WORKSPACE
+    WORKSPACE -->|Pass to| EE_CONTAINER
+    
+    %% Execution Flow
+    REPO -->|Playbook Content| EE_CONTAINER
+    EE_CONTAINER -->|SSH| LINUX
+    EE_CONTAINER -->|PSRP/HTTPS| WINDOWS
+    EE_CONTAINER -->|API/SSH| NETWORK
+    EE_CONTAINER -->|API Calls| CLOUD
+    
+    %% Logging and Monitoring
+    EE_CONTAINER -->|Execution Logs| LOGS[Centralized Logging<br/>Dev Environment]
+    EE_CONTAINER -->|Metrics| METRICS[Performance Metrics<br/>Prometheus]
+    
+    %% Configuration Flow
+    CONFIG[ansible.cfg<br/>EE Configuration]
+    REQUIREMENTS[requirements.yml<br/>Collections]
+    
+    REPO --> CONFIG
+    REPO --> REQUIREMENTS
+    CONFIG --> EE_CONTAINER
+    REQUIREMENTS --> EE_CONTAINER
+    
+    classDef development fill:#e7f3ff,stroke:#004085
+    classDef execution fill:#d4edda,stroke:#155724
+    classDef security fill:#fff3cd,stroke:#856404
+    classDef infrastructure fill:#f8f9fa,stroke:#6c757d
+    
+    class WORKSPACE,TERMINAL,REPO development
+    class PODMAN,EE_CONTAINER,ANSIBLE execution
+    class SECRETS,VAULT,CERTS security
+    class LINUX,WINDOWS,NETWORK,CLOUD infrastructure
+    
+    %% Command Examples
+    note1[ansible-navigator run playbooks/site.yml<br/>--execution-environment-image ee-base:2025.10.01<br/>--pull-policy missing]
+    note2[Secrets automatically mounted:<br/>/etc/secrets/ssh-keys/<br/>/etc/secrets/certificates/]
+    note3[All execution isolated in container<br/>No direct host access required]
+```
+
+## Execution Flow Details
+
+### Development Workflow
+1. Developer accesses Dev Spaces workspace via browser
+2. Git repository cloned into workspace
+3. Ansible Navigator used to execute playbooks
+4. EE container pulled from registry if needed
+5. Playbook executed within isolated container
+
+### Security Model
+- All secrets managed through OpenShift secrets
+- No credentials stored in workspaces
+- EE containers run with minimal privileges
+- Network access controlled by policies
+
+### Execution Environment Features
+- Pre-built with required collections
+- Version-controlled and immutable
+- Signed and security scanned
+- Consistent across all environments
+
+### Benefits
+- Consistent execution environment
+- No local dependency management
+- Enhanced security isolation
+- Scalable and reproducible
+- Complete audit trail
