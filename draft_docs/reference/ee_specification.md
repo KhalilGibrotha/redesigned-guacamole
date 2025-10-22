@@ -250,36 +250,36 @@ additional_build_steps:
 #### System Dependencies (bindep.txt)
 ```
 # Base system packages
-git [platform:rpm platform:deb]
-openssh-clients [platform:rpm]
-openssh-client [platform:deb]
-sshpass [platform:rpm platform:deb]
-rsync [platform:rpm platform:deb]
-curl [platform:rpm platform:deb]
-wget [platform:rpm platform:deb]
-jq [platform:rpm platform:deb]
-unzip [platform:rpm platform:deb]
-tar [platform:rpm platform:deb]
-gzip [platform:rpm platform:deb]
+git [platform:rpm platform:deb]                # Both RPM-based (RHEL/CentOS/Fedora) and DEB-based (Debian/Ubuntu) platforms
+openssh-clients [platform:rpm]                 # RPM-based platforms (RHEL/CentOS/Fedora)
+openssh-client [platform:deb]                  # DEB-based platforms (Debian/Ubuntu)
+sshpass [platform:rpm platform:deb]            # Both RPM-based and DEB-based platforms
+rsync [platform:rpm platform:deb]              # Both RPM-based and DEB-based platforms
+curl [platform:rpm platform:deb]               # Both RPM-based and DEB-based platforms
+wget [platform:rpm platform:deb]               # Both RPM-based and DEB-based platforms
+jq [platform:rpm platform:deb]                 # Both RPM-based and DEB-based platforms
+unzip [platform:rpm platform:deb]              # Both RPM-based and DEB-based platforms
+tar [platform:rpm platform:deb]                # Both RPM-based and DEB-based platforms
+gzip [platform:rpm platform:deb]               # Both RPM-based and DEB-based platforms
 
 # Python build dependencies
-python3-devel [platform:rpm]
-python3-dev [platform:deb]
-gcc [platform:rpm platform:deb]
-gcc-c++ [platform:rpm]
-g++ [platform:deb]
+python3-devel [platform:rpm]                   # RPM-based platforms (RHEL/CentOS/Fedora)
+python3-dev [platform:deb]                     # DEB-based platforms (Debian/Ubuntu)
+gcc [platform:rpm platform:deb]                # Both RPM-based and DEB-based platforms
+gcc-c++ [platform:rpm]                         # RPM-based platforms (RHEL/CentOS/Fedora)
+g++ [platform:deb]                             # DEB-based platforms (Debian/Ubuntu)
 
 # SSL/TLS libraries
-openssl-devel [platform:rpm]
-libssl-dev [platform:deb]
-libffi-devel [platform:rpm]
-libffi-dev [platform:deb]
+openssl-devel [platform:rpm]                   # RPM-based platforms (RHEL/CentOS/Fedora)
+libssl-dev [platform:deb]                      # DEB-based platforms (Debian/Ubuntu)
+libffi-devel [platform:rpm]                    # RPM-based platforms (RHEL/CentOS/Fedora)
+libffi-dev [platform:deb]                      # DEB-based platforms (Debian/Ubuntu)
 
 # Kerberos support (Windows environments)
-krb5-devel [platform:rpm]
-libkrb5-dev [platform:deb]
-krb5-workstation [platform:rpm]
-krb5-user [platform:deb]
+krb5-devel [platform:rpm]                      # RPM-based platforms (RHEL/CentOS/Fedora)
+libkrb5-dev [platform:deb]                     # DEB-based platforms (Debian/Ubuntu)
+krb5-workstation [platform:rpm]                # RPM-based platforms (RHEL/CentOS/Fedora)
+krb5-user [platform:deb]                       # DEB-based platforms (Debian/Ubuntu)
 ```
 
 ### Build Automation
