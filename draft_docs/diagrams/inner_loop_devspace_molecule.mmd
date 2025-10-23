@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph OCPNS["OpenShift Dev Spaces Namespace"]
+    WS["Dev Spaces Workspace (editor + dev shell)"]
+    SECRETS["K8s Secrets\n(~/.ansible tokens, registry creds)"]
+    LINT["ansible-lint / pre-commit"]
+    MOL["Molecule Runner (docker/delegated)"]
+    TESTC["Ephemeral Test Container(s)\n(e.g., Rocky9 base)"]
+  end
+
+  subgraph REG["Internal Registries"]
+    QUAY["Quay / Image Registry"]
+    PAH["Private Automation Hub (collections)"]
+  end
+
+  SECRETS --> WS
+  WS --> LINT
+  WS --> MOL
+  MOL --> TESTC
+  MOL -. optional .-> PAH
+  TESTC -. optional base image pull .-> QUAY
+
+  click WS "# dev shell is your primary touchpoint"

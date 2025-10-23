@@ -1,0 +1,32 @@
+flowchart LR
+  subgraph OCPNS["OpenShift Dev Spaces Namespace"]
+    WS["Dev Spaces Workspace"]
+    NAV["ansible-navigator (remote)"]
+    DSSECRETS["K8s Secrets (registry creds, hub token)"]
+  end
+
+  subgraph VCENTER["vCenter – Non-Prod Segment"]
+    EENODE["Dedicated EE Node VM\n(ee_runner user, podman.socket)"]
+    AUTH["/home/ee_runner/.config/containers/auth.json"]
+  end
+
+  subgraph REG["Internal Registries"]
+    QUAY["Quay / Registry (EE images)"]
+    PAH["Private Automation Hub\n(baked at build-time)"]
+  end
+
+  subgraph TARGETS["Automation Targets – Non-Prod"]
+    WIN["Windows Hosts (5986/HTTPS)"]
+    LNX["Linux Hosts (22/SSH)"]
+  end
+
+  DSSECRETS --> WS
+  WS --> NAV
+  NAV -- "SSH + podman-remote" --> EENODE
+  EENODE --> AUTH
+  EENODE -- "pull EE image" --> QUAY
+  EENODE -- "run playbook inside EE" --> WIN
+  EENODE -- "run playbook inside EE" --> LNX
+
+  %% optional: collections are already in EE; PAH shown for clarity
+  QUAY -. EE build/publish .- PAH
