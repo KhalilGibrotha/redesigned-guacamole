@@ -1,0 +1,14 @@
+flowchart LR
+  subgraph OCPNS["OpenShift Dev Spaces Namespace"]
+    WS["Dev Spaces Workspace"]
+    APB["ansible-playbook / ad-hoc runs"]
+  end
+
+  subgraph PROD["Prod Network"]
+    PWIN["Prod Windows (5986)"]
+    PLNX["Prod Linux (22)"]
+  end
+
+  WS --> APB
+  APB -. "DISALLOWED egress" .-> PWIN
+  APB -. "DISALLOWED egress" .-> PLNX
