@@ -1,93 +1,127 @@
-# Jira Story Specification Template with Tracking
+# Jira Story Specification – Windows Server Upgrade Automation (Feasibility)
 
-This document defines the intake template for Jira stories related to automation and platform enhancements.  
-It includes fields for governance alignment, impact measurement, and tracking of related subtasks or stories.
+This story represents the initial feasibility and discovery phase for automating the Windows Server in-place upgrade process.  
+It covers preliminary research, environment preparation, and validation of automation components required to standardize the process.
 
 ---
 
 ## 🏷️ Title
-Short, action-oriented title (will become Jira Story summary).
+Windows Server In-Place Upgrade Automation – Discovery & Feasibility
 
 ## 👤 Requestor
-Name / Team submitting request.
+Server Operations / Platform Engineering
 
 ## 📅 Date
-Intake date.
+October 2025
 
 ## 🧩 Background / Context
-Why this automation or enhancement is needed.  
-Provide relevant context — such as process pain points, compliance drivers, or dependencies.
+The current Windows Server in-place upgrade process (2016 → 2022 and 2019 → 2025) is **manual** and **error-prone**, relying on Server Operations to perform scripted pre-checks and manual CRQ coordination.  
+This story seeks to determine the **technical feasibility** of automating key pre-, during-, and post-upgrade tasks using **Ansible** and existing infrastructure integrations.
+
+Primary goals:
+- Validate automation of Windows Server upgrades using **WinRM**.
+- Define dependencies, guardrails, and RBAC boundaries.
+- Capture requirements and integration points for subsequent Pilot and Scale phases.
+
+---
 
 ## ✅ Requirements (Acceptance Criteria)
-List all functional and non-functional requirements.
+### Pre-Upgrade Phase
+- [ ] Define **server inventory child groups** (deployment group structure) with input from Server Ops.  
+- [ ] Collect metadata: server role, environment (Prod/Non-Prod), business app, and owner.  
+- [ ] Detect if host is **physical or virtual** (via facts or VMware integration).  
+- [ ] Validate **disk space** requirements for upgrade image.  
+- [ ] Check **upgrade path eligibility** (Windows version mapping).  
+- [ ] Detect **pending reboots** due to patching or updates.  
+- [ ] Verify **monitoring status** and **mute alerts** (SolarWinds integration).  
+- [ ] Identify **active RDP sessions** prior to upgrade.  
+- [ ] Send **Teams/email notification** to downstream owners (if available in vars).  
 
-- Functional requirements  
-- Non-functional requirements  
-- Integration requirements (e.g., Satellite, Helix, Splunk, etc.)
+### Upgrade Phase
+- [ ] Validate ISO image availability from enterprise share.  
+- [ ] Automate upgrade command execution with proper credentials.  
+- [ ] Log upgrade progress and capture output.  
+
+### Post-Upgrade Phase
+- [ ] Validate OS version post-upgrade.  
+- [ ] Confirm monitoring re-enabled (SolarWinds).  
+- [ ] Identify failures requiring restore workflow.  
+- [ ] Trigger manual QA by Application Support.  
+- [ ] Record results for reporting to Server Ops.
+
+### Restore (If Required)
+- [ ] Trigger **restore from backup job** (via API or backup system integration).  
+- [ ] Notify Ops of restore action and mark for review.
+
+---
 
 ## ⚙️ Constraints
-Technical or organizational limits, such as:
-- Platform or API restrictions  
-- Change window or policy requirements  
-- RBAC or credential constraints  
+- CRQ submissions and communications remain manual, handled by Server Ops.  
+- Access to monitoring and backup APIs may require new credentials or integration scope definition.  
+- Testing limited to **non-production** systems in Pilot.  
+- Compliance reviews required prior to Prod rollout.  
+
+---
 
 ## 📂 Approved Scope Category
-_Select one or more from the approved list:_
-- Server Provisioning & Builds  
-- Patching & Compliance  
-- Monitoring & Alerting  
-- Pre/Post Maintenance Automation Tasks  
-- Backup/Recovery Validation  
-- Capacity & Lifecycle Management  
-- Operational Runbooks  
-- Platform Enhancements / Platform Process Development  
+- [x] Server Provisioning & Builds  
+- [x] Patching & Compliance  
+- [x] Operational Runbooks  
+- [x] Platform Enhancements / Platform Process Development  
+
+---
 
 ## 👨‍💼 Manager Approval
-Name/date of approving manager.
+*Pending – Leadership Review (Server Ops / Platform Engineering)*
+
+---
 
 ## 🎯 Success Criteria (Definition of Done)
-List measurable outcomes that determine completion, such as:
-- Job execution success across pilot inventory  
-- Validation logs present in Splunk  
-- Approval from Platform or Security teams  
+- Pre-upgrade job successfully collects all required metadata and validations.  
+- Upgrade job executes successfully on a non-production system.  
+- Post-upgrade checks and restore validation run cleanly.  
+- Results logged and available in Splunk for audit review.  
+- Server Ops and Platform Engineering validate readiness for Pilot.
+
+---
 
 ## 💡 Impact Measurement
-Captured at intake and validated post-implementation.
 
 | Metric | Description | Estimated Value |
 |--------|--------------|-----------------|
-| Hours Saved | Labor time reduction per month/quarter | `N/A` |
-| Cost Avoided / Saved ($) | Operational cost reduction | `N/A` |
-| Risk Reduction | Security or compliance improvement | `N/A` |
-| Compliance Improvement (%) | Configuration or patch compliance gain | `N/A` |
+| Hours Saved | Reduction in manual upgrade time per server | TBD |
+| Cost Avoided / Saved ($) | Reduced outage risk and repeat work | TBD |
+| Risk Reduction | Automated validation reduces failure risk | TBD |
+| Compliance Improvement (%) | Consistent pre-upgrade checks and auditability | TBD |
+
+---
 
 ## 🗒️ Notes
-Free-text space for supporting details, assumptions, or cross-team dependencies.
+- Discovery findings will drive future story decomposition into Pre-Upgrade, Upgrade, and Post-Upgrade workflows.  
+- Dependencies on SolarWinds and backup systems must be clarified early.  
+- WinRM connectivity and EE validation completed previously (reference: AAP Dev Loop testing).  
 
 ---
 
 ## 🔗 Tracking & Breakdown
 
-**Primary Jira Issue Key (Parent Story/Epic):**  
-`<Jira-1234>`
-
-### Related Stories / Subtasks
+**Primary Jira Epic:** `<Jira-####>` – Windows Server In-Place Upgrade Automation
 
 | Jira Issue Key | Title / Description | Notes |
 |----------------|---------------------|-------|
-| `<Jira-1235>`  | Setup Helix Service Account | Needed for API authentication |
-| `<Jira-1236>`  | Build Pre-Run CRQ Validation Job | Implements change gating |
-| `<Jira-1237>`  | Post-Run CRQ/WO Update Workflow | Pushes execution notes to Helix |
-| `<Jira-1238>`  | Splunk Logging Integration | Ensure audit trail for Helix events |
+| `<Jira-####-A>` | Define Pre-Upgrade Checks & Inventory Structure | Inventory + server metadata logic |
+| `<Jira-####-B>` | Implement Upgrade Orchestration | Validate EE and image mount process |
+| `<Jira-####-C>` | Post-Upgrade Verification & Restore Workflow | Includes validation, monitoring, and backup triggers |
 
 ---
 
 ## 🧭 Usage Notes
-
-- This template should be used during **intake and backlog refinement**.  
-- The **Primary Story** (or Epic) captures the overall automation initiative.  
-- The **Related Stories/Subtasks** section tracks incremental deliverables required to fulfill functional requirements.  
-- Once completed, each related story should reference the parent issue key to maintain traceability.
+- This document reflects the **Discovery → Pilot** phase.  
+- Subsequent stories will refine automation details for execution and scale.  
+- Feasibility validation will inform scope for institutionalization.
 
 ---
 
+**Author:** Platform Engineering / Server Operations  
+**Version:** Draft v0.3 – Discovery Phase  
+**Date:** October 24, 2025
